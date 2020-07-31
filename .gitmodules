@@ -1,0 +1,3 @@
+[submodule "elarian-proto"]
+	path = elarian-proto
+	url = git@github.com:ElarianLtd/elarian-proto.git
