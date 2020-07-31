@@ -3,7 +3,6 @@ package elariango
 import (
 	"context"
 	"crypto/tls"
-	"log"
 	"time"
 
 	elarian "github.com/elarian/elariango/com_elarian_hera_proto"
@@ -61,7 +60,6 @@ func (s *service) connect() (elarian.GrpcWebServiceClient, error) {
 
 	channel, err := grpc.Dial(host, opts...)
 	if err != nil {
-		log.Fatalln("err", err)
 		return nil, err
 	}
 	client := elarian.NewGrpcWebServiceClient(channel)
