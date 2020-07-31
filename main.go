@@ -3,7 +3,6 @@ package elariango
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"log"
 	"time"
 
@@ -66,7 +65,6 @@ func (s *service) connect() (elarian.GrpcWebServiceClient, error) {
 		return nil, err
 	}
 	client := elarian.NewGrpcWebServiceClient(channel)
-	fmt.Println(channel.GetState().String())
 	return client, nil
 }
 
