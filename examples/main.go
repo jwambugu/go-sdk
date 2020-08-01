@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"io"
 	"log"
 	"time"
 
 	"github.com/elarian/elariango"
 	elarian "github.com/elarian/elariango/com_elarian_hera_proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -31,7 +33,7 @@ func sendSms(client elarian.GrpcWebServiceClient) {
 		},
 		Customer: &elarian.SendMessageRequest_CustomerNumber{
 			CustomerNumber: &elarian.CustomerNumber{
-				Number:   "+254712345678",
+				Number:   "+2547",
 				Provider: 2,
 			},
 		},
@@ -43,13 +45,40 @@ func sendSms(client elarian.GrpcWebServiceClient) {
 	log.Printf("Customer id %v", res.GetCustomerId())
 }
 
+// StreamCustomerNotifications func
+func StreamCustomerNotifications(client elarian.GrpcWebServiceClient) {
+	ctx := context.Background()
+
+	stream, err := client.StreamNotifications(ctx, &elarian.StreamNotificationRequest{
+		AppId: "app_id",
+	})
+	if err != nil {
+		log.Fatalf("could stream notification %v", err)
+	}
+	waitChannel := make(chan struct{})
+	go func() {
+		for {
+			in, err := stream.Recv()
+			if err == io.EOF {
+				close(waitChannel)
+				return
+			}
+			if err != nil {
+				log.Fatalf("Failed to recieve  notifications: %v", err)
+			}
+			log.Printf("Got a notification %v", in.GetReminder())
+		}
+	}()
+	<-waitChannel
+}
+
 func getCustomerState(client elarian.GrpcWebServiceClient) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	res, err := client.GetCustomerState(ctx, &elarian.GetCustomerStateRequest{
-		AppId: "app-id",
+		AppId: "app_id",
 		Customer: &elarian.GetCustomerStateRequest_CustomerId{
-			CustomerId: "el_cst_35ff1eb3r448652dv55556fvff",
+			CustomerId: "customer_id",
 		},
 	})
 	if err != nil {
@@ -60,25 +89,28 @@ func getCustomerState(client elarian.GrpcWebServiceClient) {
 
 // AddCustomerReminder func
 func AddCustomerReminder(client elarian.GrpcWebServiceClient) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30000*time.Second)
 	defer cancel()
+	exp := time.Now().Add(time.Minute + 1)
+
 	res, err := client.AddCustomerReminder(ctx, &elarian.AddCustomerReminderRequest{
-		AppId: "some_app",
+		AppId: "app_id",
 		Customer: &elarian.AddCustomerReminderRequest_CustomerId{
-			CustomerId: "",
+			CustomerId: "customer_id",
 		},
 		Reminder: &elarian.CustomerReminder{
-			ProductId: "some_product_id",
-			Key:       "some_key",
+			ProductId:  "product_id",
+			Expiration: timestamppb.New(exp),
+			Key:        "12345",
 			Payload: &wrapperspb.StringValue{
-				Value: "i am some payload",
+				Value: "i am a reminder",
 			},
 		},
 	})
 	if err != nil {
 		log.Fatalf("could not set a reminder %v", err)
 	}
-	log.Printf("response %v", res.GetDescription())
+	log.Printf("response %v", res)
 }
 
 func main() {
@@ -88,4 +120,6 @@ func main() {
 	}
 	sendSms(client)
 	getCustomerState(client)
+	AddCustomerReminder(client)
+	StreamCustomerNotifications(client)
 }
