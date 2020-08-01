@@ -33,8 +33,8 @@ type (
 
 func (c *elarianCredentials) GetRequestMetadata(context.Context, ...string) (map[string]string, error) {
 	return map[string]string{
-		"api_key":    c.APIKey,
-		"auth_token": c.AuthToken,
+		"api-key":    c.APIKey,
+		"auth-token": c.AuthToken,
 	}, nil
 }
 

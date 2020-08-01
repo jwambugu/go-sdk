@@ -53,9 +53,32 @@ func getCustomerState(client elarian.GrpcWebServiceClient) {
 		},
 	})
 	if err != nil {
-		log.Fatalf("could not get customer srate %v", err)
+		log.Fatalf("could not get customer state %v", err)
 	}
 	log.Printf("customer state %v", res.GetData())
+}
+
+// AddCustomerReminder func
+func AddCustomerReminder(client elarian.GrpcWebServiceClient) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	res, err := client.AddCustomerReminder(ctx, &elarian.AddCustomerReminderRequest{
+		AppId: "some_app",
+		Customer: &elarian.AddCustomerReminderRequest_CustomerId{
+			CustomerId: "",
+		},
+		Reminder: &elarian.CustomerReminder{
+			ProductId: "some_product_id",
+			Key:       "some_key",
+			Payload: &wrapperspb.StringValue{
+				Value: "i am some payload",
+			},
+		},
+	})
+	if err != nil {
+		log.Fatalf("could not set a reminder %v", err)
+	}
+	log.Printf("response %v", res.GetDescription())
 }
 
 func main() {
