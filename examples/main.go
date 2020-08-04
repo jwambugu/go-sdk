@@ -1,3 +1,4 @@
+// Package main implements a the simple examples that demonstrate hot to use the elarian SDK.
 package main
 
 import (
@@ -45,8 +46,47 @@ func sendSms(client elarian.GrpcWebServiceClient) {
 	log.Printf("Customer id %v", res.GetCustomerId())
 }
 
-// StreamCustomerNotifications func
-func StreamCustomerNotifications(client elarian.GrpcWebServiceClient) {
+func getCustomerState(client elarian.GrpcWebServiceClient) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	res, err := client.GetCustomerState(ctx, &elarian.GetCustomerStateRequest{
+		AppId: "app_id",
+		Customer: &elarian.GetCustomerStateRequest_CustomerId{
+			CustomerId: "customer_id",
+		},
+	})
+	if err != nil {
+		log.Fatalf("could not get customer state %v", err)
+	}
+	log.Printf("customer state %v", res.GetData())
+}
+
+func addCustomerReminder(client elarian.GrpcWebServiceClient) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30000*time.Second)
+	defer cancel()
+	exp := time.Now().Add(time.Minute + 1)
+
+	res, err := client.AddCustomerReminder(ctx, &elarian.AddCustomerReminderRequest{
+		AppId: "app_id",
+		Customer: &elarian.AddCustomerReminderRequest_CustomerId{
+			CustomerId: "customer_id",
+		},
+		Reminder: &elarian.CustomerReminder{
+			ProductId:  "product_id",
+			Expiration: timestamppb.New(exp),
+			Key:        "12345",
+			Payload: &wrapperspb.StringValue{
+				Value: "i am a reminder",
+			},
+		},
+	})
+	if err != nil {
+		log.Fatalf("could not set a reminder %v", err)
+	}
+	log.Printf("response %v", res)
+}
+
+func streamCustomerNotifications(client elarian.GrpcWebServiceClient) {
 	ctx := context.Background()
 
 	stream, err := client.StreamNotifications(ctx, &elarian.StreamNotificationRequest{
@@ -72,54 +112,14 @@ func StreamCustomerNotifications(client elarian.GrpcWebServiceClient) {
 	<-waitChannel
 }
 
-func getCustomerState(client elarian.GrpcWebServiceClient) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	res, err := client.GetCustomerState(ctx, &elarian.GetCustomerStateRequest{
-		AppId: "app_id",
-		Customer: &elarian.GetCustomerStateRequest_CustomerId{
-			CustomerId: "customer_id",
-		},
-	})
-	if err != nil {
-		log.Fatalf("could not get customer state %v", err)
-	}
-	log.Printf("customer state %v", res.GetData())
-}
-
-// AddCustomerReminder func
-func AddCustomerReminder(client elarian.GrpcWebServiceClient) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30000*time.Second)
-	defer cancel()
-	exp := time.Now().Add(time.Minute + 1)
-
-	res, err := client.AddCustomerReminder(ctx, &elarian.AddCustomerReminderRequest{
-		AppId: "app_id",
-		Customer: &elarian.AddCustomerReminderRequest_CustomerId{
-			CustomerId: "customer_id",
-		},
-		Reminder: &elarian.CustomerReminder{
-			ProductId:  "product_id",
-			Expiration: timestamppb.New(exp),
-			Key:        "12345",
-			Payload: &wrapperspb.StringValue{
-				Value: "i am a reminder",
-			},
-		},
-	})
-	if err != nil {
-		log.Fatalf("could not set a reminder %v", err)
-	}
-	log.Printf("response %v", res)
-}
-
 func main() {
 	client, err := elariango.Initialize("api_key", true)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	sendSms(client)
 	getCustomerState(client)
-	AddCustomerReminder(client)
-	StreamCustomerNotifications(client)
+	addCustomerReminder(client)
+	streamCustomerNotifications(client)
 }
