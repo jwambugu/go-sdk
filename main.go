@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"time"
 
-	elarian "github.com/elarian/elariango/com_elarian_hera_proto"
+	elarian "github.com/elarian/go-sdk/com_elarian_hera_proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
