@@ -7,10 +7,14 @@
 package com_elarian_hera_proto
 
 import (
+	context "context"
 	proto "github.com/golang/protobuf/proto"
 	duration "github.com/golang/protobuf/ptypes/duration"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	wrappers "github.com/golang/protobuf/ptypes/wrappers"
+	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -5449,4 +5453,868 @@ func file_web_proto_init() {
 	file_web_proto_rawDesc = nil
 	file_web_proto_goTypes = nil
 	file_web_proto_depIdxs = nil
+}
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConnInterface
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the grpc package it is being compiled against.
+const _ = grpc.SupportPackageIsVersion6
+
+// GrpcWebServiceClient is the client API for GrpcWebService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
+type GrpcWebServiceClient interface {
+	AuthToken(ctx context.Context, in *AuthTokenRequest, opts ...grpc.CallOption) (*AuthTokenReply, error)
+	GetCustomerState(ctx context.Context, in *GetCustomerStateRequest, opts ...grpc.CallOption) (*GetCustomerStateReply, error)
+	AdoptCustomerState(ctx context.Context, in *AdoptCustomerStateRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error)
+	AddCustomerReminder(ctx context.Context, in *AddCustomerReminderRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error)
+	AddCustomerReminderByTag(ctx context.Context, in *AddCustomerReminderTagRequest, opts ...grpc.CallOption) (*TagCommandReply, error)
+	CancelCustomerReminder(ctx context.Context, in *CancelCustomerReminderRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error)
+	CancelCustomerReminderByTag(ctx context.Context, in *CancelCustomerReminderTagRequest, opts ...grpc.CallOption) (*TagCommandReply, error)
+	UpdateCustomerTag(ctx context.Context, in *UpdateCustomerTagRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error)
+	DeleteCustomerTag(ctx context.Context, in *DeleteCustomerTagRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error)
+	UpdateCustomerSecondaryId(ctx context.Context, in *UpdateCustomerSecondaryIdRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error)
+	DeleteCustomerSecondaryId(ctx context.Context, in *DeleteCustomerSecondaryIdRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error)
+	UpdateCustomerMetadata(ctx context.Context, in *UpdateCustomerMetadataRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error)
+	DeleteCustomerMetadata(ctx context.Context, in *DeleteCustomerMetadataRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error)
+	SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*SendMessageReply, error)
+	SendMessageByTag(ctx context.Context, in *SendMessageTagRequest, opts ...grpc.CallOption) (*TagCommandReply, error)
+	ReplyToMessage(ctx context.Context, in *ReplyToMessageRequest, opts ...grpc.CallOption) (*SendMessageReply, error)
+	MessagingConsent(ctx context.Context, in *MessagingConsentRequest, opts ...grpc.CallOption) (*MessagingConsentReply, error)
+	SendPayment(ctx context.Context, in *SendPaymentRequest, opts ...grpc.CallOption) (*SendPaymentReply, error)
+	CheckoutPayment(ctx context.Context, in *CheckoutPaymentRequest, opts ...grpc.CallOption) (*CheckoutPaymentReply, error)
+	MakeVoiceCall(ctx context.Context, in *MakeVoiceCallRequest, opts ...grpc.CallOption) (*MakeVoiceCallReply, error)
+	StreamNotifications(ctx context.Context, in *StreamNotificationRequest, opts ...grpc.CallOption) (GrpcWebService_StreamNotificationsClient, error)
+	SendWebhookResponse(ctx context.Context, in *WebhookResponse, opts ...grpc.CallOption) (*WebhookResponseReply, error)
+}
+
+type grpcWebServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewGrpcWebServiceClient(cc grpc.ClientConnInterface) GrpcWebServiceClient {
+	return &grpcWebServiceClient{cc}
+}
+
+func (c *grpcWebServiceClient) AuthToken(ctx context.Context, in *AuthTokenRequest, opts ...grpc.CallOption) (*AuthTokenReply, error) {
+	out := new(AuthTokenReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/AuthToken", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) GetCustomerState(ctx context.Context, in *GetCustomerStateRequest, opts ...grpc.CallOption) (*GetCustomerStateReply, error) {
+	out := new(GetCustomerStateReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/GetCustomerState", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) AdoptCustomerState(ctx context.Context, in *AdoptCustomerStateRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error) {
+	out := new(UpdateCustomerStateReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/AdoptCustomerState", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) AddCustomerReminder(ctx context.Context, in *AddCustomerReminderRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error) {
+	out := new(UpdateCustomerStateReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/AddCustomerReminder", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) AddCustomerReminderByTag(ctx context.Context, in *AddCustomerReminderTagRequest, opts ...grpc.CallOption) (*TagCommandReply, error) {
+	out := new(TagCommandReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/AddCustomerReminderByTag", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) CancelCustomerReminder(ctx context.Context, in *CancelCustomerReminderRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error) {
+	out := new(UpdateCustomerStateReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/CancelCustomerReminder", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) CancelCustomerReminderByTag(ctx context.Context, in *CancelCustomerReminderTagRequest, opts ...grpc.CallOption) (*TagCommandReply, error) {
+	out := new(TagCommandReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/CancelCustomerReminderByTag", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) UpdateCustomerTag(ctx context.Context, in *UpdateCustomerTagRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error) {
+	out := new(UpdateCustomerStateReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/UpdateCustomerTag", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) DeleteCustomerTag(ctx context.Context, in *DeleteCustomerTagRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error) {
+	out := new(UpdateCustomerStateReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/DeleteCustomerTag", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) UpdateCustomerSecondaryId(ctx context.Context, in *UpdateCustomerSecondaryIdRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error) {
+	out := new(UpdateCustomerStateReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/UpdateCustomerSecondaryId", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) DeleteCustomerSecondaryId(ctx context.Context, in *DeleteCustomerSecondaryIdRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error) {
+	out := new(UpdateCustomerStateReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/DeleteCustomerSecondaryId", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) UpdateCustomerMetadata(ctx context.Context, in *UpdateCustomerMetadataRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error) {
+	out := new(UpdateCustomerStateReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/UpdateCustomerMetadata", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) DeleteCustomerMetadata(ctx context.Context, in *DeleteCustomerMetadataRequest, opts ...grpc.CallOption) (*UpdateCustomerStateReply, error) {
+	out := new(UpdateCustomerStateReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/DeleteCustomerMetadata", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) SendMessage(ctx context.Context, in *SendMessageRequest, opts ...grpc.CallOption) (*SendMessageReply, error) {
+	out := new(SendMessageReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/SendMessage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) SendMessageByTag(ctx context.Context, in *SendMessageTagRequest, opts ...grpc.CallOption) (*TagCommandReply, error) {
+	out := new(TagCommandReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/SendMessageByTag", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) ReplyToMessage(ctx context.Context, in *ReplyToMessageRequest, opts ...grpc.CallOption) (*SendMessageReply, error) {
+	out := new(SendMessageReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/ReplyToMessage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) MessagingConsent(ctx context.Context, in *MessagingConsentRequest, opts ...grpc.CallOption) (*MessagingConsentReply, error) {
+	out := new(MessagingConsentReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/MessagingConsent", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) SendPayment(ctx context.Context, in *SendPaymentRequest, opts ...grpc.CallOption) (*SendPaymentReply, error) {
+	out := new(SendPaymentReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/SendPayment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) CheckoutPayment(ctx context.Context, in *CheckoutPaymentRequest, opts ...grpc.CallOption) (*CheckoutPaymentReply, error) {
+	out := new(CheckoutPaymentReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/CheckoutPayment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) MakeVoiceCall(ctx context.Context, in *MakeVoiceCallRequest, opts ...grpc.CallOption) (*MakeVoiceCallReply, error) {
+	out := new(MakeVoiceCallReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/MakeVoiceCall", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *grpcWebServiceClient) StreamNotifications(ctx context.Context, in *StreamNotificationRequest, opts ...grpc.CallOption) (GrpcWebService_StreamNotificationsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_GrpcWebService_serviceDesc.Streams[0], "/com.elarian.hera.proto.GrpcWebService/StreamNotifications", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpcWebServiceStreamNotificationsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type GrpcWebService_StreamNotificationsClient interface {
+	Recv() (*WebhookRequest, error)
+	grpc.ClientStream
+}
+
+type grpcWebServiceStreamNotificationsClient struct {
+	grpc.ClientStream
+}
+
+func (x *grpcWebServiceStreamNotificationsClient) Recv() (*WebhookRequest, error) {
+	m := new(WebhookRequest)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *grpcWebServiceClient) SendWebhookResponse(ctx context.Context, in *WebhookResponse, opts ...grpc.CallOption) (*WebhookResponseReply, error) {
+	out := new(WebhookResponseReply)
+	err := c.cc.Invoke(ctx, "/com.elarian.hera.proto.GrpcWebService/SendWebhookResponse", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// GrpcWebServiceServer is the server API for GrpcWebService service.
+type GrpcWebServiceServer interface {
+	AuthToken(context.Context, *AuthTokenRequest) (*AuthTokenReply, error)
+	GetCustomerState(context.Context, *GetCustomerStateRequest) (*GetCustomerStateReply, error)
+	AdoptCustomerState(context.Context, *AdoptCustomerStateRequest) (*UpdateCustomerStateReply, error)
+	AddCustomerReminder(context.Context, *AddCustomerReminderRequest) (*UpdateCustomerStateReply, error)
+	AddCustomerReminderByTag(context.Context, *AddCustomerReminderTagRequest) (*TagCommandReply, error)
+	CancelCustomerReminder(context.Context, *CancelCustomerReminderRequest) (*UpdateCustomerStateReply, error)
+	CancelCustomerReminderByTag(context.Context, *CancelCustomerReminderTagRequest) (*TagCommandReply, error)
+	UpdateCustomerTag(context.Context, *UpdateCustomerTagRequest) (*UpdateCustomerStateReply, error)
+	DeleteCustomerTag(context.Context, *DeleteCustomerTagRequest) (*UpdateCustomerStateReply, error)
+	UpdateCustomerSecondaryId(context.Context, *UpdateCustomerSecondaryIdRequest) (*UpdateCustomerStateReply, error)
+	DeleteCustomerSecondaryId(context.Context, *DeleteCustomerSecondaryIdRequest) (*UpdateCustomerStateReply, error)
+	UpdateCustomerMetadata(context.Context, *UpdateCustomerMetadataRequest) (*UpdateCustomerStateReply, error)
+	DeleteCustomerMetadata(context.Context, *DeleteCustomerMetadataRequest) (*UpdateCustomerStateReply, error)
+	SendMessage(context.Context, *SendMessageRequest) (*SendMessageReply, error)
+	SendMessageByTag(context.Context, *SendMessageTagRequest) (*TagCommandReply, error)
+	ReplyToMessage(context.Context, *ReplyToMessageRequest) (*SendMessageReply, error)
+	MessagingConsent(context.Context, *MessagingConsentRequest) (*MessagingConsentReply, error)
+	SendPayment(context.Context, *SendPaymentRequest) (*SendPaymentReply, error)
+	CheckoutPayment(context.Context, *CheckoutPaymentRequest) (*CheckoutPaymentReply, error)
+	MakeVoiceCall(context.Context, *MakeVoiceCallRequest) (*MakeVoiceCallReply, error)
+	StreamNotifications(*StreamNotificationRequest, GrpcWebService_StreamNotificationsServer) error
+	SendWebhookResponse(context.Context, *WebhookResponse) (*WebhookResponseReply, error)
+}
+
+// UnimplementedGrpcWebServiceServer can be embedded to have forward compatible implementations.
+type UnimplementedGrpcWebServiceServer struct {
+}
+
+func (*UnimplementedGrpcWebServiceServer) AuthToken(context.Context, *AuthTokenRequest) (*AuthTokenReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthToken not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) GetCustomerState(context.Context, *GetCustomerStateRequest) (*GetCustomerStateReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCustomerState not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) AdoptCustomerState(context.Context, *AdoptCustomerStateRequest) (*UpdateCustomerStateReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AdoptCustomerState not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) AddCustomerReminder(context.Context, *AddCustomerReminderRequest) (*UpdateCustomerStateReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddCustomerReminder not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) AddCustomerReminderByTag(context.Context, *AddCustomerReminderTagRequest) (*TagCommandReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddCustomerReminderByTag not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) CancelCustomerReminder(context.Context, *CancelCustomerReminderRequest) (*UpdateCustomerStateReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelCustomerReminder not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) CancelCustomerReminderByTag(context.Context, *CancelCustomerReminderTagRequest) (*TagCommandReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelCustomerReminderByTag not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) UpdateCustomerTag(context.Context, *UpdateCustomerTagRequest) (*UpdateCustomerStateReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateCustomerTag not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) DeleteCustomerTag(context.Context, *DeleteCustomerTagRequest) (*UpdateCustomerStateReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteCustomerTag not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) UpdateCustomerSecondaryId(context.Context, *UpdateCustomerSecondaryIdRequest) (*UpdateCustomerStateReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateCustomerSecondaryId not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) DeleteCustomerSecondaryId(context.Context, *DeleteCustomerSecondaryIdRequest) (*UpdateCustomerStateReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteCustomerSecondaryId not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) UpdateCustomerMetadata(context.Context, *UpdateCustomerMetadataRequest) (*UpdateCustomerStateReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateCustomerMetadata not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) DeleteCustomerMetadata(context.Context, *DeleteCustomerMetadataRequest) (*UpdateCustomerStateReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteCustomerMetadata not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) SendMessage(context.Context, *SendMessageRequest) (*SendMessageReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendMessage not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) SendMessageByTag(context.Context, *SendMessageTagRequest) (*TagCommandReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendMessageByTag not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) ReplyToMessage(context.Context, *ReplyToMessageRequest) (*SendMessageReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReplyToMessage not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) MessagingConsent(context.Context, *MessagingConsentRequest) (*MessagingConsentReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MessagingConsent not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) SendPayment(context.Context, *SendPaymentRequest) (*SendPaymentReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendPayment not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) CheckoutPayment(context.Context, *CheckoutPaymentRequest) (*CheckoutPaymentReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckoutPayment not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) MakeVoiceCall(context.Context, *MakeVoiceCallRequest) (*MakeVoiceCallReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MakeVoiceCall not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) StreamNotifications(*StreamNotificationRequest, GrpcWebService_StreamNotificationsServer) error {
+	return status.Errorf(codes.Unimplemented, "method StreamNotifications not implemented")
+}
+func (*UnimplementedGrpcWebServiceServer) SendWebhookResponse(context.Context, *WebhookResponse) (*WebhookResponseReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendWebhookResponse not implemented")
+}
+
+func RegisterGrpcWebServiceServer(s *grpc.Server, srv GrpcWebServiceServer) {
+	s.RegisterService(&_GrpcWebService_serviceDesc, srv)
+}
+
+func _GrpcWebService_AuthToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).AuthToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/AuthToken",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).AuthToken(ctx, req.(*AuthTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_GetCustomerState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCustomerStateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).GetCustomerState(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/GetCustomerState",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).GetCustomerState(ctx, req.(*GetCustomerStateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_AdoptCustomerState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdoptCustomerStateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).AdoptCustomerState(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/AdoptCustomerState",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).AdoptCustomerState(ctx, req.(*AdoptCustomerStateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_AddCustomerReminder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddCustomerReminderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).AddCustomerReminder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/AddCustomerReminder",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).AddCustomerReminder(ctx, req.(*AddCustomerReminderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_AddCustomerReminderByTag_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddCustomerReminderTagRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).AddCustomerReminderByTag(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/AddCustomerReminderByTag",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).AddCustomerReminderByTag(ctx, req.(*AddCustomerReminderTagRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_CancelCustomerReminder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelCustomerReminderRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).CancelCustomerReminder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/CancelCustomerReminder",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).CancelCustomerReminder(ctx, req.(*CancelCustomerReminderRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_CancelCustomerReminderByTag_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelCustomerReminderTagRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).CancelCustomerReminderByTag(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/CancelCustomerReminderByTag",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).CancelCustomerReminderByTag(ctx, req.(*CancelCustomerReminderTagRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_UpdateCustomerTag_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateCustomerTagRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).UpdateCustomerTag(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/UpdateCustomerTag",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).UpdateCustomerTag(ctx, req.(*UpdateCustomerTagRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_DeleteCustomerTag_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteCustomerTagRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).DeleteCustomerTag(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/DeleteCustomerTag",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).DeleteCustomerTag(ctx, req.(*DeleteCustomerTagRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_UpdateCustomerSecondaryId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateCustomerSecondaryIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).UpdateCustomerSecondaryId(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/UpdateCustomerSecondaryId",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).UpdateCustomerSecondaryId(ctx, req.(*UpdateCustomerSecondaryIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_DeleteCustomerSecondaryId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteCustomerSecondaryIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).DeleteCustomerSecondaryId(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/DeleteCustomerSecondaryId",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).DeleteCustomerSecondaryId(ctx, req.(*DeleteCustomerSecondaryIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_UpdateCustomerMetadata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateCustomerMetadataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).UpdateCustomerMetadata(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/UpdateCustomerMetadata",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).UpdateCustomerMetadata(ctx, req.(*UpdateCustomerMetadataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_DeleteCustomerMetadata_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteCustomerMetadataRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).DeleteCustomerMetadata(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/DeleteCustomerMetadata",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).DeleteCustomerMetadata(ctx, req.(*DeleteCustomerMetadataRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_SendMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).SendMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/SendMessage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).SendMessage(ctx, req.(*SendMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_SendMessageByTag_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendMessageTagRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).SendMessageByTag(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/SendMessageByTag",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).SendMessageByTag(ctx, req.(*SendMessageTagRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_ReplyToMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplyToMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).ReplyToMessage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/ReplyToMessage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).ReplyToMessage(ctx, req.(*ReplyToMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_MessagingConsent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MessagingConsentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).MessagingConsent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/MessagingConsent",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).MessagingConsent(ctx, req.(*MessagingConsentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_SendPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendPaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).SendPayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/SendPayment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).SendPayment(ctx, req.(*SendPaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_CheckoutPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckoutPaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).CheckoutPayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/CheckoutPayment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).CheckoutPayment(ctx, req.(*CheckoutPaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_MakeVoiceCall_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MakeVoiceCallRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).MakeVoiceCall(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/MakeVoiceCall",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).MakeVoiceCall(ctx, req.(*MakeVoiceCallRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GrpcWebService_StreamNotifications_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(StreamNotificationRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(GrpcWebServiceServer).StreamNotifications(m, &grpcWebServiceStreamNotificationsServer{stream})
+}
+
+type GrpcWebService_StreamNotificationsServer interface {
+	Send(*WebhookRequest) error
+	grpc.ServerStream
+}
+
+type grpcWebServiceStreamNotificationsServer struct {
+	grpc.ServerStream
+}
+
+func (x *grpcWebServiceStreamNotificationsServer) Send(m *WebhookRequest) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _GrpcWebService_SendWebhookResponse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WebhookResponse)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GrpcWebServiceServer).SendWebhookResponse(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/com.elarian.hera.proto.GrpcWebService/SendWebhookResponse",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GrpcWebServiceServer).SendWebhookResponse(ctx, req.(*WebhookResponse))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _GrpcWebService_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "com.elarian.hera.proto.GrpcWebService",
+	HandlerType: (*GrpcWebServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "AuthToken",
+			Handler:    _GrpcWebService_AuthToken_Handler,
+		},
+		{
+			MethodName: "GetCustomerState",
+			Handler:    _GrpcWebService_GetCustomerState_Handler,
+		},
+		{
+			MethodName: "AdoptCustomerState",
+			Handler:    _GrpcWebService_AdoptCustomerState_Handler,
+		},
+		{
+			MethodName: "AddCustomerReminder",
+			Handler:    _GrpcWebService_AddCustomerReminder_Handler,
+		},
+		{
+			MethodName: "AddCustomerReminderByTag",
+			Handler:    _GrpcWebService_AddCustomerReminderByTag_Handler,
+		},
+		{
+			MethodName: "CancelCustomerReminder",
+			Handler:    _GrpcWebService_CancelCustomerReminder_Handler,
+		},
+		{
+			MethodName: "CancelCustomerReminderByTag",
+			Handler:    _GrpcWebService_CancelCustomerReminderByTag_Handler,
+		},
+		{
+			MethodName: "UpdateCustomerTag",
+			Handler:    _GrpcWebService_UpdateCustomerTag_Handler,
+		},
+		{
+			MethodName: "DeleteCustomerTag",
+			Handler:    _GrpcWebService_DeleteCustomerTag_Handler,
+		},
+		{
+			MethodName: "UpdateCustomerSecondaryId",
+			Handler:    _GrpcWebService_UpdateCustomerSecondaryId_Handler,
+		},
+		{
+			MethodName: "DeleteCustomerSecondaryId",
+			Handler:    _GrpcWebService_DeleteCustomerSecondaryId_Handler,
+		},
+		{
+			MethodName: "UpdateCustomerMetadata",
+			Handler:    _GrpcWebService_UpdateCustomerMetadata_Handler,
+		},
+		{
+			MethodName: "DeleteCustomerMetadata",
+			Handler:    _GrpcWebService_DeleteCustomerMetadata_Handler,
+		},
+		{
+			MethodName: "SendMessage",
+			Handler:    _GrpcWebService_SendMessage_Handler,
+		},
+		{
+			MethodName: "SendMessageByTag",
+			Handler:    _GrpcWebService_SendMessageByTag_Handler,
+		},
+		{
+			MethodName: "ReplyToMessage",
+			Handler:    _GrpcWebService_ReplyToMessage_Handler,
+		},
+		{
+			MethodName: "MessagingConsent",
+			Handler:    _GrpcWebService_MessagingConsent_Handler,
+		},
+		{
+			MethodName: "SendPayment",
+			Handler:    _GrpcWebService_SendPayment_Handler,
+		},
+		{
+			MethodName: "CheckoutPayment",
+			Handler:    _GrpcWebService_CheckoutPayment_Handler,
+		},
+		{
+			MethodName: "MakeVoiceCall",
+			Handler:    _GrpcWebService_MakeVoiceCall_Handler,
+		},
+		{
+			MethodName: "SendWebhookResponse",
+			Handler:    _GrpcWebService_SendWebhookResponse_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "StreamNotifications",
+			Handler:       _GrpcWebService_StreamNotifications_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "web.proto",
 }
