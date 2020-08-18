@@ -1,4 +1,4 @@
-module github.com/elarian/go-sdk
+module github.com/elarianltd/go-sdk
 
 go 1.13
 

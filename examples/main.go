@@ -7,8 +7,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/elarian/elariango"
-	elarian "github.com/elarian/elariango/com_elarian_hera_proto"
+	"github.com/elarianltd/go-sdk"
+	elarian "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
