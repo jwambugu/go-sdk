@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"time"
 
-	elarian "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
+	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -42,7 +42,7 @@ func (c *elarianCredentials) RequireTransportSecurity() bool {
 	return true
 }
 
-func (s *service) connect() (elarian.GrpcWebServiceClient, error) {
+func (s *service) connect() (hera.GrpcWebServiceClient, error) {
 	var host string
 	var opts []grpc.DialOption
 
@@ -62,12 +62,12 @@ func (s *service) connect() (elarian.GrpcWebServiceClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := elarian.NewGrpcWebServiceClient(channel)
+	client := hera.NewGrpcWebServiceClient(channel)
 	return client, nil
 }
 
 // Initialize creates a secure grpc connection with the elarian api and returns an elarian grpc web service client
-func Initialize(apikey string, sandbox bool) (elarian.GrpcWebServiceClient, error) {
+func Initialize(apikey string, sandbox bool) (Elarian, error) {
 	var elarianService service
 
 	elarianService.tlsConfig = &tls.Config{
@@ -84,5 +84,9 @@ func Initialize(apikey string, sandbox bool) (elarian.GrpcWebServiceClient, erro
 	}
 	elarianService.options.SandBox = sandbox
 
-	return elarianService.connect()
+	client, err := elarianService.connect()
+	if err != nil {
+		return &elarian{}, err
+	}
+	return NewService(&client), nil
 }
