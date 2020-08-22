@@ -10,14 +10,14 @@ Take a look at the [API docs here](http://docs.elarian.com).
 
 ```bash
 
-    go get github.com/elarianltd/go_sdk
+    go get github.com/elarianltd/go-sdk
 
 ```
 
 ## Usage
 
 ```go
-import elarian github.com/elarianltd/go_sdk
+import elarian github.com/elarianltd/go-sdk
 
 func main(){
     client, err := elariango.Initialize("api_key", true);
@@ -80,7 +80,7 @@ func main(){
 
 ```bash
 
-git clone --recurse-submodules https://github.com/ElarianLtd/go_sdk.git
+git clone --recurse-submodules https://github.com/ElarianLtd/go-sdk.git
 cd go-sdk
 make run
 
