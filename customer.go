@@ -11,10 +11,13 @@ import (
 )
 
 type (
+	// NumberProvider is an enum that defines a type of customer number provider. it could be a telco, facebook, telegram or unspecified
+	NumberProvider int32
+
 	// PhoneNumber struct
 	PhoneNumber struct {
-		Number   string                      `json:"number,omitempty"`
-		Provider hera.CustomerNumberProvider `json:"provider,omitempty"`
+		Number   string         `json:"number,omitempty"`
+		Provider NumberProvider `json:"provider,omitempty"`
 	}
 
 	// Customer struct defines the paramters required to make any request involving a customer. Note: in every scenario either the ID or the phoneNumber is required but not  both unless otherwise specified
@@ -109,6 +112,17 @@ type (
 	}
 )
 
+const (
+	// CustomerNumberProviderUnspecified is a type of NumberProvider
+	CustomerNumberProviderUnspecified NumberProvider = iota
+	// CustomerNumberProviderFacebook is a type of NumberProvider
+	CustomerNumberProviderFacebook
+	// CustomerNumberProviderTelco is a type of NumberProvider
+	CustomerNumberProviderTelco
+	// CustomerNumberProviderTelegram is a type of NumberProvider
+	CustomerNumberProviderTelegram
+)
+
 func (e *elarian) GetCustomerState(customer *Customer, params *CustomerStateRequest) (*hera.CustomerStateReplyData, error) {
 	var request hera.GetCustomerStateRequest
 
@@ -121,7 +135,7 @@ func (e *elarian) GetCustomerState(customer *Customer, params *CustomerStateRequ
 		request.Customer = &hera.GetCustomerStateRequest_CustomerNumber{
 			CustomerNumber: &hera.CustomerNumber{
 				Number:   customer.PhoneNumber.Number,
-				Provider: customer.PhoneNumber.Provider,
+				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
 			},
 		}
 	}
@@ -148,7 +162,7 @@ func (e *elarian) AdoptCustomerState(customer *Customer, otherCustomer *Customer
 		request.OtherCustomer = &hera.AdoptCustomerStateRequest_OtherCustomerNumber{
 			OtherCustomerNumber: &hera.CustomerNumber{
 				Number:   otherCustomer.PhoneNumber.Number,
-				Provider: otherCustomer.PhoneNumber.Provider,
+				Provider: hera.CustomerNumberProvider(otherCustomer.PhoneNumber.Provider),
 			},
 		}
 	}
@@ -170,7 +184,7 @@ func (e *elarian) AddCustomerReminder(customer *Customer, params *CustomerRemind
 		request.Customer = &hera.AddCustomerReminderRequest_CustomerNumber{
 			CustomerNumber: &hera.CustomerNumber{
 				Number:   customer.PhoneNumber.Number,
-				Provider: customer.PhoneNumber.Provider,
+				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
 			},
 		}
 	}
@@ -223,7 +237,7 @@ func (e *elarian) CancelCustomerReminder(customer *Customer, params *CancelCusto
 		request.Customer = &hera.CancelCustomerReminderRequest_CustomerNumber{
 			CustomerNumber: &hera.CustomerNumber{
 				Number:   customer.PhoneNumber.Number,
-				Provider: customer.PhoneNumber.Provider,
+				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
 			},
 		}
 	}
@@ -269,7 +283,7 @@ func (e *elarian) UpdateCustomerTag(customer *Customer, params *UpdateCustomerTa
 		request.Customer = &hera.UpdateCustomerTagRequest_CustomerNumber{
 			CustomerNumber: &hera.CustomerNumber{
 				Number:   customer.PhoneNumber.Number,
-				Provider: customer.PhoneNumber.Provider,
+				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
 			},
 		}
 	}
@@ -307,7 +321,7 @@ func (e *elarian) DeleteCustomerTag(customer *Customer, params *DeleteCustomerTa
 		request.Customer = &hera.DeleteCustomerTagRequest_CustomerNumber{
 			CustomerNumber: &hera.CustomerNumber{
 				Number:   customer.PhoneNumber.Number,
-				Provider: customer.PhoneNumber.Provider,
+				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
 			},
 		}
 	}
@@ -330,7 +344,7 @@ func (e *elarian) UpdateCustomerSecondaryID(customer *Customer, params *UpdateCu
 		request.Customer = &hera.UpdateCustomerSecondaryIdRequest_CustomerNumber{
 			CustomerNumber: &hera.CustomerNumber{
 				Number:   customer.PhoneNumber.Number,
-				Provider: customer.PhoneNumber.Provider,
+				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
 			},
 		}
 	}
@@ -367,7 +381,7 @@ func (e *elarian) DeleteCustomerSecondaryID(customer *Customer, params *DeleteCu
 		request.Customer = &hera.DeleteCustomerSecondaryIdRequest_CustomerNumber{
 			CustomerNumber: &hera.CustomerNumber{
 				Number:   customer.PhoneNumber.Number,
-				Provider: customer.PhoneNumber.Provider,
+				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
 			},
 		}
 	}
@@ -401,7 +415,7 @@ func (e *elarian) UpdateCustomerMetaData(customer *Customer, params *UpdateCusto
 		request.Customer = &hera.UpdateCustomerMetadataRequest_CustomerNumber{
 			CustomerNumber: &hera.CustomerNumber{
 				Number:   customer.PhoneNumber.Number,
-				Provider: customer.PhoneNumber.Provider,
+				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
 			},
 		}
 	}
@@ -428,7 +442,7 @@ func (e *elarian) DeleteCustomerMetaData(customer *Customer, params *DeleteCusto
 		request.Customer = &hera.DeleteCustomerMetadataRequest_CustomerNumber{
 			CustomerNumber: &hera.CustomerNumber{
 				Number:   customer.PhoneNumber.Number,
-				Provider: customer.PhoneNumber.Provider,
+				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
 			},
 		}
 	}

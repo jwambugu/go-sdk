@@ -43,7 +43,7 @@ type (
 		UpdateCustomerMetaData(customer *Customer, params *UpdateCustomerMetadataRequest) (*hera.UpdateCustomerStateReply, error)
 		DeleteCustomerMetaData(customer *Customer, params *DeleteCustomerMetadataRequest) (*hera.UpdateCustomerStateReply, error)
 		GetAuthToken(appID string) (*hera.AuthTokenReply, error)
-		SendWebhookResponse() (*hera.WebhookResponseReply, error)
+		SendWebhookResponse(params *WebhookRequest) (*hera.WebhookResponseReply, error)
 		StreamNotifications(appID string) (chan *hera.WebhookRequest, chan error)
 		SendPayment(customer *Customer, params *PaymentRequest) (*hera.SendPaymentReply, error)
 		CheckoutPayment(customer *Customer, params *PaymentRequest) (*hera.CheckoutPaymentReply, error)

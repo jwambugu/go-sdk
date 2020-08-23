@@ -34,7 +34,7 @@ func (e *elarian) MakeVoiceCall(customer *Customer, params *VoiceCallRequest) (*
 		request.Customer = &hera.MakeVoiceCallRequest_CustomerNumber{
 			CustomerNumber: &hera.CustomerNumber{
 				Number:   customer.PhoneNumber.Number,
-				Provider: customer.PhoneNumber.Provider,
+				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
 			},
 		}
 	}

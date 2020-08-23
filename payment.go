@@ -36,7 +36,7 @@ func (e *elarian) SendPayment(customer *Customer, params *PaymentRequest) (*hera
 		request.Customer = &hera.SendPaymentRequest_CustomerNumber{
 			CustomerNumber: &hera.CustomerNumber{
 				Number:   customer.PhoneNumber.Number,
-				Provider: customer.PhoneNumber.Provider,
+				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
 			},
 		}
 	}
@@ -69,7 +69,7 @@ func (e *elarian) CheckoutPayment(customer *Customer, params *PaymentRequest) (*
 		request.Customer = &hera.CheckoutPaymentRequest_CustomerNumber{
 			CustomerNumber: &hera.CustomerNumber{
 				Number:   customer.PhoneNumber.Number,
-				Provider: customer.PhoneNumber.Provider,
+				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
 			},
 		}
 	}

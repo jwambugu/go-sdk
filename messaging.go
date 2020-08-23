@@ -10,10 +10,13 @@ import (
 )
 
 type (
+	// MessagingChannel is an enum
+	MessagingChannel int32
+
 	// MessagingChannelNumber struct
 	MessagingChannelNumber struct {
-		Number  string                `json:"number"`
-		Channel hera.MessagingChannel `json:"channel"`
+		Number  string           `json:"number"`
+		Channel MessagingChannel `json:"channel"`
 	}
 
 	// Media defines the necessary attributes required to send a file as a message
@@ -75,6 +78,21 @@ type (
 	}
 )
 
+const (
+	// MessagingChannelUnspecified is a type of MessagingChannel
+	MessagingChannelUnspecified MessagingChannel = iota
+	// MessagingChannelGoogleRCS is a type of MessagingChannel
+	MessagingChannelGoogleRCS
+	// MessagingChannelFaceBookMessanger is a type of MessagingChannel
+	MessagingChannelFaceBookMessanger
+	// MessagingChannelSMS is a type of MessagingChannel
+	MessagingChannelSMS
+	// MessagingChannelTelegram is a type of MessagingChannel
+	MessagingChannelTelegram
+	// MessagingChannelWhatsapp is a type of MessagingChannel
+	MessagingChannelWhatsapp
+)
+
 func (e *elarian) SendMessage(customer *Customer, params *SendMessageRequest) (*hera.SendMessageReply, error) {
 	var request hera.SendMessageRequest
 
@@ -90,7 +108,7 @@ func (e *elarian) SendMessage(customer *Customer, params *SendMessageRequest) (*
 		request.Customer = &hera.SendMessageRequest_CustomerNumber{
 			CustomerNumber: &hera.CustomerNumber{
 				Number:   customer.PhoneNumber.Number,
-				Provider: customer.PhoneNumber.Provider,
+				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
 			},
 		}
 	}
@@ -142,7 +160,10 @@ func (e *elarian) SendMessage(customer *Customer, params *SendMessageRequest) (*
 		}
 	}
 
-	request.ChannelNumber = &hera.MessagingChannelNumber{}
+	request.ChannelNumber = &hera.MessagingChannelNumber{
+		Channel: hera.MessagingChannel(params.ChannelNumber.Channel),
+		Number:  params.ChannelNumber.Number,
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	return e.client.SendMessage(ctx, &request)
@@ -290,13 +311,13 @@ func (e *elarian) MessagingConsent(customer *Customer, params *MessagingConsentR
 		request.Customer = &hera.MessagingConsentRequest_CustomerNumber{
 			CustomerNumber: &hera.CustomerNumber{
 				Number:   customer.PhoneNumber.Number,
-				Provider: customer.PhoneNumber.Provider,
+				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
 			},
 		}
 	}
 	if !reflect.ValueOf(params.ChannelNumber).IsZero() {
 		request.ChannelNumber = &hera.MessagingChannelNumber{
-			Channel: params.ChannelNumber.Channel,
+			Channel: hera.MessagingChannel(params.ChannelNumber.Channel),
 			Number:  params.ChannelNumber.Number,
 		}
 	}

@@ -8,8 +8,29 @@ import (
 	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
 )
 
-func (e *elarian) SendWebhookResponse() (*hera.WebhookResponseReply, error) {
+type (
+	// USSDMenu struct
+	USSDMenu struct {
+		IsTerminal bool
+		Text       string
+	}
+	// WebhookRequest struct
+	WebhookRequest struct {
+		AppID     string
+		SessionID string
+		USSDMenu  USSDMenu
+	}
+)
+
+func (e *elarian) SendWebhookResponse(params *WebhookRequest) (*hera.WebhookResponseReply, error) {
 	var request hera.WebhookResponse
+	request.AppId = params.AppID
+	request.SessionId = params.SessionID
+	request.UssdMenu = &hera.UssdMenu{
+		IsTerminal: params.USSDMenu.IsTerminal,
+		Text:       params.USSDMenu.Text,
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	return e.client.SendWebhookResponse(ctx, &request)
@@ -36,6 +57,9 @@ func (e *elarian) StreamNotifications(appID string) (chan *hera.WebhookRequest, 
 			}
 			if err != nil {
 				errorChannel <- err
+				close(streamChannel)
+				close(errorChannel)
+				return
 			}
 			streamChannel <- in
 		}
