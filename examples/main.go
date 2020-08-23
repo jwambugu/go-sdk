@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	service, err := elarian.Initialize("api_key", true)
+	service, err := elarian.Initialize("api_key")
 	if err != nil {
 		log.Fatal(err)
 	}

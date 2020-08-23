@@ -1,4 +1,4 @@
-package elariango
+package elarian
 
 import (
 	"context"
@@ -24,7 +24,7 @@ type (
 	}
 )
 
-func (e *elarian) SendPayment(customer *Customer, params *PaymentRequest) (*hera.SendPaymentReply, error) {
+func (s *service) SendPayment(customer *Customer, params *PaymentRequest) (*hera.SendPaymentReply, error) {
 	var request hera.SendPaymentRequest
 
 	if customer.ID != "" {
@@ -54,10 +54,10 @@ func (e *elarian) SendPayment(customer *Customer, params *PaymentRequest) (*hera
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.SendPayment(ctx, &request)
+	return s.client.SendPayment(ctx, &request)
 }
 
-func (e *elarian) CheckoutPayment(customer *Customer, params *PaymentRequest) (*hera.CheckoutPaymentReply, error) {
+func (s *service) CheckoutPayment(customer *Customer, params *PaymentRequest) (*hera.CheckoutPaymentReply, error) {
 	var request hera.CheckoutPaymentRequest
 
 	if customer.ID != "" {
@@ -88,5 +88,5 @@ func (e *elarian) CheckoutPayment(customer *Customer, params *PaymentRequest) (*
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.CheckoutPayment(ctx, &request)
+	return s.client.CheckoutPayment(ctx, &request)
 }

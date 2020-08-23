@@ -17,29 +17,27 @@ Take a look at the [API docs here](http://docs.elarian.com).
 ## Usage
 
 ```go
-import elarian github.com/elarianltd/go-sdk
+import (
+    elarian elarian github.com/elarianltd/go-sdk
+)
 
 func main(){
-    client, err := elariango.Initialize("api_key", true);
+    client, err := elarian.Initialize("api_key");
     if err != nil {
         log.Fatal(err)
     }
-    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-    defer cancel()
-    res, err := client.GetCustomerState(
-        ctx,
-        &elarian.GetCustomerStateRequest{
-            AppId: "app_id",
-            Customer: &elarian.GetCustomerStateRequest_CustomerId{
-            CustomerId: "customer_id",
-        },
-    })
+    var customer elarian.Customer
+    customer.ID = "customer_id"
+
+    var request elarian.CustomerStateRequest
+    request.AppID = "app_id"
+
+    response, err := client.GetCustomerState(&customer, &request)
     if err != nil {
         log.Fatalf("could not get customer state %v", err)
     }
-    log.Printf("customer state %v", res.GetData())
+    log.Printf("customer state %v", response)
 }
-
 ```
 
 ## Methods

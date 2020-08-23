@@ -10,7 +10,7 @@ import (
 )
 
 func Test_GetCustomerState(t *testing.T) {
-	service, err := elarian.Initialize(APIKey, true)
+	service, err := elarian.Initialize(APIKey)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func Test_GetCustomerState(t *testing.T) {
 }
 
 func Test_AddCustomerReminder(t *testing.T) {
-	service, err := elarian.Initialize(APIKey, true)
+	service, err := elarian.Initialize(APIKey)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -1,4 +1,4 @@
-package elariango
+package elarian
 
 import (
 	"context"
@@ -93,7 +93,7 @@ const (
 	MessagingChannelWhatsapp
 )
 
-func (e *elarian) SendMessage(customer *Customer, params *SendMessageRequest) (*hera.SendMessageReply, error) {
+func (s *service) SendMessage(customer *Customer, params *SendMessageRequest) (*hera.SendMessageReply, error) {
 	var request hera.SendMessageRequest
 
 	request.AppId = params.AppID
@@ -166,10 +166,10 @@ func (e *elarian) SendMessage(customer *Customer, params *SendMessageRequest) (*
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.SendMessage(ctx, &request)
+	return s.client.SendMessage(ctx, &request)
 }
 
-func (e *elarian) SendMessageByTag(params *SendMessageByTagRequest) (*hera.TagCommandReply, error) {
+func (s *service) SendMessageByTag(params *SendMessageByTagRequest) (*hera.TagCommandReply, error) {
 	var request hera.SendMessageTagRequest
 
 	request.AppId = params.AppID
@@ -233,10 +233,10 @@ func (e *elarian) SendMessageByTag(params *SendMessageByTagRequest) (*hera.TagCo
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.SendMessageByTag(ctx, &request)
+	return s.client.SendMessageByTag(ctx, &request)
 }
 
-func (e *elarian) ReplyToMessage(customer *Customer, params *ReplyToMessageRequest) (*hera.SendMessageReply, error) {
+func (s *service) ReplyToMessage(customer *Customer, params *ReplyToMessageRequest) (*hera.SendMessageReply, error) {
 	var request hera.ReplyToMessageRequest
 	request.AppId = params.AppID
 	request.ProductId = params.ProductID
@@ -293,10 +293,10 @@ func (e *elarian) ReplyToMessage(customer *Customer, params *ReplyToMessageReque
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.ReplyToMessage(ctx, &request)
+	return s.client.ReplyToMessage(ctx, &request)
 }
 
-func (e *elarian) MessagingConsent(customer *Customer, params *MessagingConsentRequest) (*hera.MessagingConsentReply, error) {
+func (s *service) MessagingConsent(customer *Customer, params *MessagingConsentRequest) (*hera.MessagingConsentReply, error) {
 	var request hera.MessagingConsentRequest
 	request.AppId = params.AppID
 
@@ -323,5 +323,5 @@ func (e *elarian) MessagingConsent(customer *Customer, params *MessagingConsentR
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.MessagingConsent(ctx, &request)
+	return s.client.MessagingConsent(ctx, &request)
 }

@@ -6,7 +6,7 @@ import (
 	elarian "github.com/elarianltd/go-sdk"
 )
 
-func streamCustomerNotifications(service elarian.Elarian) {
+func streamCustomerNotifications(service elarian.Service) {
 	streamChan, errorChan := service.StreamNotifications("app_id")
 	err := <-errorChan
 	if err != nil {

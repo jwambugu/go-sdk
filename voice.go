@@ -1,4 +1,4 @@
-package elariango
+package elarian
 
 import (
 	"context"
@@ -22,7 +22,7 @@ type (
 	}
 )
 
-func (e *elarian) MakeVoiceCall(customer *Customer, params *VoiceCallRequest) (*hera.MakeVoiceCallReply, error) {
+func (s *service) MakeVoiceCall(customer *Customer, params *VoiceCallRequest) (*hera.MakeVoiceCallReply, error) {
 	var request hera.MakeVoiceCallRequest
 
 	if customer.ID != "" {
@@ -47,5 +47,5 @@ func (e *elarian) MakeVoiceCall(customer *Customer, params *VoiceCallRequest) (*
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.MakeVoiceCall(ctx, &request)
+	return s.client.MakeVoiceCall(ctx, &request)
 }

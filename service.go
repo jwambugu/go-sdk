@@ -1,4 +1,4 @@
-package elariango
+package elarian
 
 import (
 	"time"
@@ -28,8 +28,8 @@ type (
 		Amount       float64 `json:"amount"`
 	}
 
-	// Elarian interface exposes high level consumable elarian functionality
-	Elarian interface {
+	// Service interface exposes high level consumable elarian functionality
+	Service interface {
 		GetCustomerState(customer *Customer, params *CustomerStateRequest) (*hera.CustomerStateReplyData, error)
 		AdoptCustomerState(customer *Customer, otherCustomer *Customer, params *AdoptCustomerStateRequest) (*hera.UpdateCustomerStateReply, error)
 		AddCustomerReminder(customer *Customer, params *CustomerReminderRequest) (*hera.UpdateCustomerStateReply, error)
@@ -53,14 +53,15 @@ type (
 		ReplyToMessage(customer *Customer, params *ReplyToMessageRequest) (*hera.SendMessageReply, error)
 		MessagingConsent(customer *Customer, params *MessagingConsentRequest) (*hera.MessagingConsentReply, error)
 	}
-	elarian struct {
+
+	service struct {
 		client hera.GrpcWebServiceClient
 	}
 )
 
 // NewService Creates a new Elarian service
-func NewService(client *hera.GrpcWebServiceClient) Elarian {
-	return &elarian{
+func NewService(client *hera.GrpcWebServiceClient) Service {
+	return &service{
 		client: *client,
 	}
 }

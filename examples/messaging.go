@@ -6,7 +6,7 @@ import (
 	elarian "github.com/elarianltd/go-sdk"
 )
 
-func sendMessage(client elarian.Elarian) {
+func sendMessage(client elarian.Service) {
 	var customer elarian.Customer
 	customer.PhoneNumber = elarian.PhoneNumber{
 		Number:   "customer_phone_number",

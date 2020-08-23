@@ -9,7 +9,7 @@ import (
 )
 
 func Test_SendMessage(t *testing.T) {
-	service, err := elarian.Initialize(APIKey, true)
+	service, err := elarian.Initialize(APIKey)
 	if err != nil {
 		log.Fatal(err)
 	}

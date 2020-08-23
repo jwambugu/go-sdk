@@ -1,4 +1,4 @@
-package elariango
+package elarian
 
 import (
 	"context"
@@ -22,7 +22,7 @@ type (
 	}
 )
 
-func (e *elarian) SendWebhookResponse(params *WebhookRequest) (*hera.WebhookResponseReply, error) {
+func (s *service) SendWebhookResponse(params *WebhookRequest) (*hera.WebhookResponseReply, error) {
 	var request hera.WebhookResponse
 	request.AppId = params.AppID
 	request.SessionId = params.SessionID
@@ -33,15 +33,15 @@ func (e *elarian) SendWebhookResponse(params *WebhookRequest) (*hera.WebhookResp
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.SendWebhookResponse(ctx, &request)
+	return s.client.SendWebhookResponse(ctx, &request)
 }
 
-func (e *elarian) StreamNotifications(appID string) (chan *hera.WebhookRequest, chan error) {
+func (s *service) StreamNotifications(appID string) (chan *hera.WebhookRequest, chan error) {
 	var request hera.StreamNotificationRequest
 	request.AppId = appID
 
 	ctx := context.Background()
-	stream, err := e.client.StreamNotifications(ctx, &request)
+	stream, err := s.client.StreamNotifications(ctx, &request)
 	streamChannel := make(chan *hera.WebhookRequest)
 	errorChannel := make(chan error)
 	if err != nil {

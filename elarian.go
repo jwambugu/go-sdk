@@ -1,4 +1,4 @@
-package elariango
+package elarian
 
 import (
 	"context"
@@ -12,45 +12,37 @@ import (
 )
 
 const (
-	productionHost = "api.elarian.com:443"
-	sandBoxHost    = "api.elarian.dev:443"
+	productionHost = "api.elarian.dev:443"
 )
 
 type (
-	elarianCredentials struct {
-		APIKey    string
-		AuthToken string
+	// Credentials options required to make a connection to the elarian server.
+	Credentials struct {
+		APIKey string
 	}
-	service struct {
-		options struct {
-			SandBox bool
-		}
-		credentials *elarianCredentials
+	rpcservice struct {
+		credentials *Credentials
 		tlsConfig   *tls.Config
 		keepAlive   keepalive.ClientParameters
 	}
 )
 
-func (c *elarianCredentials) GetRequestMetadata(context.Context, ...string) (map[string]string, error) {
+// GetRequestMetadata returns a map[string]string as another format of the Credentials above
+func (c *Credentials) GetRequestMetadata(context.Context, ...string) (map[string]string, error) {
 	return map[string]string{
-		"api-key":    c.APIKey,
-		"auth-token": c.AuthToken,
+		"api-key": c.APIKey,
 	}, nil
 }
 
-func (c *elarianCredentials) RequireTransportSecurity() bool {
+// RequireTransportSecurity returns a boolean as whether to enable transport layer security
+func (c *Credentials) RequireTransportSecurity() bool {
 	return true
 }
 
-func (s *service) connect() (hera.GrpcWebServiceClient, error) {
+func (s *rpcservice) connect() (hera.GrpcWebServiceClient, error) {
 	var host string
+	host = productionHost
 	var opts []grpc.DialOption
-
-	if s.options.SandBox {
-		host = sandBoxHost
-	} else {
-		host = productionHost
-	}
 
 	creds := credentials.NewTLS(s.tlsConfig)
 	opts = append(opts, grpc.WithTransportCredentials(creds))
@@ -66,10 +58,9 @@ func (s *service) connect() (hera.GrpcWebServiceClient, error) {
 	return client, nil
 }
 
-// Initialize creates a secure grpc connection with the elarian api and returns an elarian grpc web service client
-func Initialize(apikey string, sandbox bool) (Elarian, error) {
-	var elarianService service
-
+// Initialize creates a secure grpc connection with the elarian server and returns a Service
+func Initialize(apikey string) (Service, error) {
+	var elarianService rpcservice
 	elarianService.tlsConfig = &tls.Config{
 		InsecureSkipVerify: false,
 	}
@@ -78,15 +69,13 @@ func Initialize(apikey string, sandbox bool) (Elarian, error) {
 		Timeout:             time.Second,
 		PermitWithoutStream: true,
 	}
-	elarianService.credentials = &elarianCredentials{
-		APIKey:    apikey,
-		AuthToken: "",
+	elarianService.credentials = &Credentials{
+		APIKey: apikey,
 	}
-	elarianService.options.SandBox = sandbox
 
 	client, err := elarianService.connect()
 	if err != nil {
-		return &elarian{}, err
+		return &service{}, err
 	}
 	return NewService(&client), nil
 }

@@ -7,7 +7,7 @@ import (
 	elarian "github.com/elarianltd/go-sdk"
 )
 
-func getCustomerState(client elarian.Elarian) {
+func getCustomerState(client elarian.Service) {
 	var customer elarian.Customer
 	customer.ID = "customer_id"
 
@@ -21,7 +21,7 @@ func getCustomerState(client elarian.Elarian) {
 	log.Printf("customer state %v", response)
 }
 
-func addCustomerReminder(client elarian.Elarian) {
+func addCustomerReminder(client elarian.Service) {
 	var customer elarian.Customer
 	customer.ID = "customer_id"
 
@@ -41,7 +41,7 @@ func addCustomerReminder(client elarian.Elarian) {
 	log.Printf("response %v", response)
 }
 
-func adoptCustomerState(client elarian.Elarian) {
+func adoptCustomerState(client elarian.Service) {
 	var customer elarian.Customer
 	customer.ID = "customer_id"
 

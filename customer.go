@@ -1,4 +1,4 @@
-package elariango
+package elarian
 
 import (
 	"context"
@@ -123,7 +123,7 @@ const (
 	CustomerNumberProviderTelegram
 )
 
-func (e *elarian) GetCustomerState(customer *Customer, params *CustomerStateRequest) (*hera.CustomerStateReplyData, error) {
+func (s *service) GetCustomerState(customer *Customer, params *CustomerStateRequest) (*hera.CustomerStateReplyData, error) {
 	var request hera.GetCustomerStateRequest
 
 	if customer.ID != "" {
@@ -143,11 +143,11 @@ func (e *elarian) GetCustomerState(customer *Customer, params *CustomerStateRequ
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	result, err := e.client.GetCustomerState(ctx, &request)
+	result, err := s.client.GetCustomerState(ctx, &request)
 	return result.GetData(), err
 }
 
-func (e *elarian) AdoptCustomerState(customer *Customer, otherCustomer *Customer, params *AdoptCustomerStateRequest) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) AdoptCustomerState(customer *Customer, otherCustomer *Customer, params *AdoptCustomerStateRequest) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.AdoptCustomerStateRequest
 	request.AppId = params.AppID
 
@@ -168,10 +168,10 @@ func (e *elarian) AdoptCustomerState(customer *Customer, otherCustomer *Customer
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.AdoptCustomerState(ctx, &request)
+	return s.client.AdoptCustomerState(ctx, &request)
 }
 
-func (e *elarian) AddCustomerReminder(customer *Customer, params *CustomerReminderRequest) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) AddCustomerReminder(customer *Customer, params *CustomerReminderRequest) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.AddCustomerReminderRequest
 	request.AppId = params.AppID
 
@@ -199,10 +199,10 @@ func (e *elarian) AddCustomerReminder(customer *Customer, params *CustomerRemind
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.AddCustomerReminder(ctx, &request)
+	return s.client.AddCustomerReminder(ctx, &request)
 }
 
-func (e *elarian) AddCustomerReminderByTag(params *CustomerReminderByTagRequest) (*hera.TagCommandReply, error) {
+func (s *service) AddCustomerReminderByTag(params *CustomerReminderByTagRequest) (*hera.TagCommandReply, error) {
 	var request hera.AddCustomerReminderTagRequest
 	request.AppId = params.AppID
 	request.Tag = &hera.IndexMapping{
@@ -222,10 +222,10 @@ func (e *elarian) AddCustomerReminderByTag(params *CustomerReminderByTagRequest)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.AddCustomerReminderByTag(ctx, &request)
+	return s.client.AddCustomerReminderByTag(ctx, &request)
 }
 
-func (e *elarian) CancelCustomerReminder(customer *Customer, params *CancelCustomerReminderRequest) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) CancelCustomerReminder(customer *Customer, params *CancelCustomerReminderRequest) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.CancelCustomerReminderRequest
 
 	if customer.ID != "" {
@@ -248,10 +248,10 @@ func (e *elarian) CancelCustomerReminder(customer *Customer, params *CancelCusto
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.CancelCustomerReminder(ctx, &request)
+	return s.client.CancelCustomerReminder(ctx, &request)
 }
 
-func (e *elarian) CancelCustomerReminderByTag(params *CancelCustomerReminderByTagRequest) (*hera.TagCommandReply, error) {
+func (s *service) CancelCustomerReminderByTag(params *CancelCustomerReminderByTagRequest) (*hera.TagCommandReply, error) {
 	var request hera.CancelCustomerReminderTagRequest
 
 	request.AppId = params.AppID
@@ -266,10 +266,10 @@ func (e *elarian) CancelCustomerReminderByTag(params *CancelCustomerReminderByTa
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.CancelCustomerReminderByTag(ctx, &request)
+	return s.client.CancelCustomerReminderByTag(ctx, &request)
 }
 
-func (e *elarian) UpdateCustomerTag(customer *Customer, params *UpdateCustomerTagRequest) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) UpdateCustomerTag(customer *Customer, params *UpdateCustomerTagRequest) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.UpdateCustomerTagRequest
 	var tags []*hera.CustomerIndex
 	request.AppId = params.AppID
@@ -303,10 +303,10 @@ func (e *elarian) UpdateCustomerTag(customer *Customer, params *UpdateCustomerTa
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.UpdateCustomerTag(ctx, &request)
+	return s.client.UpdateCustomerTag(ctx, &request)
 }
 
-func (e *elarian) DeleteCustomerTag(customer *Customer, params *DeleteCustomerTagRequest) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) DeleteCustomerTag(customer *Customer, params *DeleteCustomerTagRequest) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.DeleteCustomerTagRequest
 	request.Tags = []string{"hello"}
 	request.AppId = params.AppID
@@ -328,10 +328,10 @@ func (e *elarian) DeleteCustomerTag(customer *Customer, params *DeleteCustomerTa
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.DeleteCustomerTag(ctx, &request)
+	return s.client.DeleteCustomerTag(ctx, &request)
 }
 
-func (e *elarian) UpdateCustomerSecondaryID(customer *Customer, params *UpdateCustomerSecondaryIDRequest) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) UpdateCustomerSecondaryID(customer *Customer, params *UpdateCustomerSecondaryIDRequest) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.UpdateCustomerSecondaryIdRequest
 	var secondaryIDs []*hera.CustomerIndex
 
@@ -365,10 +365,10 @@ func (e *elarian) UpdateCustomerSecondaryID(customer *Customer, params *UpdateCu
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.UpdateCustomerSecondaryId(ctx, &request)
+	return s.client.UpdateCustomerSecondaryId(ctx, &request)
 }
 
-func (e *elarian) DeleteCustomerSecondaryID(customer *Customer, params *DeleteCustomerSecondaryIDRequest) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) DeleteCustomerSecondaryID(customer *Customer, params *DeleteCustomerSecondaryIDRequest) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.DeleteCustomerSecondaryIdRequest
 	var secondaryIDs []*hera.IndexMapping
 
@@ -399,10 +399,10 @@ func (e *elarian) DeleteCustomerSecondaryID(customer *Customer, params *DeleteCu
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.DeleteCustomerSecondaryId(ctx, &request)
+	return s.client.DeleteCustomerSecondaryId(ctx, &request)
 }
 
-func (e *elarian) UpdateCustomerMetaData(customer *Customer, params *UpdateCustomerMetadataRequest) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) UpdateCustomerMetaData(customer *Customer, params *UpdateCustomerMetadataRequest) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.UpdateCustomerMetadataRequest
 
 	if customer.ID != "" {
@@ -425,10 +425,10 @@ func (e *elarian) UpdateCustomerMetaData(customer *Customer, params *UpdateCusto
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.UpdateCustomerMetadata(ctx, &request)
+	return s.client.UpdateCustomerMetadata(ctx, &request)
 }
 
-func (e *elarian) DeleteCustomerMetaData(customer *Customer, params *DeleteCustomerMetadataRequest) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) DeleteCustomerMetaData(customer *Customer, params *DeleteCustomerMetadataRequest) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.DeleteCustomerMetadataRequest
 	request.AppId = params.AppID
 	request.Metadata = params.Metadata
@@ -449,5 +449,5 @@ func (e *elarian) DeleteCustomerMetaData(customer *Customer, params *DeleteCusto
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return e.client.DeleteCustomerMetadata(ctx, &request)
+	return s.client.DeleteCustomerMetadata(ctx, &request)
 }
