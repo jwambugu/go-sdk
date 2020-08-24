@@ -9,10 +9,13 @@ import (
 )
 
 type (
+	// PaymentChannel type
+	PaymentChannel int32
+
 	// PaymentChannelNumber defines a payment channel number
 	PaymentChannelNumber struct {
 		Number  string `json:"number"`
-		Channel hera.PaymentChannel
+		Channel PaymentChannel
 	}
 
 	// PaymentRequest defines arguments required to make a payment request
@@ -22,6 +25,13 @@ type (
 		Cash      Cash                 `json:"cash"`
 		Channel   PaymentChannelNumber `json:"channel"`
 	}
+)
+
+const (
+	// Unspecfied type of payment channel
+	Unspecfied PaymentChannel = iota
+	// Telco type of payment channel represets a telecommunication company such as safaricon
+	Telco
 )
 
 func (s *service) SendPayment(customer *Customer, params *PaymentRequest) (*hera.SendPaymentReply, error) {
@@ -41,7 +51,7 @@ func (s *service) SendPayment(customer *Customer, params *PaymentRequest) (*hera
 		}
 	}
 	request.ChannelNumber = &hera.PaymentChannelNumber{
-		Channel: params.Channel.Channel,
+		Channel: hera.PaymentChannel(params.Channel.Channel),
 		Number:  params.Channel.Number,
 	}
 	request.Value = &hera.Cash{
@@ -75,7 +85,7 @@ func (s *service) CheckoutPayment(customer *Customer, params *PaymentRequest) (*
 	}
 
 	request.ChannelNumber = &hera.PaymentChannelNumber{
-		Channel: params.Channel.Channel,
+		Channel: hera.PaymentChannel(params.Channel.Channel),
 		Number:  params.Channel.Number,
 	}
 	request.Value = &hera.Cash{

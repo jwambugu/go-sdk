@@ -9,17 +9,28 @@ import (
 )
 
 type (
-	voiceChannelNumber struct {
-		Channel hera.VoiceChannel `json:"channel"`
-		Number  string            `json:"number"`
+	// VoiceChannel type
+	VoiceChannel int32
+
+	// VoiceChannelNumber struct
+	VoiceChannelNumber struct {
+		Channel VoiceChannel `json:"channel"`
+		Number  string       `json:"number"`
 	}
 
 	// VoiceCallRequest struct defines the parameters required to make a voice call request.
 	VoiceCallRequest struct {
 		AppID     string             `json:"appId,omitempty"`
 		ProductID string             `json:"productId,omitempty"`
-		Channel   voiceChannelNumber `json:"channel,omitempty"`
+		Channel   VoiceChannelNumber `json:"channel,omitempty"`
 	}
+)
+
+const (
+	// VoiceChannelUnspecified is a type of a voice channel
+	VoiceChannelUnspecified VoiceChannel = iota
+	// VoiceChannelTelco is a type of voice channel
+	VoiceChannelTelco
 )
 
 func (s *service) MakeVoiceCall(customer *Customer, params *VoiceCallRequest) (*hera.MakeVoiceCallReply, error) {
@@ -39,7 +50,7 @@ func (s *service) MakeVoiceCall(customer *Customer, params *VoiceCallRequest) (*
 		}
 	}
 	request.ChannelNumber = &hera.VoiceChannelNumber{
-		Channel: params.Channel.Channel,
+		Channel: hera.VoiceChannel(params.Channel.Channel),
 		Number:  params.Channel.Number,
 	}
 	request.AppId = params.AppID

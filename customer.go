@@ -38,6 +38,21 @@ type (
 		AppID string `json:"appId,omitempty"`
 	}
 
+	// Reminder defines the composition of a reminder. The key is an identifier property. The payload is also a string.
+	Reminder struct {
+		ProductID  string    `json:"productId,omitempty"`
+		Expiration time.Time `json:"expiration,omitempty"`
+		Key        string    `json:"key,omitempty"`
+		Payload    string    `json:"payload,omitempty"`
+	}
+
+	// Tag defines a customer tag
+	Tag struct {
+		Key        string    `json:"key,omitempty"`
+		Value      string    `json:"value,omitempty"`
+		Expiration time.Time `json:"expiration"`
+	}
+
 	// AdoptCustomerStateRequest defines the arguments required to adopt the state of one customer to another. For the other customer a customer ID or customer phone Number are required.
 	AdoptCustomerStateRequest struct {
 		AppID string `json:"appId,omitempty"`
