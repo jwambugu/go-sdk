@@ -8,7 +8,7 @@ import (
 	elarian "github.com/elarianltd/go-sdk"
 )
 
-func Test_SendMessage(t *testing.T) {
+func Test_SendTextMessage(t *testing.T) {
 	service, err := elarian.Initialize(APIKey)
 	if err != nil {
 		log.Fatal(err)

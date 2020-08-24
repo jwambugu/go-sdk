@@ -2,6 +2,7 @@ package elarian
 
 import (
 	"context"
+	"log"
 	"reflect"
 	"time"
 
@@ -18,6 +19,12 @@ type (
 	PhoneNumber struct {
 		Number   string         `json:"number,omitempty"`
 		Provider NumberProvider `json:"provider,omitempty"`
+	}
+	// CustomerSecondaryID refers to an identifier that can be used on a customer that is unique to a customer and that is provided by you and not the elarian service
+	CustomerSecondaryID struct {
+		Key        string    `json:"key,omitempty"`
+		Value      string    `json:"value,omitempty"`
+		Expiration time.Time `json:"expiration"`
 	}
 
 	// Customer struct defines the paramters required to make any request involving a customer. Note: in every scenario either the ID or the phoneNumber is required but not  both unless otherwise specified
@@ -73,30 +80,19 @@ type (
 	// UpdateCustomerTagRequest defines the arguments required to update a customer's tags, you can add one or more tags
 	UpdateCustomerTagRequest struct {
 		AppID string `json:"appId,omitempty"`
-		Tags  []struct {
-			Key        string    `json:"key,omitempty"`
-			Value      string    `json:"value,omitempty"`
-			Expiration time.Time `json:"expiration"`
-		} `json:"tags"`
+		Tags  []Tag  `json:"tags"`
 	}
 
 	// UpdateCustomerSecondaryIDRequest defines the arguments required to update a customer's secondary IDs you can add one or more secondary IDs
 	UpdateCustomerSecondaryIDRequest struct {
-		AppID        string `json:"appId,omitempty"`
-		SecondaryIDs []struct {
-			Key        string    `json:"key,omitempty"`
-			Value      string    `json:"value,omitempty"`
-			Expiration time.Time `json:"expiration"`
-		} `json:"secondaryIds"`
+		AppID        string                `json:"appId,omitempty"`
+		SecondaryIDs []CustomerSecondaryID `json:"secondaryIds"`
 	}
 
 	// DeleteCustomerSecondaryIDRequest defines the arguments required to delete a customer's secondary Identifiers. You can provide one or more secondary IDs you want to delete
 	DeleteCustomerSecondaryIDRequest struct {
-		AppID        string `json:"appId,omitempty"`
-		SecondaryIDs []struct {
-			Key   string `json:"key,omitempty"`
-			Value string `json:"value,omitempty"`
-		} `json:"secondaryIds"`
+		AppID        string                `json:"appId,omitempty"`
+		SecondaryIDs []CustomerSecondaryID `json:"secondaryIds"`
 	}
 
 	// UpdateCustomerMetadataRequest defines the arguments required to update a customer's metadata
@@ -150,7 +146,6 @@ func (s *service) GetCustomerState(customer *Customer, params *CustomerStateRequ
 func (s *service) AdoptCustomerState(customer *Customer, otherCustomer *Customer, params *AdoptCustomerStateRequest) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.AdoptCustomerStateRequest
 	request.AppId = params.AppID
-
 	request.CustomerId = customer.ID
 
 	if otherCustomer.ID != "" {
@@ -158,7 +153,7 @@ func (s *service) AdoptCustomerState(customer *Customer, otherCustomer *Customer
 			OtherCustomerId: otherCustomer.ID,
 		}
 	}
-	if otherCustomer.PhoneNumber.Number != "" {
+	if !reflect.ValueOf(otherCustomer.PhoneNumber).IsZero() {
 		request.OtherCustomer = &hera.AdoptCustomerStateRequest_OtherCustomerNumber{
 			OtherCustomerNumber: &hera.CustomerNumber{
 				Number:   otherCustomer.PhoneNumber.Number,
@@ -166,6 +161,7 @@ func (s *service) AdoptCustomerState(customer *Customer, otherCustomer *Customer
 			},
 		}
 	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	return s.client.AdoptCustomerState(ctx, &request)
@@ -396,6 +392,7 @@ func (s *service) DeleteCustomerSecondaryID(customer *Customer, params *DeleteCu
 	}
 	request.AppId = params.AppID
 	request.SecondaryIds = secondaryIDs
+	log.Println(request.SecondaryIds)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

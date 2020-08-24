@@ -60,20 +60,20 @@ func (s *rpcservice) connect() (hera.GrpcWebServiceClient, error) {
 
 // Initialize creates a secure grpc connection with the elarian server and returns a Service
 func Initialize(apikey string) (Service, error) {
-	var elarianService rpcservice
-	elarianService.tlsConfig = &tls.Config{
+	var rpc rpcservice
+	rpc.tlsConfig = &tls.Config{
 		InsecureSkipVerify: false,
 	}
-	elarianService.keepAlive = keepalive.ClientParameters{
+	rpc.keepAlive = keepalive.ClientParameters{
 		Time:                10 * time.Second,
 		Timeout:             time.Second,
 		PermitWithoutStream: true,
 	}
-	elarianService.credentials = &Credentials{
+	rpc.credentials = &Credentials{
 		APIKey: apikey,
 	}
 
-	client, err := elarianService.connect()
+	client, err := rpc.connect()
 	if err != nil {
 		return &service{}, err
 	}

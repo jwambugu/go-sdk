@@ -18,8 +18,9 @@ type (
 
 	// Tag defines a customer tag
 	Tag struct {
-		Key   string `json:"key,omitempty"`
-		Value string `json:"value,omitempty"`
+		Key        string    `json:"key,omitempty"`
+		Value      string    `json:"value,omitempty"`
+		Expiration time.Time `json:"expiration"`
 	}
 
 	// Cash defines a cash object
