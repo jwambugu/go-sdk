@@ -1,4 +1,4 @@
-run_examples:
+run:
 	cd examples
 	go run .
 

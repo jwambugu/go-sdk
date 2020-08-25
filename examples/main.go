@@ -7,12 +7,23 @@ import (
 	elarian "github.com/elarianltd/go-sdk"
 )
 
+type (
+	receiver func(service elarian.Service)
+)
+
 func main() {
 	service, err := elarian.Initialize("api_key")
 	if err != nil {
 		log.Fatal(err)
 	}
-	sendMessage(service)
-	getCustomerState(service)
-	addCustomerReminder(service)
+	receivers := []receiver{
+		sendMessage,
+		getCustomerState,
+		getAuthToken,
+		streamCustomerNotifications,
+		addCustomerReminder,
+	}
+	for _, receiver := range receivers {
+		receiver(service)
+	}
 }

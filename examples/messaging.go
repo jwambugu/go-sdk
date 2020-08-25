@@ -6,7 +6,7 @@ import (
 	elarian "github.com/elarianltd/go-sdk"
 )
 
-func sendMessage(client elarian.Service) {
+func sendMessage(service elarian.Service) {
 	var customer elarian.Customer
 	customer.PhoneNumber = elarian.PhoneNumber{
 		Number:   "customer_phone_number",
@@ -24,7 +24,7 @@ func sendMessage(client elarian.Service) {
 		Text: "Hello world",
 	}
 
-	response, err := client.SendMessage(&customer, &message)
+	response, err := service.SendMessage(&customer, &message)
 	if err != nil {
 		log.Fatalf("Could not send sms %v", err)
 	}
