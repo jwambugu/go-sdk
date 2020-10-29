@@ -13,6 +13,9 @@ type (
 	// MessagingChannel is an enum
 	MessagingChannel int32
 
+	// MessagingConsentAction is an enum
+	MessagingConsentAction int32
+
 	// MessagingChannelNumber struct
 	MessagingChannelNumber struct {
 		Number  string           `json:"number"`
@@ -47,16 +50,14 @@ type (
 
 	// SendMessageRequest struct
 	SendMessageRequest struct {
-		AppID         string                 `json:"appId,omitempty"`
-		ProductID     string                 `json:"productId,omitempty"`
+		AppId         string                 `json:"appId,omitempty"`
 		ChannelNumber MessagingChannelNumber `json:"channelNumber"`
 		Body          MessageBody            `json:"body"`
 	}
 
 	// SendMessageByTagRequest struct
 	SendMessageByTagRequest struct {
-		AppID         string                 `json:"appId,omitempty"`
-		ProductID     string                 `json:"productId,omitempty"`
+		AppId         string                 `json:"appId,omitempty"`
 		Tag           Tag                    `json:"tag"`
 		ChannelNumber MessagingChannelNumber `json:"channelNumber"`
 		Body          MessageBody            `json:"body"`
@@ -64,116 +65,117 @@ type (
 
 	// ReplyToMessageRequest struct
 	ReplyToMessageRequest struct {
-		AppID            string      `json:"appId,omitempty"`
-		ProductID        string      `json:"productId,omitempty"`
-		ReplyToMessageID string      `json:"customerId,omitempty"`
+		AppId            string      `json:"appId,omitempty"`
+		ReplyToMessageId string      `json:"customerId,omitempty"`
 		Body             MessageBody `json:"body"`
 	}
 
 	// MessagingConsentRequest struct
 	MessagingConsentRequest struct {
-		AppID         string                 `json:"appId,omitempty"`
-		ProductID     string                 `json:"productId,omitempty"`
+		AppId         string                 `json:"appId,omitempty"`
 		ChannelNumber MessagingChannelNumber `json:"channelNumber"`
+		Action        MessagingConsentAction `json:"consentAction"`
 	}
 )
 
 const (
-	// MessagingChannelUnspecified is a type of MessagingChannel
-	MessagingChannelUnspecified MessagingChannel = iota
-	// MessagingChannelGoogleRCS is a type of MessagingChannel
-	MessagingChannelGoogleRCS
-	// MessagingChannelFaceBookMessanger is a type of MessagingChannel
-	MessagingChannelFaceBookMessanger
-	// MessagingChannelSMS is a type of MessagingChannel
-	MessagingChannelSMS
-	// MessagingChannelTelegram is a type of MessagingChannel
-	MessagingChannelTelegram
-	// MessagingChannelWhatsapp is a type of MessagingChannel
-	MessagingChannelWhatsapp
+	MESSAGING_CHANNEL_UNSPECIFIED MessagingChannel = iota
+	MESSAGING_CHANNEL_GOOGLE_RCS
+	MESSAGING_CHANNEL_FB_MESSENGER
+	MESSAGING_CHANNEL_SMS
+	MESSAGING_CHANNEL_TELEGRAM
+	MESSAGING_CHANNEL_WHATSAPP
 )
+
+const (
+	MESSAGING_CONSENT_ACTION_UNSPECIFIED MessagingConsentAction = iota
+	MESSAGING_CONSENT_ACTION_OPT_IN
+	MESSAGING_CONSENT_ACTION_OPT_OUT
+)
+
+func (s *service) setMessageBodyAsText(text string) *hera.CustomerMessageBody_Text {
+	return &hera.CustomerMessageBody_Text{
+		Text: &hera.TextMessageBody{
+			Text: &wrapperspb.StringValue{
+				Value: text,
+			},
+		},
+	}
+}
+func (s *service) setMessageBodyAsTemplate(template *Template) *hera.CustomerMessageBody_Text {
+	return &hera.CustomerMessageBody_Text{
+		Text: &hera.TextMessageBody{
+			Template: &hera.TextMessageTemplate{
+				Name:   template.Name,
+				Params: template.Params,
+			},
+		},
+	}
+}
+func (s *service) setMessageBodyAsLocation(location *Location) *hera.CustomerMessageBody_Location {
+	return &hera.CustomerMessageBody_Location{
+		Location: &hera.LocationMessageBody{
+			Latitude:  location.Latitude,
+			Longitude: location.Longitude,
+		},
+	}
+}
+func (s *service) setMessageBodyAsMedia(media *Media) *hera.CustomerMessageBody_Media {
+	return &hera.CustomerMessageBody_Media{
+		Media: &hera.MediaMessageBody{
+			Url:   media.URL,
+			Media: media.Type,
+		},
+	}
+}
 
 func (s *service) SendMessage(customer *Customer, params *SendMessageRequest) (*hera.SendMessageReply, error) {
 	var request hera.SendMessageRequest
+	request.AppId = params.AppId
+	request.OrgId = s.orgId
 
-	request.AppId = params.AppID
-	request.ProductId = params.ProductID
-
-	if customer.ID != "" {
-		request.Customer = &hera.SendMessageRequest_CustomerId{
-			CustomerId: customer.ID,
-		}
+	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
+		request.CustomerNumber = s.setCustomerNumber(customer)
 	}
 	if !reflect.ValueOf(params.ChannelNumber).IsZero() {
-		request.Customer = &hera.SendMessageRequest_CustomerNumber{
-			CustomerNumber: &hera.CustomerNumber{
-				Number:   customer.PhoneNumber.Number,
-				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
-			},
+		request.ChannelNumber = &hera.MessagingChannelNumber{
+			Channel: hera.MessagingChannel(params.ChannelNumber.Channel),
+			Number:  params.ChannelNumber.Number,
 		}
 	}
 
 	if params.Body.Text != "" {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: &hera.CustomerMessageBody_Text{
-				Text: &hera.TextMessageBody{
-					Text: &wrapperspb.StringValue{
-						Value: params.Body.Text,
-					},
-				},
-			},
+			Entry: s.setMessageBodyAsText(params.Body.Text),
 		}
 	}
-
 	if !reflect.ValueOf(params.Body.Template).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: &hera.CustomerMessageBody_Text{
-				Text: &hera.TextMessageBody{
-					Template: &hera.TextMessageTemplate{
-						Name:   params.Body.Template.Name,
-						Params: params.Body.Template.Params,
-					},
-				},
-			},
+			Entry: s.setMessageBodyAsTemplate(&params.Body.Template),
 		}
 	}
-
 	if !reflect.ValueOf(params.Body.Location).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: &hera.CustomerMessageBody_Location{
-				Location: &hera.LocationMessageBody{
-					Latitude:  params.Body.Location.Latitude,
-					Longitude: params.Body.Location.Longitude,
-				},
-			},
+			Entry: s.setMessageBodyAsLocation(&params.Body.Location),
 		}
 	}
-
 	if !reflect.ValueOf(params.Body.Media).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: &hera.CustomerMessageBody_Media{
-				Media: &hera.MediaMessageBody{
-					Url:   params.Body.Media.URL,
-					Media: params.Body.Media.Type,
-				},
-			},
+			Entry: s.setMessageBodyAsMedia(&params.Body.Media),
 		}
 	}
 
-	request.ChannelNumber = &hera.MessagingChannelNumber{
-		Channel: hera.MessagingChannel(params.ChannelNumber.Channel),
-		Number:  params.ChannelNumber.Number,
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	return s.client.SendMessage(ctx, &request)
 }
 
-func (s *service) SendMessageByTag(params *SendMessageByTagRequest) (*hera.TagCommandReply, error) {
+func (s *service) SendMessageByTag(
+	params *SendMessageByTagRequest,
+) (*hera.TagCommandReply, error) {
 	var request hera.SendMessageTagRequest
-
-	request.AppId = params.AppID
-	request.ProductId = params.ProductID
+	request.AppId = params.AppId
+	request.OrgId = s.orgId
 
 	if !reflect.ValueOf(params.Tag).IsZero() {
 		request.Tag = &hera.IndexMapping{
@@ -186,48 +188,22 @@ func (s *service) SendMessageByTag(params *SendMessageByTagRequest) (*hera.TagCo
 
 	if params.Body.Text != "" {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: &hera.CustomerMessageBody_Text{
-				Text: &hera.TextMessageBody{
-					Text: &wrapperspb.StringValue{
-						Value: params.Body.Text,
-					},
-				},
-			},
+			Entry: s.setMessageBodyAsText(params.Body.Text),
 		}
 	}
-
 	if !reflect.ValueOf(params.Body.Template).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: &hera.CustomerMessageBody_Text{
-				Text: &hera.TextMessageBody{
-					Template: &hera.TextMessageTemplate{
-						Name:   params.Body.Template.Name,
-						Params: params.Body.Template.Params,
-					},
-				},
-			},
+			Entry: s.setMessageBodyAsTemplate(&params.Body.Template),
 		}
 	}
-
 	if !reflect.ValueOf(params.Body.Location).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: &hera.CustomerMessageBody_Location{
-				Location: &hera.LocationMessageBody{
-					Latitude:  params.Body.Location.Latitude,
-					Longitude: params.Body.Location.Longitude,
-				},
-			},
+			Entry: s.setMessageBodyAsLocation(&params.Body.Location),
 		}
 	}
-
 	if !reflect.ValueOf(params.Body.Media).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: &hera.CustomerMessageBody_Media{
-				Media: &hera.MediaMessageBody{
-					Url:   params.Body.Media.URL,
-					Media: params.Body.Media.Type,
-				},
-			},
+			Entry: s.setMessageBodyAsMedia(&params.Body.Media),
 		}
 	}
 
@@ -238,56 +214,29 @@ func (s *service) SendMessageByTag(params *SendMessageByTagRequest) (*hera.TagCo
 
 func (s *service) ReplyToMessage(customer *Customer, params *ReplyToMessageRequest) (*hera.SendMessageReply, error) {
 	var request hera.ReplyToMessageRequest
-	request.AppId = params.AppID
-	request.ProductId = params.ProductID
-	request.CustomerId = customer.ID
-	request.ReplyToMessageId = params.ReplyToMessageID
-	request.Body = &hera.CustomerMessageBody{}
+	request.AppId = params.AppId
+	request.OrgId = s.orgId
+	request.CustomerId = customer.Id
+	request.ReplyToMessageId = params.ReplyToMessageId
 
 	if params.Body.Text != "" {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: &hera.CustomerMessageBody_Text{
-				Text: &hera.TextMessageBody{
-					Text: &wrapperspb.StringValue{
-						Value: params.Body.Text,
-					},
-				},
-			},
+			Entry: s.setMessageBodyAsText(params.Body.Text),
 		}
 	}
-
 	if !reflect.ValueOf(params.Body.Template).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: &hera.CustomerMessageBody_Text{
-				Text: &hera.TextMessageBody{
-					Template: &hera.TextMessageTemplate{
-						Name:   params.Body.Template.Name,
-						Params: params.Body.Template.Params,
-					},
-				},
-			},
+			Entry: s.setMessageBodyAsTemplate(&params.Body.Template),
 		}
 	}
-
 	if !reflect.ValueOf(params.Body.Location).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: &hera.CustomerMessageBody_Location{
-				Location: &hera.LocationMessageBody{
-					Latitude:  params.Body.Location.Latitude,
-					Longitude: params.Body.Location.Longitude,
-				},
-			},
+			Entry: s.setMessageBodyAsLocation(&params.Body.Location),
 		}
 	}
-
 	if !reflect.ValueOf(params.Body.Media).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: &hera.CustomerMessageBody_Media{
-				Media: &hera.MediaMessageBody{
-					Url:   params.Body.Media.URL,
-					Media: params.Body.Media.Type,
-				},
-			},
+			Entry: s.setMessageBodyAsMedia(&params.Body.Media),
 		}
 	}
 
@@ -298,22 +247,9 @@ func (s *service) ReplyToMessage(customer *Customer, params *ReplyToMessageReque
 
 func (s *service) MessagingConsent(customer *Customer, params *MessagingConsentRequest) (*hera.MessagingConsentReply, error) {
 	var request hera.MessagingConsentRequest
-	request.AppId = params.AppID
 
-	request.Action = hera.MessagingConsentAction_MESSAGING_CONSENT_ACTION_OPT_IN
-
-	if customer.ID != "" {
-		request.Customer = &hera.MessagingConsentRequest_CustomerId{
-			CustomerId: customer.ID,
-		}
-	}
-	if !reflect.ValueOf(params.ChannelNumber).IsZero() {
-		request.Customer = &hera.MessagingConsentRequest_CustomerNumber{
-			CustomerNumber: &hera.CustomerNumber{
-				Number:   customer.PhoneNumber.Number,
-				Provider: hera.CustomerNumberProvider(customer.PhoneNumber.Provider),
-			},
-		}
+	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
+		request.CustomerNumber = s.setCustomerNumber(customer)
 	}
 	if !reflect.ValueOf(params.ChannelNumber).IsZero() {
 		request.ChannelNumber = &hera.MessagingChannelNumber{
@@ -321,7 +257,18 @@ func (s *service) MessagingConsent(customer *Customer, params *MessagingConsentR
 			Number:  params.ChannelNumber.Number,
 		}
 	}
+	request.Action = hera.MessagingConsentAction(params.Action)
+	request.AppId = params.AppId
+	request.OrgId = s.orgId
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	return s.client.MessagingConsent(ctx, &request)
+}
+
+// SendMessage sends a messsage to a customer
+func (c *Customer) SendMessage(
+	params *SendMessageRequest,
+) (*hera.SendMessageReply, error) {
+	return c.service.SendMessage(c, params)
 }

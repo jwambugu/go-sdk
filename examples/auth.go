@@ -7,7 +7,7 @@ import (
 )
 
 func getAuthToken(service elarian.Service) {
-	response, err := service.GetAuthToken("app_id")
+	response, err := service.GetAuthToken()
 	if err != nil {
 		log.Fatalf("could not get an auth token %v", err)
 	}

@@ -9,12 +9,14 @@ import (
 
 func getCustomerState(client elarian.Service) {
 	var customer elarian.Customer
-	customer.ID = "customer_id"
+	customer.Id = "customer_id"
 
-	var request elarian.CustomerStateRequest
-	request.AppID = "app_id"
+	response, err := client.GetCustomerState(&customer)
 
-	response, err := client.GetCustomerState(&customer, &request)
+	calvin, err := client.NewCustomer(&elarian.CreateCustomerParams{Id: ""})
+	res, err := calvin.GetState()
+	log.Println(res)
+
 	if err != nil {
 		log.Fatalf("could not get customer state %v", err)
 	}
@@ -23,15 +25,13 @@ func getCustomerState(client elarian.Service) {
 
 func addCustomerReminder(client elarian.Service) {
 	var customer elarian.Customer
-	customer.ID = "customer_id"
+	customer.Id = "customer_id"
 
 	var request elarian.CustomerReminderRequest
-	request.AppID = "app_id"
 	request.Reminder = elarian.Reminder{
 		Key:        "reminder_key",
 		Expiration: time.Now().Add(time.Minute + 1),
 		Payload:    "I am a reminder",
-		ProductID:  "product_id",
 	}
 
 	response, err := client.AddCustomerReminder(&customer, &request)
@@ -43,18 +43,14 @@ func addCustomerReminder(client elarian.Service) {
 
 func adoptCustomerState(client elarian.Service) {
 	var customer elarian.Customer
-	customer.ID = "customer_id"
+	customer.Id = "customer_id"
 
 	var otherCustomer elarian.Customer
-	otherCustomer.ID = "otherCustomer_id"
-
-	var request elarian.AdoptCustomerStateRequest
-	request.AppID = "app_id"
+	otherCustomer.Id = "otherCustomer_id"
 
 	response, err := client.AdoptCustomerState(
 		&customer,
 		&otherCustomer,
-		&request,
 	)
 
 	if err != nil {

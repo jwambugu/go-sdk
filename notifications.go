@@ -2,67 +2,105 @@ package elarian
 
 import (
 	"context"
+	"errors"
 	"io"
-	"time"
+	"reflect"
 
 	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
 )
 
 type (
-	// USSDMenu struct
-	USSDMenu struct {
-		IsTerminal bool
-		Text       string
-	}
-	// WebhookRequest struct
-	WebhookRequest struct {
-		AppID     string
-		SessionID string
-		USSDMenu  USSDMenu
-	}
+	ElarianEvent int32
 )
 
-func (s *service) SendWebhookResponse(params *WebhookRequest) (*hera.WebhookResponseReply, error) {
-	var request hera.WebhookResponse
-	request.AppId = params.AppID
-	request.SessionId = params.SessionID
-	request.UssdMenu = &hera.UssdMenu{
-		IsTerminal: params.USSDMenu.IsTerminal,
-		Text:       params.USSDMenu.Text,
-	}
+const (
+	ElarianReminderEvent ElarianEvent = iota
+	ElarianVoiceCallEvent
+	ElarianUSSDSessionEvent
+	ElarianPaymentStatusEvent
+	ElarianMessageStatusEvent
+	ElarianReceivedMessageEvent
+	ElarianReceivedPaymentEvent
+	ElarianWalletPaymentStatusEvent
+	ElarianMessagingSessionStatusEvent
+	ElarianMessagingConsentStatusEvent
+)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	return s.client.SendWebhookResponse(ctx, &request)
+func (s *service) AddNotificationSubscriber(
+	event ElarianEvent,
+	handler func(data interface{}, customer *Customer),
+) error {
+	err := s.bus.SubscribeAsync(string(event), handler, false)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (s *service) StreamNotifications(appID string) (chan *hera.WebhookRequest, chan error) {
+func (s *service) RemoveNotificationSubscriber(
+	event ElarianEvent,
+	handler func(data interface{}, customer *Customer),
+) error {
+	err := s.bus.Unsubscribe(string(event), handler)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *service) notificationsHandler(data *hera.WebhookRequest) {
+	if ussdSession := data.GetUssdSession(); !reflect.ValueOf(ussdSession).IsZero() {
+		newCustomer, _ := s.NewCustomer(&CreateCustomerParams{
+			Id: ussdSession.CustomerId,
+		})
+		session := &USSDSessionNotification{
+			SessionId:  ussdSession.SessionId,
+			CustomerId: ussdSession.CustomerId,
+			Input:      ussdSession.Input.Value,
+			CustomerNumber: &CustomerNumber{
+				Number:    ussdSession.CustomerNumber.Number,
+				Partition: ussdSession.CustomerNumber.Partition.Value,
+				Provider:  NumberProvider(ussdSession.CustomerNumber.Provider),
+			},
+			ChannelNumber: USSDChannelNumber{
+				Channel: USSDChannel(ussdSession.ChannelNumber.Channel),
+				Number:  ussdSession.ChannelNumber.Number,
+			},
+		}
+		s.bus.Publish(string(ElarianUSSDSessionEvent), session, newCustomer)
+	}
+}
+
+func (s *service) InitializeNotificationStream(appId string) error {
 	var request hera.StreamNotificationRequest
-	request.AppId = appID
+	request.AppId = appId
+	request.OrgId = s.orgId
 
 	ctx := context.Background()
 	stream, err := s.client.StreamNotifications(ctx, &request)
-	streamChannel := make(chan *hera.WebhookRequest)
 	errorChannel := make(chan error)
 	if err != nil {
-		return streamChannel, errorChannel
+		return err
 	}
 	go func() {
 		for {
 			in, err := stream.Recv()
-			if err == io.EOF {
-				close(streamChannel)
+			if errors.Is(err, io.EOF) {
 				close(errorChannel)
 				return
+
 			}
 			if err != nil {
 				errorChannel <- err
-				close(streamChannel)
 				close(errorChannel)
 				return
 			}
-			streamChannel <- in
+			s.notificationsHandler(in)
 		}
 	}()
-	return streamChannel, nil
+	err = <-errorChannel
+	if err != nil {
+		return err
+	}
+	return nil
 }

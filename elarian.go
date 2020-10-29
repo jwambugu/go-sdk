@@ -11,10 +11,6 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
-const (
-	productionHost = "api.elarian.dev:443"
-)
-
 type (
 	// Credentials options required to make a connection to the elarian server.
 	Credentials struct {
@@ -40,8 +36,6 @@ func (c *Credentials) RequireTransportSecurity() bool {
 }
 
 func (s *rpcservice) connect() (hera.GrpcWebServiceClient, error) {
-	var host string
-	host = productionHost
 	var opts []grpc.DialOption
 
 	creds := credentials.NewTLS(s.tlsConfig)
@@ -50,7 +44,7 @@ func (s *rpcservice) connect() (hera.GrpcWebServiceClient, error) {
 	opts = append(opts, grpc.WithKeepaliveParams(s.keepAlive))
 	opts = append(opts, grpc.WithBlock())
 
-	channel, err := grpc.Dial(host, opts...)
+	channel, err := grpc.Dial("api.elarian.dev:443", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +53,7 @@ func (s *rpcservice) connect() (hera.GrpcWebServiceClient, error) {
 }
 
 // Initialize creates a secure grpc connection with the elarian server and returns a Service
-func Initialize(apikey string) (Service, error) {
+func Initialize(apikey, orgId string) (Service, error) {
 	var rpc rpcservice
 	rpc.tlsConfig = &tls.Config{
 		InsecureSkipVerify: false,
@@ -77,5 +71,5 @@ func Initialize(apikey string) (Service, error) {
 	if err != nil {
 		return &service{}, err
 	}
-	return NewService(&client), nil
+	return NewService(&client, orgId), nil
 }

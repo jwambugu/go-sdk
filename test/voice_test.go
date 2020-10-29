@@ -8,21 +8,22 @@ import (
 )
 
 func Test_Voice(t *testing.T) {
-	service, err := elarian.Initialize(APIKey)
+	service, err := elarian.Initialize(APIKey, OrgId)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var customer elarian.Customer
-	customer.PhoneNumber = elarian.PhoneNumber{
+	customer.CustomerNumber = elarian.CustomerNumber{
 		Number:   "+254712876967",
-		Provider: elarian.CustomerNumberProviderTelco,
+		Provider: elarian.CUSTOMER_NUMBER_PROVIDER_TELCO,
 	}
+
 	t.Run("It should make a voice call", func(t *testing.T) {
 		var request elarian.VoiceCallRequest
-		request.AppID = AppID
-		request.ProductID = ProductID
+		request.AppId = AppId
+
 		request.Channel = elarian.VoiceChannelNumber{
-			Channel: elarian.VoiceChannelTelco,
+			Channel: elarian.VOICE_CHANNEL_TELCO,
 			Number:  "+245712876967",
 		}
 

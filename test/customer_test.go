@@ -9,22 +9,19 @@ import (
 )
 
 func Test_Customer(t *testing.T) {
-	service, err := elarian.Initialize(APIKey)
+	service, err := elarian.Initialize(APIKey, OrgId)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var customer elarian.Customer
-	customer.ID = "el_cst_c617c20cec9b52bf7698ea58695fb8bc"
-	customer.PhoneNumber = elarian.PhoneNumber{
+	customer.Id = "el_cst_c617c20cec9b52bf7698ea58695fb8bc"
+	customer.CustomerNumber = elarian.CustomerNumber{
 		Number:   "+254712876967",
-		Provider: elarian.CustomerNumberProviderTelco,
+		Provider: elarian.CUSTOMER_NUMBER_PROVIDER_TELCO,
 	}
 
 	t.Run("It Should get customer state", func(t *testing.T) {
-		var request elarian.CustomerStateRequest
-		request.AppID = AppID
-
-		response, err := service.GetCustomerState(&customer, &request)
+		response, err := service.GetCustomerState(&customer)
 		if err != nil {
 			t.Errorf("Error %v", err)
 		}
@@ -36,16 +33,14 @@ func Test_Customer(t *testing.T) {
 
 	t.Run("It should adopt customer state", func(t *testing.T) {
 		var otherCustomer elarian.Customer
-		otherCustomer.PhoneNumber = elarian.PhoneNumber{
+		otherCustomer.CustomerNumber = elarian.CustomerNumber{
 			Number:   "+254711276275",
-			Provider: elarian.CustomerNumberProviderTelco,
+			Provider: elarian.CUSTOMER_NUMBER_PROVIDER_TELCO,
 		}
-		var request elarian.AdoptCustomerStateRequest
-		request.AppID = AppID
+
 		response, err := service.AdoptCustomerState(
 			&customer,
 			&otherCustomer,
-			&request,
 		)
 		if err != nil {
 			t.Errorf("Error %v", err)
@@ -61,11 +56,10 @@ func Test_Customer(t *testing.T) {
 
 	t.Run("It should add a customer reminder", func(t *testing.T) {
 		var request elarian.CustomerReminderRequest
-		request.AppID = AppID
 		request.Reminder = elarian.Reminder{
 			Key:        "reminder_key",
 			Expiration: time.Now().Add(time.Minute + 1),
-			ProductID:  ProductID,
+			Interval:   int64(2 * time.Second),
 			Payload:    "i am a reminder",
 		}
 
@@ -81,7 +75,6 @@ func Test_Customer(t *testing.T) {
 
 	t.Run("It should add a customer reminder by tag", func(t *testing.T) {
 		var request elarian.CustomerReminderByTagRequest
-		request.AppID = AppID
 		request.Tag = elarian.Tag{
 			Key:   "some key",
 			Value: "some value",
@@ -89,7 +82,7 @@ func Test_Customer(t *testing.T) {
 		request.Reminder = elarian.Reminder{
 			Key:        "reminder_key",
 			Expiration: time.Now().Add(time.Minute + 1),
-			ProductID:  ProductID,
+			Interval:   int64(2 * time.Second),
 			Payload:    "i am a reminder",
 		}
 
@@ -98,7 +91,7 @@ func Test_Customer(t *testing.T) {
 			t.Errorf("Error %v", err)
 		}
 		if reflect.ValueOf(response.WorkId).IsZero() {
-			t.Errorf("Expecred a WorkID but didn't get any")
+			t.Errorf("Expecred a WorkId but didn't get any")
 		}
 		if response.Description == "" {
 			t.Errorf("Expected a description but didn't get any")
@@ -108,13 +101,12 @@ func Test_Customer(t *testing.T) {
 
 	t.Run("It should cancel a customer reminder", func(t *testing.T) {
 		var reminderRequest elarian.CustomerReminderRequest
-		reminderRequest.AppID = AppID
 		reminderRequest.Reminder = elarian.Reminder{
 			Key:        "reminder_key",
 			Expiration: time.Now().Add(time.Minute + 1),
-			ProductID:  ProductID,
 			Payload:    "i am a reminder",
 		}
+
 		response, err := service.AddCustomerReminder(&customer, &reminderRequest)
 		if err != nil {
 			t.Errorf("Error %v", err)
@@ -125,9 +117,8 @@ func Test_Customer(t *testing.T) {
 		t.Logf("response %v", response)
 
 		var cancelReminderRequest elarian.CancelCustomerReminderRequest
-		cancelReminderRequest.AppID = AppID
+		cancelReminderRequest.AppId = AppId
 		cancelReminderRequest.Key = "reminder_key"
-		cancelReminderRequest.ProductID = ProductID
 
 		res, err := service.CancelCustomerReminder(&customer, &cancelReminderRequest)
 		if err != nil {
@@ -141,7 +132,6 @@ func Test_Customer(t *testing.T) {
 
 	t.Run("It should cancel a customer reminder by tag", func(t *testing.T) {
 		var reminderRequest elarian.CustomerReminderByTagRequest
-		reminderRequest.AppID = AppID
 		reminderRequest.Tag = elarian.Tag{
 			Key:   "tag_key",
 			Value: "i am a value",
@@ -149,7 +139,6 @@ func Test_Customer(t *testing.T) {
 		reminderRequest.Reminder = elarian.Reminder{
 			Key:        "reminder_key",
 			Expiration: time.Now().Add(time.Minute + 1),
-			ProductID:  ProductID,
 			Payload:    "i am a reminder",
 		}
 		response, err := service.AddCustomerReminderByTag(&reminderRequest)
@@ -157,7 +146,7 @@ func Test_Customer(t *testing.T) {
 			t.Errorf("Error %v", err)
 		}
 		if reflect.ValueOf(response.WorkId).IsZero() {
-			t.Errorf("Expecred a WorkID but didn't get any")
+			t.Errorf("Expecred a WorkId but didn't get any")
 		}
 		if response.Description == "" {
 			t.Errorf("Expected a description but didn't get any")
@@ -165,9 +154,8 @@ func Test_Customer(t *testing.T) {
 		t.Logf("response %v", response)
 
 		var cancelReminderRequest elarian.CancelCustomerReminderByTagRequest
-		cancelReminderRequest.AppID = AppID
+		cancelReminderRequest.AppId = AppId
 		cancelReminderRequest.Key = "reminder_key"
-		cancelReminderRequest.ProductID = ProductID
 		cancelReminderRequest.Tag = elarian.Tag{
 			Key:   "tag_key",
 			Value: "i am a value",
@@ -184,7 +172,7 @@ func Test_Customer(t *testing.T) {
 
 	t.Run("It should update a customer's tags", func(t *testing.T) {
 		var request elarian.UpdateCustomerTagRequest
-		request.AppID = AppID
+		request.OrgId = OrgId
 		request.Tags = []elarian.Tag{
 			{
 				Key:        "new_tag",
@@ -204,8 +192,7 @@ func Test_Customer(t *testing.T) {
 
 	t.Run("It should delete a customer's tags", func(t *testing.T) {
 		var request elarian.DeleteCustomerTagRequest
-		request.AppID = AppID
-		request.Tags = []string{"new_tag"}
+		request.Keys = []string{"new_tag"}
 		res, err := service.DeleteCustomerTag(&customer, &request)
 		if err != nil {
 			t.Errorf("Error %v", err)
@@ -217,16 +204,16 @@ func Test_Customer(t *testing.T) {
 	})
 
 	t.Run("It should update a customer's secondary ids", func(t *testing.T) {
-		var request elarian.UpdateCustomerSecondaryIDRequest
-		request.AppID = AppID
-		request.SecondaryIDs = []elarian.CustomerSecondaryID{
+		var request elarian.UpdateCustomerSecondaryIdRequest
+
+		request.SecondaryIds = []elarian.CustomerSecondaryId{
 			{
 				Key:        "my_app_customer_Id",
 				Value:      "123456wq",
 				Expiration: time.Now().Add(time.Duration(1 * time.Minute)),
 			},
 		}
-		res, err := service.UpdateCustomerSecondaryID(&customer, &request)
+		res, err := service.UpdateCustomerSecondaryId(&customer, &request)
 		if err != nil {
 			t.Errorf("Error %v", err)
 		}
@@ -237,15 +224,14 @@ func Test_Customer(t *testing.T) {
 	})
 
 	t.Run("It should delete a customer's secondary ids", func(t *testing.T) {
-		var request elarian.DeleteCustomerSecondaryIDRequest
-		request.AppID = AppID
-		request.SecondaryIDs = []elarian.CustomerSecondaryID{
+		var request elarian.DeleteCustomerSecondaryIdRequest
+		request.SecondaryIds = []elarian.CustomerSecondaryId{
 			{
 				Key:   "my_app_customer_Id",
 				Value: "123456wq",
 			},
 		}
-		res, err := service.DeleteCustomerSecondaryID(&customer, &request)
+		res, err := service.DeleteCustomerSecondaryId(&customer, &request)
 		if err != nil {
 			t.Errorf("Error %v", err)
 		}
@@ -257,7 +243,6 @@ func Test_Customer(t *testing.T) {
 
 	t.Run("It should update a customers metadata", func(t *testing.T) {
 		var request elarian.UpdateCustomerMetadataRequest
-		request.AppID = AppID
 		request.Metadata = map[string]string{
 			"some_key":       "some_value",
 			"some_other_key": "some_other_value",
@@ -278,7 +263,6 @@ func Test_Customer(t *testing.T) {
 
 	t.Run("It should delete a customer's metadata", func(t *testing.T) {
 		var request elarian.DeleteCustomerMetadataRequest
-		request.AppID = AppID
 		request.Metadata = []string{
 			"some_key", "some_other_key",
 		}

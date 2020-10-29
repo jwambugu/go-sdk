@@ -7,60 +7,36 @@ import (
 )
 
 func Test_Payments(t *testing.T) {
-	service, err := elarian.Initialize(APIKey)
+	service, err := elarian.Initialize(APIKey, OrgId)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var customer elarian.Customer
-	customer.ID = "el_cst_c617c20cec9b52bf7698ea58695fb8bc"
-	customer.PhoneNumber = elarian.PhoneNumber{
+	customer.Id = "el_cst_c617c20cec9b52bf7698ea58695fb8bc"
+	customer.CustomerNumber = elarian.CustomerNumber{
 		Number:   "+254712876967",
-		Provider: elarian.CustomerNumberProviderTelco,
+		Provider: elarian.CUSTOMER_NUMBER_PROVIDER_TELCO,
 	}
 
 	t.Run("It should send a payment", func(t *testing.T) {
 		var request elarian.PaymentRequest
-		request.AppID = AppID
-		request.ProductID = ProductID
+		request.AppId = AppId
 		request.Cash = elarian.Cash{
 			CurrencyCode: "KES",
 			Amount:       100.00,
 		}
 		request.Channel = elarian.PaymentChannelNumber{
 			Number:  "+254700000001",
-			Channel: elarian.Telco,
+			Channel: elarian.PAYMENT_CHANNEL_TELCO,
 		}
 
-		res, err := service.SendPayment(&customer, &request)
+		res, err := service.InitiatePayment(&customer, &request)
 		if err != nil {
 			t.Error(err)
 		}
 		if res.Description == "" {
 			t.Error("SendPayment: Expected a description but got none")
-		}
-		t.Logf("Result %v", res)
-	})
-
-	t.Run("It should checkout a payment", func(t *testing.T) {
-		var request elarian.PaymentRequest
-		request.AppID = AppID
-		request.ProductID = ProductID
-		request.Cash = elarian.Cash{
-			CurrencyCode: "KES",
-			Amount:       100.00,
-		}
-		request.Channel = elarian.PaymentChannelNumber{
-			Number:  "+254700000001",
-			Channel: elarian.Telco,
-		}
-		res, err := service.CheckoutPayment(&customer, &request)
-		if err != nil {
-			t.Error(err)
-		}
-		t.Log(res.Status.Number())
-		if res.CustomerId.Value != customer.ID {
-			t.Errorf("CheckoutPayment: Expected customer id %s but got %s", customer.ID, res.CustomerId.Value)
 		}
 		t.Logf("Result %v", res)
 	})

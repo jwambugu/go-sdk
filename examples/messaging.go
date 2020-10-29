@@ -8,17 +8,16 @@ import (
 
 func sendMessage(service elarian.Service) {
 	var customer elarian.Customer
-	customer.PhoneNumber = elarian.PhoneNumber{
+	customer.CustomerNumber = elarian.CustomerNumber{
 		Number:   "customer_phone_number",
-		Provider: elarian.CustomerNumberProviderFacebook,
+		Provider: elarian.CUSTOMER_NUMBER_PROVIDER_TELCO,
 	}
 
 	var message elarian.SendMessageRequest
-	message.AppID = "app_id"
-	message.ProductID = "product_id"
+	message.AppId = "app_id"
 	message.ChannelNumber = elarian.MessagingChannelNumber{
 		Number:  "channel_number",
-		Channel: elarian.MessagingChannelGoogleRCS,
+		Channel: elarian.MESSAGING_CHANNEL_GOOGLE_RCS,
 	}
 	message.Body = elarian.MessageBody{
 		Text: "Hello world",

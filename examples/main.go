@@ -12,7 +12,8 @@ type (
 )
 
 func main() {
-	service, err := elarian.Initialize("api_key")
+	service, err := elarian.Initialize(appId, orgId)
+
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -27,10 +27,10 @@ func main(){
         log.Fatal(err)
     }
     var customer elarian.Customer
-    customer.ID = "customer_id"
+    customer.Id = "customer_id"
 
     var request elarian.CustomerStateRequest
-    request.AppID = "app_id"
+    request.AppId = "app_id"
 
     response, err := client.GetCustomerState(&customer, &request)
     if err != nil {

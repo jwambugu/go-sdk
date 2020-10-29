@@ -7,9 +7,9 @@ import (
 	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
 )
 
-func (s *service) GetAuthToken(appID string) (*hera.AuthTokenReply, error) {
+func (s *service) GetAuthToken() (*hera.AuthTokenReply, error) {
 	var request hera.AuthTokenRequest
-	request.AppId = appID
+	request.OrgId = s.orgId
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
