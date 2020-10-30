@@ -24,17 +24,16 @@ func getCustomerState(client elarian.Service) {
 }
 
 func addCustomerReminder(client elarian.Service) {
-	var customer elarian.Customer
+	var customer *elarian.Customer
 	customer.Id = "customer_id"
 
-	var request elarian.CustomerReminderRequest
-	request.Reminder = elarian.Reminder{
+	reminder := &elarian.Reminder{
 		Key:        "reminder_key",
 		Expiration: time.Now().Add(time.Minute + 1),
 		Payload:    "I am a reminder",
 	}
 
-	response, err := client.AddCustomerReminder(&customer, &request)
+	response, err := client.AddCustomerReminder(customer, reminder)
 	if err != nil {
 		log.Fatalf("could not set a reminder %v", err)
 	}

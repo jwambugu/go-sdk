@@ -7,7 +7,12 @@ import (
 )
 
 func Test_Payments(t *testing.T) {
-	service, err := elarian.Initialize(APIKey, OrgId)
+	opts := &elarian.Options{
+		ApiKey: APIKey,
+		AppId:  AppId,
+		OrgId:  OrgId,
+	}
+	service, err := elarian.Initialize(opts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,8 +25,7 @@ func Test_Payments(t *testing.T) {
 	}
 
 	t.Run("It should send a payment", func(t *testing.T) {
-		var request elarian.PaymentRequest
-		request.AppId = AppId
+		var request *elarian.Paymentrequest
 		request.Cash = elarian.Cash{
 			CurrencyCode: "KES",
 			Amount:       100.00,
@@ -31,7 +35,7 @@ func Test_Payments(t *testing.T) {
 			Channel: elarian.PAYMENT_CHANNEL_TELCO,
 		}
 
-		res, err := service.InitiatePayment(&customer, &request)
+		res, err := service.InitiatePayment(&customer, request)
 		if err != nil {
 			t.Error(err)
 		}

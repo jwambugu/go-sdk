@@ -47,35 +47,6 @@ type (
 		Location Location `json:"location"`
 		Template Template `json:"template"`
 	}
-
-	// SendMessageRequest struct
-	SendMessageRequest struct {
-		AppId         string                 `json:"appId,omitempty"`
-		ChannelNumber MessagingChannelNumber `json:"channelNumber"`
-		Body          MessageBody            `json:"body"`
-	}
-
-	// SendMessageByTagRequest struct
-	SendMessageByTagRequest struct {
-		AppId         string                 `json:"appId,omitempty"`
-		Tag           Tag                    `json:"tag"`
-		ChannelNumber MessagingChannelNumber `json:"channelNumber"`
-		Body          MessageBody            `json:"body"`
-	}
-
-	// ReplyToMessageRequest struct
-	ReplyToMessageRequest struct {
-		AppId            string      `json:"appId,omitempty"`
-		ReplyToMessageId string      `json:"customerId,omitempty"`
-		Body             MessageBody `json:"body"`
-	}
-
-	// MessagingConsentRequest struct
-	MessagingConsentRequest struct {
-		AppId         string                 `json:"appId,omitempty"`
-		ChannelNumber MessagingChannelNumber `json:"channelNumber"`
-		Action        MessagingConsentAction `json:"consentAction"`
-	}
 )
 
 const (
@@ -129,39 +100,43 @@ func (s *service) setMessageBodyAsMedia(media *Media) *hera.CustomerMessageBody_
 	}
 }
 
-func (s *service) SendMessage(customer *Customer, params *SendMessageRequest) (*hera.SendMessageReply, error) {
+func (s *service) SendMessage(
+	customer *Customer,
+	body *MessageBody,
+	channelNumber *MessagingChannelNumber,
+) (*hera.SendMessageReply, error) {
 	var request hera.SendMessageRequest
-	request.AppId = params.AppId
+	request.AppId = s.appId
 	request.OrgId = s.orgId
 
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		request.CustomerNumber = s.setCustomerNumber(customer)
 	}
-	if !reflect.ValueOf(params.ChannelNumber).IsZero() {
+	if !reflect.ValueOf(channelNumber).IsZero() {
 		request.ChannelNumber = &hera.MessagingChannelNumber{
-			Channel: hera.MessagingChannel(params.ChannelNumber.Channel),
-			Number:  params.ChannelNumber.Number,
+			Channel: hera.MessagingChannel(channelNumber.Channel),
+			Number:  channelNumber.Number,
 		}
 	}
 
-	if params.Body.Text != "" {
+	if body.Text != "" {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: s.setMessageBodyAsText(params.Body.Text),
+			Entry: s.setMessageBodyAsText(body.Text),
 		}
 	}
-	if !reflect.ValueOf(params.Body.Template).IsZero() {
+	if !reflect.ValueOf(body.Template).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: s.setMessageBodyAsTemplate(&params.Body.Template),
+			Entry: s.setMessageBodyAsTemplate(&body.Template),
 		}
 	}
-	if !reflect.ValueOf(params.Body.Location).IsZero() {
+	if !reflect.ValueOf(body.Location).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: s.setMessageBodyAsLocation(&params.Body.Location),
+			Entry: s.setMessageBodyAsLocation(&body.Location),
 		}
 	}
-	if !reflect.ValueOf(params.Body.Media).IsZero() {
+	if !reflect.ValueOf(body.Media).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: s.setMessageBodyAsMedia(&params.Body.Media),
+			Entry: s.setMessageBodyAsMedia(&body.Media),
 		}
 	}
 
@@ -171,39 +146,47 @@ func (s *service) SendMessage(customer *Customer, params *SendMessageRequest) (*
 }
 
 func (s *service) SendMessageByTag(
-	params *SendMessageByTagRequest,
+	tag *Tag,
+	body *MessageBody,
+	channelNumber *MessagingChannelNumber,
 ) (*hera.TagCommandReply, error) {
 	var request hera.SendMessageTagRequest
-	request.AppId = params.AppId
+	request.AppId = s.appId
 	request.OrgId = s.orgId
 
-	if !reflect.ValueOf(params.Tag).IsZero() {
+	if !reflect.ValueOf(tag).IsZero() {
 		request.Tag = &hera.IndexMapping{
-			Key: params.Tag.Key,
+			Key: tag.Key,
 			Value: &wrapperspb.StringValue{
-				Value: params.Tag.Value,
+				Value: tag.Value,
 			},
 		}
 	}
+	if !reflect.ValueOf(channelNumber).IsZero() {
+		request.ChannelNumber = &hera.MessagingChannelNumber{
+			Channel: hera.MessagingChannel(channelNumber.Channel),
+			Number:  channelNumber.Number,
+		}
+	}
 
-	if params.Body.Text != "" {
+	if body.Text != "" {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: s.setMessageBodyAsText(params.Body.Text),
+			Entry: s.setMessageBodyAsText(body.Text),
 		}
 	}
-	if !reflect.ValueOf(params.Body.Template).IsZero() {
+	if !reflect.ValueOf(body.Template).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: s.setMessageBodyAsTemplate(&params.Body.Template),
+			Entry: s.setMessageBodyAsTemplate(&body.Template),
 		}
 	}
-	if !reflect.ValueOf(params.Body.Location).IsZero() {
+	if !reflect.ValueOf(body.Location).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: s.setMessageBodyAsLocation(&params.Body.Location),
+			Entry: s.setMessageBodyAsLocation(&body.Location),
 		}
 	}
-	if !reflect.ValueOf(params.Body.Media).IsZero() {
+	if !reflect.ValueOf(body.Media).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: s.setMessageBodyAsMedia(&params.Body.Media),
+			Entry: s.setMessageBodyAsMedia(&body.Media),
 		}
 	}
 
@@ -212,31 +195,35 @@ func (s *service) SendMessageByTag(
 	return s.client.SendMessageByTag(ctx, &request)
 }
 
-func (s *service) ReplyToMessage(customer *Customer, params *ReplyToMessageRequest) (*hera.SendMessageReply, error) {
+func (s *service) ReplyToMessage(
+	customer *Customer,
+	messageId string,
+	body *MessageBody,
+) (*hera.SendMessageReply, error) {
 	var request hera.ReplyToMessageRequest
-	request.AppId = params.AppId
+	request.AppId = s.appId
 	request.OrgId = s.orgId
 	request.CustomerId = customer.Id
-	request.ReplyToMessageId = params.ReplyToMessageId
+	request.ReplyToMessageId = messageId
 
-	if params.Body.Text != "" {
+	if body.Text != "" {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: s.setMessageBodyAsText(params.Body.Text),
+			Entry: s.setMessageBodyAsText(body.Text),
 		}
 	}
-	if !reflect.ValueOf(params.Body.Template).IsZero() {
+	if !reflect.ValueOf(body.Template).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: s.setMessageBodyAsTemplate(&params.Body.Template),
+			Entry: s.setMessageBodyAsTemplate(&body.Template),
 		}
 	}
-	if !reflect.ValueOf(params.Body.Location).IsZero() {
+	if !reflect.ValueOf(body.Location).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: s.setMessageBodyAsLocation(&params.Body.Location),
+			Entry: s.setMessageBodyAsLocation(&body.Location),
 		}
 	}
-	if !reflect.ValueOf(params.Body.Media).IsZero() {
+	if !reflect.ValueOf(body.Media).IsZero() {
 		request.Body = &hera.CustomerMessageBody{
-			Entry: s.setMessageBodyAsMedia(&params.Body.Media),
+			Entry: s.setMessageBodyAsMedia(&body.Media),
 		}
 	}
 
@@ -245,22 +232,25 @@ func (s *service) ReplyToMessage(customer *Customer, params *ReplyToMessageReque
 	return s.client.ReplyToMessage(ctx, &request)
 }
 
-func (s *service) MessagingConsent(customer *Customer, params *MessagingConsentRequest) (*hera.MessagingConsentReply, error) {
+func (s *service) MessagingConsent(
+	customer *Customer,
+	channelNumber *MessagingChannelNumber,
+	action MessagingConsentAction,
+) (*hera.MessagingConsentReply, error) {
 	var request hera.MessagingConsentRequest
+	request.AppId = s.appId
+	request.OrgId = s.orgId
 
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		request.CustomerNumber = s.setCustomerNumber(customer)
 	}
-	if !reflect.ValueOf(params.ChannelNumber).IsZero() {
+	if !reflect.ValueOf(channelNumber).IsZero() {
 		request.ChannelNumber = &hera.MessagingChannelNumber{
-			Channel: hera.MessagingChannel(params.ChannelNumber.Channel),
-			Number:  params.ChannelNumber.Number,
+			Channel: hera.MessagingChannel(channelNumber.Channel),
+			Number:  channelNumber.Number,
 		}
 	}
-	request.Action = hera.MessagingConsentAction(params.Action)
-	request.AppId = params.AppId
-	request.OrgId = s.orgId
-
+	request.Action = hera.MessagingConsentAction(action)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	return s.client.MessagingConsent(ctx, &request)
@@ -268,7 +258,8 @@ func (s *service) MessagingConsent(customer *Customer, params *MessagingConsentR
 
 // SendMessage sends a messsage to a customer
 func (c *Customer) SendMessage(
-	params *SendMessageRequest,
+	body *MessageBody,
+	channelNumber *MessagingChannelNumber,
 ) (*hera.SendMessageReply, error) {
-	return c.service.SendMessage(c, params)
+	return c.service.SendMessage(c, body, channelNumber)
 }

@@ -39,9 +39,8 @@ type (
 		Purse    Purse
 	}
 
-	// PaymentRequest defines arguments required to make a payment request
-	PaymentRequest struct {
-		AppId       string               `json:"appId,omitempty"`
+	// Paymentrequest defines arguments required to make a payment request
+	Paymentrequest struct {
 		Cash        Cash                 `json:"cash"`
 		Channel     PaymentChannelNumber `json:"channel"`
 		CreditParty PaymentParty         `json:"creditparty,omitempty"`
@@ -115,9 +114,9 @@ func (s *service) setPaymentCounterPartyAsWallet(wallet *Wallet) *hera.PaymentCo
 	}
 }
 
-func (s *service) InitiatePayment(customer *Customer, params *PaymentRequest) (*hera.InitiatePaymentReply, error) {
+func (s *service) InitiatePayment(customer *Customer, params *Paymentrequest) (*hera.InitiatePaymentReply, error) {
 	var request hera.InitiatePaymentRequest
-	request.AppId = params.AppId
+	request.AppId = s.appId
 	request.OrgId = s.orgId
 	request.Value = &hera.Cash{
 		Amount:       params.Cash.Amount,

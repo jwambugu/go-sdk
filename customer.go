@@ -65,67 +65,6 @@ type (
 		Value      string    `json:"value,omitempty"`
 		Expiration time.Time `json:"expiration,omitempty"`
 	}
-
-	// CustomerReminderRequest defines the arguments required to create a reminder based on a customer.
-	CustomerReminderRequest struct {
-		Reminder Reminder `json:"reminder,omitempty"`
-	}
-
-	// CancelCustomerReminderRequest defines the arguments required to cancel a reminder set on a customer
-	CancelCustomerReminderRequest struct {
-		AppId    string `json:"appId,omitempty"`
-		Key      string `json:"key,omitempty"`
-		Reminder string `json:"reminder,omitempty"`
-	}
-
-	// CustomerReminderByTagRequest defines the arguments required to Create a reminder based on a tag. With this the reminder can applly to a group of customers.
-	CustomerReminderByTagRequest struct {
-		Reminder Reminder `json:"reminder,omitempty"`
-		Tag      Tag      `json:"tag,omitempty"`
-	}
-
-	// CancelCustomerReminderByTagRequest defines the arguments required to cancel a reminder set on a tag
-	CancelCustomerReminderByTagRequest struct {
-		AppId string `json:"appId,omitempty"`
-		Key   string `json:"key,omitempty"`
-		Tag   Tag    `json:"tag,omitempty"`
-	}
-
-	// DeleteCustomerTagRequest defines the arguments required to delete a customer's tags
-	DeleteCustomerTagRequest struct {
-		Keys []string `json:"keys,omitempty"`
-	}
-
-	// UpdateCustomerTagRequest defines the arguments required to update a customer's tags, you can add one or more tags
-	UpdateCustomerTagRequest struct {
-		OrgId string `json:"orgId,omitempty"`
-		Tags  []Tag  `json:"tags,omitempty"`
-	}
-
-	// UpdateCustomerSecondaryIdRequest defines the arguments required to update a customer's secondary Ids you can add one or more secondary Ids
-	UpdateCustomerSecondaryIdRequest struct {
-		SecondaryIds []CustomerSecondaryId `json:"secondaryIds,omitempty"`
-	}
-
-	// DeleteCustomerSecondaryIdRequest defines the arguments required to delete a customer's secondary Identifiers. You can provide one or more secondary Ids you want to delete
-	DeleteCustomerSecondaryIdRequest struct {
-		SecondaryIds []CustomerSecondaryId `json:"secondaryIds,omitempty"`
-	}
-
-	// UpdateCustomerMetadataRequest defines the arguments required to update a customer's metadata
-	UpdateCustomerMetadataRequest struct {
-		Metadata map[string]string `json:"metadata,omitempty"`
-	}
-
-	// DeleteCustomerMetadataRequest defines the arguments required to delete a customer's metadata
-	DeleteCustomerMetadataRequest struct {
-		Metadata []string `json:"metadata,omitempty"`
-	}
-
-	// LeaseCustomerMetadataRequest defines the arguments required to lease metadata
-	LeaseCustomerMetadataRequest struct {
-		Key string `json:"key,omitempty"`
-	}
 )
 
 const (
@@ -217,7 +156,7 @@ func (s *service) AdoptCustomerState(
 
 func (s *service) AddCustomerReminder(
 	customer *Customer,
-	params *CustomerReminderRequest,
+	reminder *Reminder,
 ) (*hera.UpdateCustomerStateReply, error) {
 
 	var request hera.AddCustomerReminderRequest
@@ -240,13 +179,13 @@ func (s *service) AddCustomerReminder(
 	}
 
 	request.Reminder = &hera.CustomerReminder{
-		Expiration: timestamppb.New(params.Reminder.Expiration),
+		Expiration: timestamppb.New(reminder.Expiration),
 		Interval: &durationpb.Duration{
-			Seconds: int64(time.Duration(params.Reminder.Interval) * time.Second),
+			Seconds: int64(time.Duration(reminder.Interval) * time.Second),
 		},
-		Key: params.Reminder.Key,
+		Key: reminder.Key,
 		Payload: &wrapperspb.StringValue{
-			Value: params.Reminder.Payload,
+			Value: reminder.Payload,
 		},
 	}
 
@@ -256,26 +195,26 @@ func (s *service) AddCustomerReminder(
 }
 
 func (s *service) AddCustomerReminderByTag(
-	params *CustomerReminderByTagRequest,
+	reminder *Reminder, tag *Tag,
 ) (*hera.TagCommandReply, error) {
 	var request hera.AddCustomerReminderTagRequest
 	request.OrgId = s.orgId
 
 	request.Tag = &hera.IndexMapping{
-		Key: params.Tag.Key,
+		Key: tag.Key,
 		Value: &wrapperspb.StringValue{
-			Value: params.Tag.Value,
+			Value: tag.Value,
 		},
 	}
 
 	request.Reminder = &hera.CustomerReminder{
-		Expiration: timestamppb.New(params.Reminder.Expiration),
+		Expiration: timestamppb.New(reminder.Expiration),
 		Interval: &durationpb.Duration{
-			Seconds: int64(time.Duration(params.Reminder.Interval) * time.Second),
+			Seconds: int64(time.Duration(reminder.Interval) * time.Second),
 		},
-		Key: params.Reminder.Key,
+		Key: reminder.Key,
 		Payload: &wrapperspb.StringValue{
-			Value: params.Reminder.Payload,
+			Value: reminder.Payload,
 		},
 	}
 
@@ -286,12 +225,12 @@ func (s *service) AddCustomerReminderByTag(
 
 func (s *service) CancelCustomerReminder(
 	customer *Customer,
-	params *CancelCustomerReminderRequest,
+	key string,
 ) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.CancelCustomerReminderRequest
-	request.AppId = params.AppId
+	request.AppId = s.appId
 	request.OrgId = s.orgId
-	request.Key = params.Key
+	request.Key = key
 
 	if customer.Id != "" {
 		request.Customer = &hera.CancelCustomerReminderRequest_CustomerId{
@@ -315,17 +254,17 @@ func (s *service) CancelCustomerReminder(
 }
 
 func (s *service) CancelCustomerReminderByTag(
-	params *CancelCustomerReminderByTagRequest,
+	key string, tag *Tag,
 ) (*hera.TagCommandReply, error) {
 	var request hera.CancelCustomerReminderTagRequest
-	request.AppId = params.AppId
+	request.AppId = s.appId
 	request.OrgId = s.orgId
-	request.Key = params.Key
+	request.Key = key
 
 	request.Tag = &hera.IndexMapping{
-		Key: params.Tag.Key,
+		Key: tag.Key,
 		Value: &wrapperspb.StringValue{
-			Value: params.Tag.Value,
+			Value: tag.Value,
 		},
 	}
 
@@ -336,10 +275,10 @@ func (s *service) CancelCustomerReminderByTag(
 
 func (s *service) UpdateCustomerTag(
 	customer *Customer,
-	params *UpdateCustomerTagRequest,
+	tags []Tag,
 ) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.UpdateCustomerTagRequest
-	var tags []*hera.CustomerIndex
+	var heraTags []*hera.CustomerIndex
 	request.OrgId = s.orgId
 
 	if customer.Id != "" {
@@ -358,8 +297,8 @@ func (s *service) UpdateCustomerTag(
 		}
 	}
 
-	for _, tag := range params.Tags {
-		tags = append(tags, &hera.CustomerIndex{
+	for _, tag := range tags {
+		heraTags = append(heraTags, &hera.CustomerIndex{
 			Expiration: timestamppb.New(tag.Expiration),
 			Mapping: &hera.IndexMapping{
 				Key: tag.Key,
@@ -369,7 +308,7 @@ func (s *service) UpdateCustomerTag(
 			},
 		})
 	}
-	request.Tags = tags
+	request.Tags = heraTags
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -378,11 +317,11 @@ func (s *service) UpdateCustomerTag(
 
 func (s *service) DeleteCustomerTag(
 	customer *Customer,
-	params *DeleteCustomerTagRequest,
+	keys []string,
 ) (*hera.UpdateCustomerStateReply, error) {
 
 	var request hera.DeleteCustomerTagRequest
-	request.Keys = params.Keys
+	request.Keys = keys
 	request.OrgId = s.orgId
 
 	if !reflect.ValueOf(customer.SecondaryId).IsZero() {
@@ -407,10 +346,9 @@ func (s *service) DeleteCustomerTag(
 
 func (s *service) UpdateCustomerSecondaryId(
 	customer *Customer,
-	params *UpdateCustomerSecondaryIdRequest,
+	secondaryIds []CustomerSecondaryId,
 ) (*hera.UpdateCustomerStateReply, error) {
-
-	var secondaryIds []*hera.CustomerIndex
+	var heraSecIds []*hera.CustomerIndex
 	var request hera.UpdateCustomerSecondaryIdRequest
 	request.OrgId = s.orgId
 
@@ -430,8 +368,8 @@ func (s *service) UpdateCustomerSecondaryId(
 		}
 	}
 
-	for _, secondaryId := range params.SecondaryIds {
-		secondaryIds = append(secondaryIds, &hera.CustomerIndex{
+	for _, secondaryId := range secondaryIds {
+		heraSecIds = append(heraSecIds, &hera.CustomerIndex{
 			Expiration: timestamppb.New(secondaryId.Expiration),
 			Mapping: &hera.IndexMapping{
 				Key: secondaryId.Key,
@@ -441,7 +379,7 @@ func (s *service) UpdateCustomerSecondaryId(
 			},
 		})
 	}
-	request.SecondaryIds = secondaryIds
+	request.SecondaryIds = heraSecIds
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -450,11 +388,11 @@ func (s *service) UpdateCustomerSecondaryId(
 
 func (s *service) DeleteCustomerSecondaryId(
 	customer *Customer,
-	params *DeleteCustomerSecondaryIdRequest,
+	secondaryIds []CustomerSecondaryId,
 ) (*hera.UpdateCustomerStateReply, error) {
 
 	var request hera.DeleteCustomerSecondaryIdRequest
-	var secondaryIds []*hera.IndexMapping
+	var heraSecIds []*hera.IndexMapping
 
 	if customer.Id != "" {
 		request.Customer = &hera.DeleteCustomerSecondaryIdRequest_CustomerId{
@@ -473,8 +411,8 @@ func (s *service) DeleteCustomerSecondaryId(
 		}
 	}
 
-	for _, secondaryId := range params.SecondaryIds {
-		secondaryIds = append(secondaryIds, &hera.IndexMapping{
+	for _, secondaryId := range secondaryIds {
+		heraSecIds = append(heraSecIds, &hera.IndexMapping{
 			Key: secondaryId.Key,
 			Value: &wrapperspb.StringValue{
 				Value: secondaryId.Value,
@@ -482,7 +420,7 @@ func (s *service) DeleteCustomerSecondaryId(
 		})
 	}
 	request.OrgId = s.orgId
-	request.Mappings = secondaryIds
+	request.Mappings = heraSecIds
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -491,12 +429,12 @@ func (s *service) DeleteCustomerSecondaryId(
 
 func (s *service) LeaseCustomerMetaData(
 	customer *Customer,
-	params *LeaseCustomerMetadataRequest,
+	key string,
 ) (*hera.LeaseCustomerMetadataReply, error) {
 
 	var request hera.LeaseCustomerMetadataRequest
 	request.OrgId = s.orgId
-	request.Key = params.Key
+	request.Key = key
 
 	if customer.Id != "" {
 		request.Customer = &hera.LeaseCustomerMetadataRequest_CustomerId{
@@ -521,7 +459,7 @@ func (s *service) LeaseCustomerMetaData(
 
 func (s *service) UpdateCustomerMetaData(
 	customer *Customer,
-	params *UpdateCustomerMetadataRequest,
+	metadata map[string]string,
 ) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.UpdateCustomerMetadataRequest
 	request.OrgId = s.orgId
@@ -544,7 +482,7 @@ func (s *service) UpdateCustomerMetaData(
 
 	request.Metadata = map[string]*hera.DataMapValue{}
 
-	for key, value := range params.Metadata {
+	for key, value := range metadata {
 		request.Metadata[key] = &hera.DataMapValue{
 			Value: &hera.DataMapValue_StringVal{
 				StringVal: value,
@@ -559,11 +497,11 @@ func (s *service) UpdateCustomerMetaData(
 
 func (s *service) DeleteCustomerMetaData(
 	customer *Customer,
-	params *DeleteCustomerMetadataRequest,
+	keys []string,
 ) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.DeleteCustomerMetadataRequest
 	request.OrgId = s.orgId
-	request.Keys = params.Metadata
+	request.Keys = keys
 
 	if customer.Id != "" {
 		request.Customer = &hera.DeleteCustomerMetadataRequest_CustomerId{
@@ -609,63 +547,63 @@ func (c *Customer) AdoptState(
 
 // UpdateTag is used to add more tags to a customer
 func (c *Customer) UpdateTag(
-	params *UpdateCustomerTagRequest,
+	tags []Tag,
 ) (*hera.UpdateCustomerStateReply, error) {
-	return c.service.UpdateCustomerTag(c, params)
+	return c.service.UpdateCustomerTag(c, tags)
 }
 
 // DeleteTag disaccosiates a tag from a customer
 func (c *Customer) DeleteTag(
-	params *DeleteCustomerTagRequest,
+	keys []string,
 ) (*hera.UpdateCustomerStateReply, error) {
-	return c.service.DeleteCustomerTag(c, params)
+	return c.service.DeleteCustomerTag(c, keys)
 }
 
 // UpdateSecondaryId adds secondary ids to a customer, this could be the id you associate the customer with locally on your application.
 func (c *Customer) UpdateSecondaryId(
-	params *UpdateCustomerSecondaryIdRequest,
+	secondaryIds []CustomerSecondaryId,
 ) (*hera.UpdateCustomerStateReply, error) {
-	return c.service.UpdateCustomerSecondaryId(c, params)
+	return c.service.UpdateCustomerSecondaryId(c, secondaryIds)
 }
 
 // DeleteSecondaryId deletes an associated secondary id from a customer
 func (c *Customer) DeleteSecondaryId(
-	params *DeleteCustomerSecondaryIdRequest,
+	secondaryIds []CustomerSecondaryId,
 ) (*hera.UpdateCustomerStateReply, error) {
-	return c.service.DeleteCustomerSecondaryId(c, params)
+	return c.service.DeleteCustomerSecondaryId(c, secondaryIds)
 }
 
 // AddReminder sets a reminder on elarian for a customer which is triggered on set time. The reminder is push through the notification stream.
 func (c *Customer) AddReminder(
-	params *CustomerReminderRequest,
+	reminder *Reminder,
 ) (*hera.UpdateCustomerStateReply, error) {
-	return c.service.AddCustomerReminder(c, params)
+	return c.service.AddCustomerReminder(c, reminder)
 }
 
 // CancelReminder cancels a set reminder
 func (c *Customer) CancelReminder(
-	params *CancelCustomerReminderRequest,
+	key string,
 ) (*hera.UpdateCustomerStateReply, error) {
-	return c.service.CancelCustomerReminder(c, params)
+	return c.service.CancelCustomerReminder(c, key)
 }
 
 // UpdateMetaData adds abitrary or application specific information that you may want to tie to a customer.
 func (c *Customer) UpdateMetaData(
-	params *UpdateCustomerMetadataRequest,
+	metadata map[string]string,
 ) (*hera.UpdateCustomerStateReply, error) {
-	return c.service.UpdateCustomerMetaData(c, params)
+	return c.service.UpdateCustomerMetaData(c, metadata)
 }
 
 // DeleteMetaData removes a customers metadata
 func (c *Customer) DeleteMetaData(
-	params *DeleteCustomerMetadataRequest,
+	keys []string,
 ) (*hera.UpdateCustomerStateReply, error) {
-	return c.service.DeleteCustomerMetaData(c, params)
+	return c.service.DeleteCustomerMetaData(c, keys)
 }
 
 // LeaseMetaData leases customer metadata
 func (c *Customer) LeaseMetaData(
-	params *LeaseCustomerMetadataRequest,
+	key string,
 ) (*hera.LeaseCustomerMetadataReply, error) {
-	return c.service.LeaseCustomerMetaData(c, params)
+	return c.service.LeaseCustomerMetaData(c, key)
 }

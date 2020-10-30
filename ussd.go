@@ -8,50 +8,72 @@ import (
 )
 
 type (
-	// USSDChannel type
-	USSDChannel int32
+	// UssdChannel type
+	UssdChannel int32
 
-	// USSDMenu struct
-	USSDMenu struct {
+	// UssdMenu struct
+	UssdMenu struct {
 		IsTerminal bool   `json:"isTerminal,omitempty"`
 		Text       string `json:"text,omitempty"`
 	}
-	// USSDRequest struct
-	USSDRequest struct {
-		AppId     string   `json:"appId,omitempty"`
-		SessionId string   `json:"sessionId,omitempty"`
-		USSDMenu  USSDMenu `json:"ussdMenu,omitempty"`
-	}
 
-	// USSDChannelNumber struct
-	USSDChannelNumber struct {
-		Channel USSDChannel `json:"channel,omitempty"`
+	// UssdChannelNumber struct
+	UssdChannelNumber struct {
+		Channel UssdChannel `json:"channel,omitempty"`
 		Number  string      `json:"number,omitempty"`
 	}
 
-	// USSDSessionNotification struct
-	USSDSessionNotification struct {
+	// Ussdrequest struct
+	UssdOptions struct {
+		SessionId string    `json:"sessionId,omitempty"`
+		UssdMenu  *UssdMenu `json:"UssdMenu,omitempty"`
+	}
+
+	// UssdSessionNotification struct
+	UssdSessionNotification struct {
 		SessionId      string            `json:"sessionId,omitempty"`
 		CustomerId     string            `json:"customerId,omitempty"`
 		Input          string            `json:"input,omitempty"`
 		CustomerNumber *CustomerNumber   `json:"customerNumber,omitempty"`
-		ChannelNumber  USSDChannelNumber `json:"channelNumber,omitempty"`
+		ChannelNumber  UssdChannelNumber `json:"channelNumber,omitempty"`
 	}
 )
 
 const (
-	USSD_CHANNEL_UNSPECIFIED USSDChannel = iota
+	USSD_CHANNEL_UNSPECIFIED UssdChannel = iota
 	USSD_CHANNEL_TELCO
 )
 
-func (s *service) ReplyToUSSDSession(params *USSDRequest) (*hera.WebhookResponseReply, error) {
+func (s *service) getUssdSessionNotification(
+	notification *hera.UssdSessionNotification,
+) *UssdSessionNotification {
+	return &UssdSessionNotification{
+		SessionId:  notification.SessionId,
+		CustomerId: notification.CustomerId,
+		Input:      notification.Input.Value,
+		CustomerNumber: &CustomerNumber{
+			Number:    notification.CustomerNumber.Number,
+			Partition: notification.CustomerNumber.Partition.Value,
+			Provider:  NumberProvider(notification.CustomerNumber.Provider),
+		},
+		ChannelNumber: UssdChannelNumber{
+			Channel: UssdChannel(notification.ChannelNumber.Channel),
+			Number:  notification.ChannelNumber.Number,
+		},
+	}
+}
+
+func (s *service) ReplyToUssdSession(
+	sessionId string,
+	ussdMenu *UssdMenu,
+) (*hera.WebhookResponseReply, error) {
 	var request hera.WebhookResponse
-	request.AppId = params.AppId
+	request.AppId = s.appId
 	request.OrgId = s.orgId
-	request.SessionId = params.SessionId
+	request.SessionId = sessionId
 	request.UssdMenu = &hera.UssdMenu{
-		IsTerminal: params.USSDMenu.IsTerminal,
-		Text:       params.USSDMenu.Text,
+		IsTerminal: ussdMenu.IsTerminal,
+		Text:       ussdMenu.Text,
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

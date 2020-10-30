@@ -29,7 +29,7 @@ func main(){
     var customer elarian.Customer
     customer.Id = "customer_id"
 
-    var request elarian.CustomerStateRequest
+    var request elarian.CustomerStaterequest
     request.AppId = "app_id"
 
     response, err := client.GetCustomerState(&customer, &request)

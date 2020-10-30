@@ -9,11 +9,16 @@ import (
 )
 
 func Test_Messaging(t *testing.T) {
-	service, err := elarian.Initialize(APIKey, OrgId)
+	opts := &elarian.Options{
+		ApiKey: APIKey,
+		AppId:  AppId,
+		OrgId:  OrgId,
+	}
+	service, err := elarian.Initialize(opts)
 	if err != nil {
 		log.Fatal(err)
 	}
-	var customer elarian.Customer
+	var customer *elarian.Customer
 	customer.Id = "el_cst_c617c20cec9b52bf7698ea58695fb8bc"
 	customer.CustomerNumber = elarian.CustomerNumber{
 		Number:   "+254712876967",
@@ -21,14 +26,19 @@ func Test_Messaging(t *testing.T) {
 	}
 
 	t.Run("It should send a text message", func(t *testing.T) {
-		var request elarian.SendMessageRequest
-		request.AppId = AppId
-		request.Body.Text = "Hello World"
-		request.ChannelNumber = elarian.MessagingChannelNumber{
-			Number:  "41012",
-			Channel: elarian.MESSAGING_CHANNEL_SMS,
-		}
-		response, err := service.SendMessage(&customer, &request)
+
+		var messageBody *elarian.MessageBody
+		messageBody.Text = "hello world"
+
+		var channelNumber *elarian.MessagingChannelNumber
+		channelNumber.Number = "41012"
+		channelNumber.Channel = elarian.MESSAGING_CHANNEL_SMS
+
+		response, err := service.SendMessage(
+			customer,
+			messageBody,
+			channelNumber,
+		)
 		if err != nil {
 			t.Errorf("Error %v", err)
 		}

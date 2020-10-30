@@ -89,19 +89,6 @@ type (
 		Play VoiceCallActionPlay `json:"voiceCallActionPlay,omitempty"`
 		Say  VoiceCallActionSay  `json:"voiceCallActionSay,omitempty"`
 	}
-
-	// VoiceCallRequest struct defines the parameters required to make a voice call request.
-	VoiceCallRequest struct {
-		AppId   string             `json:"appId,omitempty"`
-		Channel VoiceChannelNumber `json:"channel,omitempty"`
-	}
-
-	// VoiceCallReplyRequest struct
-	VoiceCallReplyRequest struct {
-		AppId            string        `json:"appId,omitempty"`
-		SessionId        string        `json:"sessionId,omitempty"`
-		VoiceCallActions []interface{} `json:"voiceCallActions,omitempty"`
-	}
 )
 
 const (
@@ -280,18 +267,21 @@ func (s *service) transformVoiceCallActions(actions []interface{}) []*hera.Voice
 	return voiceActions
 }
 
-func (s *service) MakeVoiceCall(customer *Customer, params *VoiceCallRequest) (*hera.MakeVoiceCallReply, error) {
+func (s *service) MakeVoiceCall(
+	customer *Customer,
+	channel *VoiceChannelNumber,
+) (*hera.MakeVoiceCallReply, error) {
 	var request hera.MakeVoiceCallRequest
-	request.AppId = params.AppId
+	request.AppId = s.appId
 	request.OrgId = s.orgId
 
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		request.CustomerNumber = s.setCustomerNumber(customer)
 	}
-	if !reflect.ValueOf(params.Channel).IsZero() {
+	if !reflect.ValueOf(channel).IsZero() {
 		request.ChannelNumber = &hera.VoiceChannelNumber{
-			Channel: hera.VoiceChannel(params.Channel.Channel),
-			Number:  params.Channel.Number,
+			Channel: hera.VoiceChannel(channel.Channel),
+			Number:  channel.Number,
 		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -300,13 +290,14 @@ func (s *service) MakeVoiceCall(customer *Customer, params *VoiceCallRequest) (*
 }
 
 func (s *service) ReplyToVoiceCall(
-	params *VoiceCallReplyRequest,
+	sessionId string,
+	actions []interface{},
 ) (*hera.WebhookResponseReply, error) {
 	var request hera.WebhookResponse
-	request.AppId = params.AppId
+	request.AppId = s.appId
 	request.OrgId = s.orgId
-	request.SessionId = params.SessionId
-	request.VoiceCallActions = s.transformVoiceCallActions(params.VoiceCallActions)
+	request.SessionId = sessionId
+	request.VoiceCallActions = s.transformVoiceCallActions(actions)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

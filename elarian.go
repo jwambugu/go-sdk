@@ -16,10 +16,18 @@ type (
 	Credentials struct {
 		APIKey string
 	}
+
 	rpcservice struct {
 		credentials *Credentials
 		tlsConfig   *tls.Config
 		keepAlive   keepalive.ClientParameters
+	}
+
+	// Options required to start get an elarian instance
+	Options struct {
+		ApiKey string `json:"apiKey,omitempty"`
+		OrgId  string `json:"orgId,omitempty"`
+		AppId  string `json:"appId,omitempty"`
 	}
 )
 
@@ -53,7 +61,7 @@ func (s *rpcservice) connect() (hera.GrpcWebServiceClient, error) {
 }
 
 // Initialize creates a secure grpc connection with the elarian server and returns a Service
-func Initialize(apikey, orgId string) (Service, error) {
+func Initialize(opts *Options) (Service, error) {
 	var rpc rpcservice
 	rpc.tlsConfig = &tls.Config{
 		InsecureSkipVerify: false,
@@ -64,12 +72,12 @@ func Initialize(apikey, orgId string) (Service, error) {
 		PermitWithoutStream: true,
 	}
 	rpc.credentials = &Credentials{
-		APIKey: apikey,
+		APIKey: opts.ApiKey,
 	}
 
 	client, err := rpc.connect()
 	if err != nil {
 		return &service{}, err
 	}
-	return NewService(&client, orgId), nil
+	return NewService(&client, opts.OrgId, opts.AppId), nil
 }

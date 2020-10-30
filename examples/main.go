@@ -12,7 +12,7 @@ type (
 )
 
 func main() {
-	service, err := elarian.Initialize(appId, orgId)
+	service, err := elarian.Initialize(&elarian.Options{})
 
 	if err != nil {
 		log.Fatal(err)
