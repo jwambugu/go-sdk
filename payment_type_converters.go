@@ -6,7 +6,7 @@ import (
 
 func (s *service) paymentStatusNotf(notf *hera.PaymentStatusNotification) *PaymentStatusNotification {
 	return &PaymentStatusNotification{
-		CustomerId:    notf.CustomerId,
+		CustomerId:    notf.CustomerId.Value,
 		TransactionId: notf.TransactionId,
 		Status:        PaymentStatus(notf.GetStatus()),
 	}

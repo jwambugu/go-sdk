@@ -34,7 +34,7 @@ func (s *service) reminderNotificationHandler(notf *hera.ReminderNotification) {
 
 func (s *service) paymentStatusNotificationHandler(notf *hera.PaymentStatusNotification) {
 	if !reflect.ValueOf(notf).IsZero() {
-		cust := s.NewCustomer(&CreateCustomer{Id: notf.CustomerId})
+		cust := s.NewCustomer(&CreateCustomer{Id: notf.CustomerId.Value})
 		statusNotf := s.paymentStatusNotf(notf)
 		s.bus.Publish(
 			string(ELARIAN_PAYMENT_STATUS_NOTIFICATION),
