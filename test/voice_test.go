@@ -8,17 +8,17 @@ import (
 )
 
 func Test_Voice(t *testing.T) {
-	opts := &elarian.Options{
-		ApiKey: APIKey,
-		AppId:  AppId,
-		OrgId:  OrgId,
-	}
+	var opts *elarian.Options
+	opts.ApiKey = APIKey
+	opts.AppId = AppId
+	opts.OrgId = OrgId
+
 	service, err := elarian.Initialize(opts)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var customer *elarian.Customer
-	customer.CustomerNumber = elarian.CustomerNumber{
+	customer.CustomerNumber = &elarian.CustomerNumber{
 		Number:   "+254712876967",
 		Provider: elarian.CUSTOMER_NUMBER_PROVIDER_TELCO,
 	}

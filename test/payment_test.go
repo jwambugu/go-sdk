@@ -7,11 +7,11 @@ import (
 )
 
 func Test_Payments(t *testing.T) {
-	opts := &elarian.Options{
-		ApiKey: APIKey,
-		AppId:  AppId,
-		OrgId:  OrgId,
-	}
+	var opts *elarian.Options
+	opts.ApiKey = APIKey
+	opts.AppId = AppId
+	opts.OrgId = OrgId
+
 	service, err := elarian.Initialize(opts)
 	if err != nil {
 		t.Fatal(err)
@@ -19,7 +19,7 @@ func Test_Payments(t *testing.T) {
 
 	var customer elarian.Customer
 	customer.Id = "el_cst_c617c20cec9b52bf7698ea58695fb8bc"
-	customer.CustomerNumber = elarian.CustomerNumber{
+	customer.CustomerNumber = &elarian.CustomerNumber{
 		Number:   "+254712876967",
 		Provider: elarian.CUSTOMER_NUMBER_PROVIDER_TELCO,
 	}

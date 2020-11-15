@@ -50,7 +50,6 @@ func (s *rpcservice) connect() (hera.GrpcWebServiceClient, error) {
 	opts = append(opts, grpc.WithTransportCredentials(creds))
 	opts = append(opts, grpc.WithPerRPCCredentials(s.credentials))
 	opts = append(opts, grpc.WithKeepaliveParams(s.keepAlive))
-	opts = append(opts, grpc.WithBlock())
 
 	channel, err := grpc.Dial("api.elarian.dev:443", opts...)
 	if err != nil {
@@ -79,5 +78,5 @@ func Initialize(opts *Options) (Service, error) {
 	if err != nil {
 		return &service{}, err
 	}
-	return NewService(&client, opts.OrgId, opts.AppId), nil
+	return NewService(&client, opts.OrgId, opts.AppId)
 }

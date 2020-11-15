@@ -6,13 +6,17 @@ import (
 	"time"
 
 	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
-	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type (
 	// VoiceChannel type
 	VoiceChannel int32
+
+	CustomerEventDirection int32
+
+	VoiceCallStatus int32
+
+	VoiceCallHangupCause int32
 
 	// VoiceChannelNumber struct
 	VoiceChannelNumber struct {
@@ -89,6 +93,39 @@ type (
 		Play VoiceCallActionPlay `json:"voiceCallActionPlay,omitempty"`
 		Say  VoiceCallActionSay  `json:"voiceCallActionSay,omitempty"`
 	}
+
+	VoiceCallDailInput struct {
+		DestinationNumber string        `json:"destinationNumber,omitempty"`
+		Duration          time.Duration `json:"duration,omitempty"`
+		StartedAt         time.Time     `json:"startedAt,omitempty"`
+	}
+
+	VoiceCallQueueInput struct {
+		DequeuedAt          time.Time     `json:"dequeuedAt,omitempty"`
+		DequeuedToNumber    string        `json:"dequeuedToNumber,omitempty"`
+		DequeuedToSessionId string        `json:"dequeuedToSessionId,omitempty"`
+		EnqueuedAt          time.Time     `json:"enqueuedAt,omitempty"`
+		QueueDuration       time.Duration `json:"queueDuration,omitempty"`
+	}
+
+	VoiceCallHopInput struct {
+		DtmfDigits   string               `json:"dtmfDigits,omitempty"`
+		RecordingUrl string               `json:"recordingUrl,omitempty"`
+		StartedAt    time.Time            `json:"startedAt,omitempty"`
+		Status       VoiceCallStatus      `json:"status,omitempty"`
+		HangupCase   VoiceCallHangupCause `json:"hangupCase,omitempty"`
+		DailData     *VoiceCallDailInput  `json:"dailData,omitempty"`
+		QueueData    *VoiceCallQueueInput `json:"queueData,omitempty"`
+	}
+
+	VoiceCallNotification struct {
+		SessionId     string                 `json:"sessionId,omitempty"`
+		Cost          *Cash                  `json:"cost,omitempty"`
+		Duration      time.Duration          `json:"duration,omitempty"`
+		Input         *VoiceCallHopInput     `json:"input,omitempty"`
+		Direction     CustomerEventDirection `json:"direction,omitempty"`
+		ChannelNumber *VoiceChannelNumber    `json:"channelNumber,omitempty"`
+	}
 )
 
 const (
@@ -96,176 +133,53 @@ const (
 	VOICE_CHANNEL_TELCO
 )
 
-func (s *service) transformVoiceCallActions(actions []interface{}) []*hera.VoiceCallAction {
-	var voiceActions = []*hera.VoiceCallAction{}
+const (
+	CUSTOMER_EVENT_DIRECTION_UNSPECIFIED CustomerEventDirection = iota
+	CUSTOMER_EVENT_DIRECTION_INBOUND                            = 1
+	CUSTOMER_EVENT_DIRECTION_OUTBOUND                           = 2
+)
 
-	for _, voiceAction := range actions {
-		if action, ok := voiceAction.(VoiceCallActionDequeue); ok && !reflect.ValueOf(action).IsZero() {
-			voiceActions = append(voiceActions, &hera.VoiceCallAction{
-				Entry: &hera.VoiceCallAction_Dequeue{
-					Dequeue: &hera.DequeueCallAction{
-						Record:    action.Record,
-						QueueName: wrapperspb.String(action.QueueName),
-						ChannelNumber: &hera.VoiceChannelNumber{
-							Channel: hera.VoiceChannel(action.Channel.Channel),
-							Number:  action.Channel.Number,
-						},
-					},
-				},
-			})
-			continue
-		}
+const (
+	VOICE_CALL_STATUS_UNSPECIFIED               VoiceCallStatus = 0
+	VOICE_CALL_STATUS_QUEUED                    VoiceCallStatus = 100
+	VOICE_CALL_STATUS_ANSWERED                  VoiceCallStatus = 101
+	VOICE_CALL_STATUS_RINGING                   VoiceCallStatus = 102
+	VOICE_CALL_STATUS_ACTIVE                    VoiceCallStatus = 200
+	VOICE_CALL_STATUS_DIALING                   VoiceCallStatus = 201
+	VOICE_CALL_STATUS_DIAL_COMPLETED            VoiceCallStatus = 202
+	VOICE_CALL_STATUS_BRIDGED                   VoiceCallStatus = 203
+	VOICE_CALL_STATUS_ENQUEUED                  VoiceCallStatus = 204
+	VOICE_CALL_STATUS_DEQUEUED                  VoiceCallStatus = 205
+	VOICE_CALL_STATUS_TRANSFERRED               VoiceCallStatus = 206
+	VOICE_CALL_STATUS_TRANSFER_COMPLETED        VoiceCallStatus = 207
+	VOICE_CALL_STATUS_COMPLETED                 VoiceCallStatus = 300
+	VOICE_CALL_STATUS_INSUFFICIENT_CREDIT       VoiceCallStatus = 400
+	VOICE_CALL_STATUS_NOT_ANSWERED              VoiceCallStatus = 401
+	VOICE_CALL_STATUS_INVALID_PHONE_NUMBER      VoiceCallStatus = 402
+	VOICE_CALL_STATUS_DESTINATION_NOT_SUPPORTED VoiceCallStatus = 403
+	VOICE_CALL_STATUS_DECOMMISSIONED_CUSTOMERID VoiceCallStatus = 404
+	VOICE_CALL_STATUS_EXPIRED                   VoiceCallStatus = 405
+	VOICE_CALL_STATUS_INVALID_CHANNEL_NUMBER    VoiceCallStatus = 406
+	VOICE_CALL_STATUS_APPLICATION_ERROR         VoiceCallStatus = 501
+)
 
-		if action, ok := voiceAction.(VoiceCallActionEnqueue); ok && !reflect.ValueOf(action).IsZero() {
-			voiceActions = append(voiceActions, &hera.VoiceCallAction{
-				Entry: &hera.VoiceCallAction_Enqueue{
-					Enqueue: &hera.EnqueueCallAction{
-						HoldMusic: wrapperspb.String(action.HoldMusic),
-						QueueName: wrapperspb.String(action.QueueName),
-					},
-				},
-			})
-			continue
-		}
-
-		if action, ok := voiceAction.(VoiceCallActionDail); ok && !reflect.ValueOf(action).IsZero() {
-			voiceActions = append(voiceActions, &hera.VoiceCallAction{
-				Entry: &hera.VoiceCallAction_Dial{
-					Dial: &hera.DialCallAction{
-						Record:          action.Record,
-						Sequential:      action.Sequential,
-						MaxDuration:     wrapperspb.Int32(action.MaxDuration),
-						CallerId:        wrapperspb.String(action.CallerId),
-						RingbackTone:    wrapperspb.String(action.RingBackTone),
-						CustomerNumbers: s.setCustomerNumbers(action.CustomerNumbers),
-					},
-				},
-			})
-			continue
-		}
-
-		if action, ok := voiceAction.(VoiceCallActionGetDigits); ok && !reflect.ValueOf(action).IsZero() {
-			var getDigits *hera.GetDigitsCallAction
-			getDigits.FinishOnKey = wrapperspb.String(action.FinishOnKey)
-			getDigits.NumDigits = wrapperspb.Int32(action.NumDigits)
-			getDigits.Timeout = durationpb.New(action.Timeout)
-
-			if !reflect.ValueOf(action.Prompt.Play).IsZero() {
-				getDigits.Prompt = &hera.GetDigitsCallAction_Play{
-					Play: &hera.PlayCallAction{
-						Url: action.Prompt.Play.URL,
-					},
-				}
-			}
-
-			if !reflect.ValueOf(action.Prompt.Say).IsZero() {
-				getDigits.Prompt = &hera.GetDigitsCallAction_Say{
-					Say: &hera.SayCallAction{
-						PlayBeep: action.Prompt.Say.PlayBeep,
-						Text:     action.Prompt.Say.Text,
-						Voice:    hera.TextToSpeechVoice(action.Prompt.Say.Voice),
-					},
-				}
-			}
-
-			voiceActions = append(voiceActions, &hera.VoiceCallAction{
-				Entry: &hera.VoiceCallAction_GetDigits{
-					GetDigits: getDigits,
-				},
-			})
-			continue
-		}
-
-		if action, ok := voiceAction.(VoiceCallActionGetRecording); ok && !reflect.ValueOf(action).IsZero() {
-			var getRecording *hera.GetRecordingCallAction
-			getRecording.FinishOnKey = wrapperspb.String(action.FinishOnKey)
-			getRecording.MaxLength = durationpb.New(action.MaxLength)
-			getRecording.PlayBeep = action.PlayBeep
-			getRecording.TrimSilence = action.TrimSilence
-			getRecording.Timeout = durationpb.New(action.Timeout)
-			getRecording.Prompt = &hera.GetRecordingCallAction_Say{}
-
-			if !reflect.ValueOf(action.Prompt.Play).IsZero() {
-				getRecording.Prompt = &hera.GetRecordingCallAction_Play{
-					Play: &hera.PlayCallAction{
-						Url: action.Prompt.Play.URL,
-					},
-				}
-			}
-
-			if !reflect.ValueOf(action.Prompt.Say).IsZero() {
-				getRecording.Prompt = &hera.GetRecordingCallAction_Say{
-					Say: &hera.SayCallAction{
-						PlayBeep: action.Prompt.Say.PlayBeep,
-						Text:     action.Prompt.Say.Text,
-						Voice:    hera.TextToSpeechVoice(action.Prompt.Say.Voice),
-					},
-				}
-			}
-
-			voiceActions = append(voiceActions, &hera.VoiceCallAction{
-				Entry: &hera.VoiceCallAction_GetRecording{
-					GetRecording: getRecording,
-				},
-			})
-			continue
-		}
-
-		if action, ok := voiceAction.(VoiceCallActionPlay); ok && !reflect.ValueOf(action).IsZero() {
-			voiceActions = append(voiceActions, &hera.VoiceCallAction{
-				Entry: &hera.VoiceCallAction_Play{
-					Play: &hera.PlayCallAction{
-						Url: action.URL,
-					},
-				},
-			})
-			continue
-		}
-
-		if action, ok := voiceAction.(VoiceCallActionSay); ok && !reflect.ValueOf(action).IsZero() {
-			voiceActions = append(voiceActions, &hera.VoiceCallAction{
-				Entry: &hera.VoiceCallAction_Say{
-					Say: &hera.SayCallAction{
-						PlayBeep: action.PlayBeep,
-						Text:     action.Text,
-						Voice:    hera.TextToSpeechVoice(action.Voice), //FIXME
-					},
-				},
-			})
-			continue
-		}
-
-		if action, ok := voiceAction.(VoiceCallActionRedirect); ok && !reflect.ValueOf(action).IsZero() {
-			voiceActions = append(voiceActions, &hera.VoiceCallAction{
-				Entry: &hera.VoiceCallAction_Redirect{
-					Redirect: &hera.RedirectCallAction{
-						Url: action.URL,
-					},
-				},
-			})
-			continue
-		}
-
-		if _, ok := voiceAction.(VoiceCallActionReject); ok {
-			voiceActions = append(voiceActions, &hera.VoiceCallAction{
-				Entry: &hera.VoiceCallAction_Reject{
-					Reject: &hera.RejectCallAction{},
-				},
-			})
-			continue
-		}
-
-		if _, ok := voiceAction.(VoiceCallActionRecordSession); ok {
-			voiceActions = append(voiceActions, &hera.VoiceCallAction{
-				Entry: &hera.VoiceCallAction_RecordSession{
-					RecordSession: &hera.RecordSessionCallAction{},
-				},
-			})
-			continue
-		}
-	}
-	return voiceActions
-}
+const (
+	VOICE_CALL_HANGUP_CAUSE_UNSPECIFIED              VoiceCallHangupCause = 0
+	VOICE_CALL_HANGUP_CAUSE_UNALLOCATED_NUMBER       VoiceCallHangupCause = 1
+	VOICE_CALL_HANGUP_CAUSE_USER_BUSY                VoiceCallHangupCause = 17
+	VOICE_CALL_HANGUP_CAUSE_NORMAL_CLEARING          VoiceCallHangupCause = 16
+	VOICE_CALL_HANGUP_CAUSE_NO_USER_RESPONSE         VoiceCallHangupCause = 18
+	VOICE_CALL_HANGUP_CAUSE_NO_ANSWER                VoiceCallHangupCause = 19
+	VOICE_CALL_HANGUP_CAUSE_SUBSCRIBER_ABSENT        VoiceCallHangupCause = 20
+	VOICE_CALL_HANGUP_CAUSE_CALL_REJECTED            VoiceCallHangupCause = 21
+	VOICE_CALL_HANGUP_CAUSE_NORMAL_UNSPECIFIED       VoiceCallHangupCause = 31
+	VOICE_CALL_HANGUP_CAUSE_NORMAL_TEMPORARY_FAILURE VoiceCallHangupCause = 41
+	VOICE_CALL_HANGUP_CAUSE_SERVICE_UNAVAILABLE      VoiceCallHangupCause = 63
+	VOICE_CALL_HANGUP_CAUSE_RECOVERY_ON_TIMER_EXPIRE VoiceCallHangupCause = 102
+	VOICE_CALL_HANGUP_CAUSE_ORIGINATOR_CANCEL        VoiceCallHangupCause = 487
+	VOICE_CALL_HANGUP_CAUSE_LOSE_RACE                VoiceCallHangupCause = 502
+	VOICE_CALL_HANGUP_CAUSE_USER_NOT_REGISTERED      VoiceCallHangupCause = 606
+)
 
 func (s *service) MakeVoiceCall(
 	customer *Customer,
@@ -276,7 +190,7 @@ func (s *service) MakeVoiceCall(
 	request.OrgId = s.orgId
 
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		request.CustomerNumber = s.setCustomerNumber(customer)
+		request.CustomerNumber = s.customerNumber(customer)
 	}
 	if !reflect.ValueOf(channel).IsZero() {
 		request.ChannelNumber = &hera.VoiceChannelNumber{
@@ -284,7 +198,7 @@ func (s *service) MakeVoiceCall(
 			Number:  channel.Number,
 		}
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return s.client.MakeVoiceCall(ctx, &request)
 }
@@ -299,7 +213,7 @@ func (s *service) ReplyToVoiceCall(
 	request.SessionId = sessionId
 	request.VoiceCallActions = s.transformVoiceCallActions(actions)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return s.client.SendWebhookResponse(ctx, &request)
 }

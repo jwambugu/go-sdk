@@ -1,4 +1,4 @@
-package ussd
+package main
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 )
 
 type (
-	AppMetaData struct {
+	AppData struct {
 		Name  string `json:"name,omitempty"`
 		State string `json:"state,omitempty"`
 	}
@@ -20,23 +20,19 @@ func errorHandler(err error) {
 	}
 }
 
-func ussdApp(
-	data interface{},
-	customer *elarian.Customer,
-	service elarian.Service,
-) {
+func ussdApp(srv elarian.Service, cust *elarian.Customer, data interface{}) {
 	sessionData, ok := data.(elarian.UssdSessionNotification)
 	if !ok {
 		log.Fatalln("No session data")
 	}
-	meta, err := customer.LeaseMetaData("awesomeNameSurvey")
+	meta, err := cust.LeaseMetaData("awesomeNameSurvey")
 	errorHandler(err)
 
 	var menu *elarian.UssdMenu
 	menu.IsTerminal = true
 	menu.Text = ""
 
-	metadata := &AppMetaData{}
+	metadata := &AppData{}
 	metadata.State = "newbie"
 
 	if len(meta.Value.GetBytesVal()) > 0 {
@@ -62,7 +58,7 @@ func ussdApp(
 			Number:  "Elarian",
 			Channel: elarian.MESSAGING_CHANNEL_SMS,
 		}
-		_, err := customer.SendMessage(body, channelNumber)
+		_, err := cust.SendMessage(channelNumber, body)
 		errorHandler(err)
 	case "newbie":
 	default:
@@ -70,14 +66,14 @@ func ussdApp(
 		menu.IsTerminal = false
 		metadata.State = "veteran"
 	}
-	_, err = customer.UpdateMetaData(
+	_, err = cust.UpdateMetaData(
 		map[string]string{
 			"name":  metadata.Name,
 			"state": metadata.State,
 		},
 	)
 	errorHandler(err)
-	_, err = service.ReplyToUssdSession(
+	_, err = srv.ReplyToUssdSession(
 		sessionData.SessionId,
 		menu)
 	errorHandler(err)
@@ -86,13 +82,9 @@ func ussdApp(
 func main() {
 	service, err := elarian.Initialize(&elarian.Options{})
 	errorHandler(err)
-
 	err = service.AddNotificationSubscriber(
 		elarian.ELARIAN_USSD_SESSION_NOTIFICATION,
 		ussdApp,
 	)
-	errorHandler(err)
-
-	err = service.InitializeNotificationStream()
 	errorHandler(err)
 }

@@ -55,8 +55,8 @@ func main(){
 - `UpdateCustomerTag()`:
 - `DeleteCustomerTag()`:
 
-- `UpdateCustomerSecondaryId()`:
-- `DeleteCustomerSecondaryId()`:
+- `UpdateSecondaryId()`:
+- `DeleteSecondaryId()`:
 
 - `UpdateCustomerMetadata()`:
 - `DeleteCustomerMetadata ()`:

@@ -22,8 +22,8 @@ type (
 		Partition string         `json:"partition,omitempty"`
 	}
 
-	// CustomerSecondaryId refers to an identifier that can be used on a customer that is unique to a customer and that is provided by you and not the elarian service
-	CustomerSecondaryId struct {
+	// SecondaryId refers to an identifier that can be used on a customer that is unique to a customer and that is provided by you and not the elarian service
+	SecondaryId struct {
 		Key        string    `json:"key,omitempty"`
 		Value      string    `json:"value,omitempty"`
 		Expiration time.Time `json:"expiration,omitempty"`
@@ -31,16 +31,16 @@ type (
 
 	// Customer struct defines the paramters required to make any request involving a customer. Note: in every scenario either the Id or the phoneNumber is required but not  both unless otherwise specified
 	Customer struct {
-		Id             string              `json:"customerId,omitempty"`
-		CustomerNumber CustomerNumber      `json:"phoneNumber"`
-		SecondaryId    CustomerSecondaryId `json:"secondaryId"`
+		Id             string          `json:"customerId,omitempty"`
+		CustomerNumber *CustomerNumber `json:"phoneNumber"`
+		SecondaryId    *SecondaryId    `json:"secondaryId"`
 		service        Service
 	}
 
-	// CreateCustomerParams to create a customer
-	CreateCustomerParams struct {
-		Id             string         `json:"customerId,omitempty"`
-		CustomerNumber CustomerNumber `json:"phoneNumber,omitempty"`
+	// CreateCustomer to create a customer
+	CreateCustomer struct {
+		Id             string          `json:"customerId,omitempty"`
+		CustomerNumber *CustomerNumber `json:"phoneNumber,omitempty"`
 	}
 
 	// Reminder defines the composition of a reminder. The key is an identifier property. The payload is also a string.
@@ -53,10 +53,10 @@ type (
 
 	// ReminderNotification struct
 	ReminderNotification struct {
-		CustomerId string   `json:"customerId,omitempty"`
-		WorkId     string   `json:"workId,omitempty"`
-		Reminder   Reminder `json:"reminder,omitempty"`
-		Tag        Tag      `json:"tag,omitempty"`
+		CustomerId string    `json:"customerId,omitempty"`
+		WorkId     string    `json:"workId,omitempty"`
+		Reminder   *Reminder `json:"reminder,omitempty"`
+		Tag        *Tag      `json:"tag,omitempty"`
 	}
 
 	// Tag defines a customer tag
@@ -74,40 +74,6 @@ const (
 	CUSTOMER_NUMBER_PROVIDER_TELEGRAM
 )
 
-func (s *service) setCustomerNumber(customer *Customer) *hera.CustomerNumber {
-	return &hera.CustomerNumber{
-		Number:   customer.CustomerNumber.Number,
-		Provider: hera.CustomerNumberProvider(customer.CustomerNumber.Provider),
-		Partition: &wrapperspb.StringValue{
-			Value: customer.CustomerNumber.Partition,
-		},
-	}
-}
-
-func (s *service) setCustomerNumbers(customerNumbers []*CustomerNumber) []*hera.CustomerNumber {
-	var numbers []*hera.CustomerNumber
-
-	for _, number := range customerNumbers {
-		numbers = append(numbers, &hera.CustomerNumber{
-			Number:    number.Number,
-			Provider:  hera.CustomerNumberProvider(number.Provider),
-			Partition: wrapperspb.String(number.Partition),
-		})
-	}
-	return numbers
-}
-
-func (s *service) setCustomerSecondaryId(
-	customer *Customer,
-) *hera.IndexMapping {
-	return &hera.IndexMapping{
-		Key: customer.SecondaryId.Key,
-		Value: &wrapperspb.StringValue{
-			Value: customer.SecondaryId.Value,
-		},
-	}
-}
-
 func (s *service) GetCustomerState(
 	customer *Customer,
 ) (*hera.CustomerStateReplyData, error) {
@@ -121,16 +87,16 @@ func (s *service) GetCustomerState(
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		request.Customer = &hera.GetCustomerStateRequest_CustomerNumber{
-			CustomerNumber: s.setCustomerNumber(customer),
+			CustomerNumber: s.customerNumber(customer),
 		}
 	}
 	if !reflect.ValueOf(customer.SecondaryId).IsZero() {
 		request.Customer = &hera.GetCustomerStateRequest_SecondaryId{
-			SecondaryId: s.setCustomerSecondaryId(customer),
+			SecondaryId: s.setSecondaryId(customer),
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	result, err := s.client.GetCustomerState(ctx, &request)
 	return result.GetData(), err
@@ -149,7 +115,7 @@ func (s *service) AdoptCustomerState(
 		OtherCustomerId: otherCustomer.Id,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return s.client.AdoptCustomerState(ctx, &request)
 }
@@ -169,12 +135,12 @@ func (s *service) AddCustomerReminder(
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		request.Customer = &hera.AddCustomerReminderRequest_CustomerNumber{
-			CustomerNumber: s.setCustomerNumber(customer),
+			CustomerNumber: s.customerNumber(customer),
 		}
 	}
 	if !reflect.ValueOf(customer.SecondaryId).IsZero() {
 		request.Customer = &hera.AddCustomerReminderRequest_SecondaryId{
-			SecondaryId: s.setCustomerSecondaryId(customer),
+			SecondaryId: s.setSecondaryId(customer),
 		}
 	}
 
@@ -189,14 +155,12 @@ func (s *service) AddCustomerReminder(
 		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return s.client.AddCustomerReminder(ctx, &request)
 }
 
-func (s *service) AddCustomerReminderByTag(
-	reminder *Reminder, tag *Tag,
-) (*hera.TagCommandReply, error) {
+func (s *service) AddCustomerReminderByTag(tag *Tag, reminder *Reminder) (*hera.TagCommandReply, error) {
 	var request hera.AddCustomerReminderTagRequest
 	request.OrgId = s.orgId
 
@@ -218,15 +182,12 @@ func (s *service) AddCustomerReminderByTag(
 		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return s.client.AddCustomerReminderByTag(ctx, &request)
 }
 
-func (s *service) CancelCustomerReminder(
-	customer *Customer,
-	key string,
-) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) CancelCustomerReminder(customer *Customer, key string) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.CancelCustomerReminderRequest
 	request.AppId = s.appId
 	request.OrgId = s.orgId
@@ -239,23 +200,21 @@ func (s *service) CancelCustomerReminder(
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		request.Customer = &hera.CancelCustomerReminderRequest_CustomerNumber{
-			CustomerNumber: s.setCustomerNumber(customer),
+			CustomerNumber: s.customerNumber(customer),
 		}
 	}
 	if !reflect.ValueOf(customer.SecondaryId).IsZero() {
 		request.Customer = &hera.CancelCustomerReminderRequest_SecondaryId{
-			SecondaryId: s.setCustomerSecondaryId(customer),
+			SecondaryId: s.setSecondaryId(customer),
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return s.client.CancelCustomerReminder(ctx, &request)
 }
 
-func (s *service) CancelCustomerReminderByTag(
-	key string, tag *Tag,
-) (*hera.TagCommandReply, error) {
+func (s *service) CancelCustomerReminderByTag(tag *Tag, key string) (*hera.TagCommandReply, error) {
 	var request hera.CancelCustomerReminderTagRequest
 	request.AppId = s.appId
 	request.OrgId = s.orgId
@@ -268,15 +227,12 @@ func (s *service) CancelCustomerReminderByTag(
 		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return s.client.CancelCustomerReminderByTag(ctx, &request)
 }
 
-func (s *service) UpdateCustomerTag(
-	customer *Customer,
-	tags []Tag,
-) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) UpdateCustomerTag(customer *Customer, tags []Tag) (*hera.UpdateCustomerStateReply, error) {
 	var request hera.UpdateCustomerTagRequest
 	var heraTags []*hera.CustomerIndex
 	request.OrgId = s.orgId
@@ -288,12 +244,12 @@ func (s *service) UpdateCustomerTag(
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		request.Customer = &hera.UpdateCustomerTagRequest_CustomerNumber{
-			CustomerNumber: s.setCustomerNumber(customer),
+			CustomerNumber: s.customerNumber(customer),
 		}
 	}
 	if !reflect.ValueOf(customer.SecondaryId).IsZero() {
 		request.Customer = &hera.UpdateCustomerTagRequest_SecondaryId{
-			SecondaryId: s.setCustomerSecondaryId(customer),
+			SecondaryId: s.setSecondaryId(customer),
 		}
 	}
 
@@ -310,15 +266,12 @@ func (s *service) UpdateCustomerTag(
 	}
 	request.Tags = heraTags
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return s.client.UpdateCustomerTag(ctx, &request)
 }
 
-func (s *service) DeleteCustomerTag(
-	customer *Customer,
-	keys []string,
-) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) DeleteCustomerTag(customer *Customer, keys []string) (*hera.UpdateCustomerStateReply, error) {
 
 	var request hera.DeleteCustomerTagRequest
 	request.Keys = keys
@@ -326,12 +279,12 @@ func (s *service) DeleteCustomerTag(
 
 	if !reflect.ValueOf(customer.SecondaryId).IsZero() {
 		request.Customer = &hera.DeleteCustomerTagRequest_SecondaryId{
-			SecondaryId: s.setCustomerSecondaryId(customer),
+			SecondaryId: s.setSecondaryId(customer),
 		}
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		request.Customer = &hera.DeleteCustomerTagRequest_CustomerNumber{
-			CustomerNumber: s.setCustomerNumber(customer),
+			CustomerNumber: s.customerNumber(customer),
 		}
 	}
 	if customer.Id != "" {
@@ -339,14 +292,13 @@ func (s *service) DeleteCustomerTag(
 			CustomerId: customer.Id,
 		}
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return s.client.DeleteCustomerTag(ctx, &request)
 }
 
-func (s *service) UpdateCustomerSecondaryId(
-	customer *Customer,
-	secondaryIds []CustomerSecondaryId,
+func (s *service) UpdateCustomerSecondaryId(customer *Customer,
+	secondaryIds []SecondaryId,
 ) (*hera.UpdateCustomerStateReply, error) {
 	var heraSecIds []*hera.CustomerIndex
 	var request hera.UpdateCustomerSecondaryIdRequest
@@ -359,12 +311,12 @@ func (s *service) UpdateCustomerSecondaryId(
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		request.Customer = &hera.UpdateCustomerSecondaryIdRequest_CustomerNumber{
-			CustomerNumber: s.setCustomerNumber(customer),
+			CustomerNumber: s.customerNumber(customer),
 		}
 	}
 	if !reflect.ValueOf(customer.SecondaryId).IsZero() {
 		request.Customer = &hera.UpdateCustomerSecondaryIdRequest_SecondaryId{
-			SecondaryId: s.setCustomerSecondaryId(customer),
+			SecondaryId: s.setSecondaryId(customer),
 		}
 	}
 
@@ -381,14 +333,14 @@ func (s *service) UpdateCustomerSecondaryId(
 	}
 	request.SecondaryIds = heraSecIds
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return s.client.UpdateCustomerSecondaryId(ctx, &request)
 }
 
 func (s *service) DeleteCustomerSecondaryId(
 	customer *Customer,
-	secondaryIds []CustomerSecondaryId,
+	secondaryIds []SecondaryId,
 ) (*hera.UpdateCustomerStateReply, error) {
 
 	var request hera.DeleteCustomerSecondaryIdRequest
@@ -402,12 +354,12 @@ func (s *service) DeleteCustomerSecondaryId(
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		request.Customer = &hera.
 			DeleteCustomerSecondaryIdRequest_CustomerNumber{
-			CustomerNumber: s.setCustomerNumber(customer),
+			CustomerNumber: s.customerNumber(customer),
 		}
 	}
 	if !reflect.ValueOf(customer.SecondaryId).IsZero() {
 		request.Customer = &hera.DeleteCustomerSecondaryIdRequest_SecondaryId{
-			SecondaryId: s.setCustomerSecondaryId(customer),
+			SecondaryId: s.setSecondaryId(customer),
 		}
 	}
 
@@ -422,7 +374,7 @@ func (s *service) DeleteCustomerSecondaryId(
 	request.OrgId = s.orgId
 	request.Mappings = heraSecIds
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return s.client.DeleteCustomerSecondaryId(ctx, &request)
 }
@@ -443,16 +395,16 @@ func (s *service) LeaseCustomerMetaData(
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		request.Customer = &hera.LeaseCustomerMetadataRequest_CustomerNumber{
-			CustomerNumber: s.setCustomerNumber(customer),
+			CustomerNumber: s.customerNumber(customer),
 		}
 	}
 	if !reflect.ValueOf(customer.SecondaryId).IsZero() {
 		request.Customer = &hera.LeaseCustomerMetadataRequest_SecondaryId{
-			SecondaryId: s.setCustomerSecondaryId(customer),
+			SecondaryId: s.setSecondaryId(customer),
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return s.client.LeaseCustomerMetadata(ctx, &request)
 }
@@ -471,12 +423,12 @@ func (s *service) UpdateCustomerMetaData(
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		request.Customer = &hera.UpdateCustomerMetadataRequest_CustomerNumber{
-			CustomerNumber: s.setCustomerNumber(customer),
+			CustomerNumber: s.customerNumber(customer),
 		}
 	}
 	if !reflect.ValueOf(customer.SecondaryId).IsZero() {
 		request.Customer = &hera.UpdateCustomerMetadataRequest_SecondaryId{
-			SecondaryId: s.setCustomerSecondaryId(customer),
+			SecondaryId: s.setSecondaryId(customer),
 		}
 	}
 
@@ -490,7 +442,7 @@ func (s *service) UpdateCustomerMetaData(
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return s.client.UpdateCustomerMetadata(ctx, &request)
 }
@@ -510,27 +462,27 @@ func (s *service) DeleteCustomerMetaData(
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		request.Customer = &hera.DeleteCustomerMetadataRequest_CustomerNumber{
-			CustomerNumber: s.setCustomerNumber(customer),
+			CustomerNumber: s.customerNumber(customer),
 		}
 	}
 	if !reflect.ValueOf(customer.SecondaryId).IsZero() {
 		request.Customer = &hera.DeleteCustomerMetadataRequest_SecondaryId{
-			SecondaryId: s.setCustomerSecondaryId(customer),
+			SecondaryId: s.setSecondaryId(customer),
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return s.client.DeleteCustomerMetadata(ctx, &request)
 }
 
-func (s *service) NewCustomer(params *CreateCustomerParams) (*Customer, error) {
+func (s *service) NewCustomer(params *CreateCustomer) *Customer {
 	var customer Customer
 	customer.Id = params.Id
 	customer.CustomerNumber = params.CustomerNumber
 	customer.service = s
 
-	return &customer, nil
+	return &customer
 }
 
 // GetState returns a customers state on elarian, the state could me messaging state, metadata, secondaryIds, payments etc.
@@ -561,14 +513,14 @@ func (c *Customer) DeleteTag(
 
 // UpdateSecondaryId adds secondary ids to a customer, this could be the id you associate the customer with locally on your application.
 func (c *Customer) UpdateSecondaryId(
-	secondaryIds []CustomerSecondaryId,
+	secondaryIds []SecondaryId,
 ) (*hera.UpdateCustomerStateReply, error) {
 	return c.service.UpdateCustomerSecondaryId(c, secondaryIds)
 }
 
 // DeleteSecondaryId deletes an associated secondary id from a customer
 func (c *Customer) DeleteSecondaryId(
-	secondaryIds []CustomerSecondaryId,
+	secondaryIds []SecondaryId,
 ) (*hera.UpdateCustomerStateReply, error) {
 	return c.service.DeleteCustomerSecondaryId(c, secondaryIds)
 }

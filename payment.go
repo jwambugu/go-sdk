@@ -49,9 +49,27 @@ type (
 
 	// PaymentStatusNotification struct
 	PaymentStatusNotification struct {
-		CustomerId    string `json:"customerId,omitempty"`
-		Status        int    `json:"status,omitempty"`
-		TransactionId string `json:"transactionId,omitempty"`
+		CustomerId    string        `json:"customerId,omitempty"`
+		TransactionId string        `json:"transactionId,omitempty"`
+		Status        PaymentStatus `json:"status,omitempty"`
+	}
+
+	// ReceivedPaymentNotification struct
+	ReceivedPaymentNotification struct {
+		ChannelNumber  *PaymentChannelNumber `json:"channelNumber,omitempty"`
+		CustomerId     string                `json:"customerId,omitempty"`
+		CustomerNumber *CustomerNumber       `json:"customerNumber,omitempty"`
+		PurseId        string                `json:"purseId,omitempty"`
+		Status         PaymentStatus         `json:"status,omitempty"`
+		TransactionId  string                `json:"transactionId,omitempty"`
+		Value          *Cash                 `json:"value,omitempty"`
+	}
+
+	WalletPaymentStatusNotification struct {
+		CustomerId    string        `json:"customerId,omitempty"`
+		Status        PaymentStatus `json:"status,omitempty"`
+		TransactionId string        `json:"transactionId,omitempty"`
+		WalletId      string        `json:"walletId,omitempty"`
 	}
 )
 
@@ -61,58 +79,28 @@ const (
 )
 
 const (
-	PAYMENT_STATUS_UNSPECIFIED                = 0
-	PAYMENT_STATUS_QUEUED                     = 101
-	PAYMENT_STATUS_PENDING_CONFIRMATION       = 102
-	PAYMENT_STATUS_PENDING_VALIdATION         = 103
-	PAYMENT_STATUS_VALIdATED                  = 104
-	PAYMENT_STATUS_INVALId_REQUEST            = 200
-	PAYMENT_STATUS_NOT_SUPPORTED              = 201
-	PAYMENT_STATUS_INSUFFICIENT_FUNDS         = 202
-	PAYMENT_STATUS_APPLICATION_ERROR          = 203
-	PAYMENT_STATUS_NOT_ALLOWED                = 204
-	PAYMENT_STATUS_DUPLICATE_REQUEST          = 205
-	PAYMENT_STATUS_INVALId_PURSE              = 206
-	PAYMENT_STATUS_INVALId_WALLET             = 207
-	PAYMENT_STATUS_DECOMMISSIONED_CUSTOMER_Id = 299
-	PAYMENT_STATUS_SUCCESS                    = 300
-	PAYMENT_STATUS_PASS_THROUGH               = 301
-	PAYMENT_STATUS_FAILED                     = 400
-	PAYMENT_STATUS_THROTTLED                  = 401
-	PAYMENT_STATUS_EXPIRED                    = 402
-	PAYMENT_STATUS_REJECTED                   = 403
-	PAYMENT_STATUS_REVERSED                   = 500
+	PAYMENT_STATUS_UNSPECIFIED                PaymentStatus = 0
+	PAYMENT_STATUS_QUEUED                     PaymentStatus = 101
+	PAYMENT_STATUS_PENDING_CONFIRMATION       PaymentStatus = 102
+	PAYMENT_STATUS_PENDING_VALIdATION         PaymentStatus = 103
+	PAYMENT_STATUS_VALIdATED                  PaymentStatus = 104
+	PAYMENT_STATUS_INVALId_REQUEST            PaymentStatus = 200
+	PAYMENT_STATUS_NOT_SUPPORTED              PaymentStatus = 201
+	PAYMENT_STATUS_INSUFFICIENT_FUNDS         PaymentStatus = 202
+	PAYMENT_STATUS_APPLICATION_ERROR          PaymentStatus = 203
+	PAYMENT_STATUS_NOT_ALLOWED                PaymentStatus = 204
+	PAYMENT_STATUS_DUPLICATE_REQUEST          PaymentStatus = 205
+	PAYMENT_STATUS_INVALId_PURSE              PaymentStatus = 206
+	PAYMENT_STATUS_INVALId_WALLET             PaymentStatus = 207
+	PAYMENT_STATUS_DECOMMISSIONED_CUSTOMER_Id PaymentStatus = 299
+	PAYMENT_STATUS_SUCCESS                    PaymentStatus = 300
+	PAYMENT_STATUS_PASS_THROUGH               PaymentStatus = 301
+	PAYMENT_STATUS_FAILED                     PaymentStatus = 400
+	PAYMENT_STATUS_THROTTLED                  PaymentStatus = 401
+	PAYMENT_STATUS_EXPIRED                    PaymentStatus = 402
+	PAYMENT_STATUS_REJECTED                   PaymentStatus = 403
+	PAYMENT_STATUS_REVERSED                   PaymentStatus = 500
 )
-
-func (s *service) setPaymentCounterPartyAsPurse(purse *Purse) *hera.PaymentCounterParty_Purse {
-	return &hera.PaymentCounterParty_Purse{
-		Purse: &hera.PaymentPurseCounterParty{
-			PurseId: purse.PurseId,
-		},
-	}
-}
-func (s *service) setPaymentCounterPartyAsCustomer(
-	customer *Customer,
-	channel *PaymentChannelNumber,
-) *hera.PaymentCounterParty_Customer {
-	return &hera.PaymentCounterParty_Customer{
-		Customer: &hera.PaymentCustomerCounterParty{
-			CustomerNumber: s.setCustomerNumber(customer),
-			ChannelNumber: &hera.PaymentChannelNumber{
-				Channel: hera.PaymentChannel(channel.Channel),
-				Number:  channel.Number,
-			},
-		},
-	}
-}
-func (s *service) setPaymentCounterPartyAsWallet(wallet *Wallet) *hera.PaymentCounterParty_Wallet {
-	return &hera.PaymentCounterParty_Wallet{
-		Wallet: &hera.PaymentWalletCounterParty{
-			CustomerId: wallet.CustomerId,
-			WalletId:   wallet.WalletId,
-		},
-	}
-}
 
 func (s *service) InitiatePayment(customer *Customer, params *Paymentrequest) (*hera.InitiatePaymentReply, error) {
 	var request hera.InitiatePaymentRequest
@@ -125,37 +113,37 @@ func (s *service) InitiatePayment(customer *Customer, params *Paymentrequest) (*
 
 	if !reflect.ValueOf(params.CreditParty.Customer).IsZero() {
 		request.CreditParty = &hera.PaymentCounterParty{
-			Party: s.setPaymentCounterPartyAsCustomer(customer, &params.Channel),
+			Party: s.paymentCounterPartyAsCustomer(customer, &params.Channel),
 		}
 	}
 	if !reflect.ValueOf(params.CreditParty.Purse).IsZero() {
 		request.CreditParty = &hera.PaymentCounterParty{
-			Party: s.setPaymentCounterPartyAsPurse(&params.CreditParty.Purse),
+			Party: s.paymentCounterPartyAsPurse(&params.CreditParty.Purse),
 		}
 	}
 	if !reflect.ValueOf(params.CreditParty.Wallet).IsZero() {
 		request.CreditParty = &hera.PaymentCounterParty{
-			Party: s.setPaymentCounterPartyAsWallet(&params.CreditParty.Wallet),
+			Party: s.paymentCounterPartyAsWallet(&params.CreditParty.Wallet),
 		}
 	}
 
 	if !reflect.ValueOf(params.DebitParty.Customer).IsZero() {
 		request.DebitParty = &hera.PaymentCounterParty{
-			Party: s.setPaymentCounterPartyAsCustomer(customer, &params.Channel),
+			Party: s.paymentCounterPartyAsCustomer(customer, &params.Channel),
 		}
 	}
 	if !reflect.ValueOf(params.DebitParty.Purse).IsZero() {
 		request.DebitParty = &hera.PaymentCounterParty{
-			Party: s.setPaymentCounterPartyAsPurse(&params.DebitParty.Purse),
+			Party: s.paymentCounterPartyAsPurse(&params.DebitParty.Purse),
 		}
 	}
 	if !reflect.ValueOf(params.DebitParty.Wallet).IsZero() {
 		request.DebitParty = &hera.PaymentCounterParty{
-			Party: s.setPaymentCounterPartyAsWallet(&params.DebitParty.Wallet),
+			Party: s.paymentCounterPartyAsWallet(&params.DebitParty.Wallet),
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return s.client.InitiatePayment(ctx, &request)
 }
