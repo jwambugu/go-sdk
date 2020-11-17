@@ -8,9 +8,9 @@ import (
 
 func Test_Payments(t *testing.T) {
 	var opts *elarian.Options
-	opts.ApiKey = APIKey
-	opts.AppId = AppId
-	opts.OrgId = OrgId
+	opts.APIKey = APIKey
+	opts.AppID = AppID
+	opts.OrgID = OrgID
 
 	service, err := elarian.Initialize(opts)
 	if err != nil {
@@ -18,10 +18,10 @@ func Test_Payments(t *testing.T) {
 	}
 
 	var customer elarian.Customer
-	customer.Id = "el_cst_c617c20cec9b52bf7698ea58695fb8bc"
+	customer.ID = "el_cst_c617c20cec9b52bf7698ea58695fb8bc"
 	customer.CustomerNumber = &elarian.CustomerNumber{
 		Number:   "+254712876967",
-		Provider: elarian.CUSTOMER_NUMBER_PROVIDER_TELCO,
+		Provider: elarian.CustomerNumberProviderTelco,
 	}
 
 	t.Run("It should send a payment", func(t *testing.T) {
@@ -32,7 +32,7 @@ func Test_Payments(t *testing.T) {
 		}
 		request.Channel = elarian.PaymentChannelNumber{
 			Number:  "+254700000001",
-			Channel: elarian.PAYMENT_CHANNEL_TELCO,
+			Channel: elarian.PaymentChannelTelco,
 		}
 
 		res, err := service.InitiatePayment(&customer, request)

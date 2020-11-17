@@ -10,9 +10,7 @@ import (
 func (s *service) messageBodyAsText(text string) *hera.CustomerMessageBody_Text {
 	return &hera.CustomerMessageBody_Text{
 		Text: &hera.TextMessageBody{
-			Text: &wrapperspb.StringValue{
-				Value: text,
-			},
+			Text: wrapperspb.String(text),
 		},
 	}
 }
@@ -48,15 +46,15 @@ func (s *service) messageBodyAsMedia(media *Media) *hera.CustomerMessageBody_Med
 
 func (s *service) messageStatusNotf(notf *hera.MessageStatusNotification) *MessageStatusNotification {
 	return &MessageStatusNotification{
-		CustomerId: notf.CustomerId,
-		MessageId:  notf.MessageId,
+		CustomerID: notf.CustomerId,
+		MessageID:  notf.MessageId,
 		Status:     MessageDeliveryStatus(notf.Status),
 	}
 }
 
 func (s *service) messageSessionStatusNotf(notf *hera.MessagingSessionStatusNotification) *MessageSessionStatusNotification {
 	return &MessageSessionStatusNotification{
-		CustomerId: notf.CustomerId,
+		CustomerID: notf.CustomerId,
 		ChannelNumber: &MessagingChannelNumber{
 			Number:  notf.ChannelNumber.Number,
 			Channel: MessagingChannel(notf.ChannelNumber.Channel),
@@ -73,7 +71,7 @@ func (s *service) messageSessionStatusNotf(notf *hera.MessagingSessionStatusNoti
 
 func (s *service) messagingConsentStatusNotf(notf *hera.MessagingConsentStatusNotification) *MessagingConsentStatusNotification {
 	return &MessagingConsentStatusNotification{
-		CustomerId: notf.CustomerId,
+		CustomerID: notf.CustomerId,
 		CustomerNumber: &CustomerNumber{
 			Number:    notf.CustomerNumber.Number,
 			Partition: notf.CustomerNumber.Partition.Value,
@@ -90,8 +88,8 @@ func (s *service) messagingConsentStatusNotf(notf *hera.MessagingConsentStatusNo
 func (s *service) recievedMessageNotification(notf *hera.ReceivedMessageNotification) *RecievedMessageNotification {
 	var notification *RecievedMessageNotification
 
-	notification.CustomerId = notf.CustomerId
-	notification.MessageId = notf.MessageId
+	notification.CustomerID = notf.CustomerId
+	notification.MessageID = notf.MessageId
 
 	if !reflect.ValueOf(notf.CustomerNumber).IsZero() {
 		notification.CustomerNumber = &CustomerNumber{
@@ -124,7 +122,7 @@ func (s *service) recievedMessageNotification(notf *hera.ReceivedMessageNotifica
 	}
 
 	notification.Text = notf.Text.Value
-	notification.MessageId = notf.MessageId
+	notification.MessageID = notf.MessageId
 	notification.Media = notificationMedia
 	return notification
 }

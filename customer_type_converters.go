@@ -7,11 +7,9 @@ import (
 
 func (s *service) customerNumber(customer *Customer) *hera.CustomerNumber {
 	return &hera.CustomerNumber{
-		Number:   customer.CustomerNumber.Number,
-		Provider: hera.CustomerNumberProvider(customer.CustomerNumber.Provider),
-		Partition: &wrapperspb.StringValue{
-			Value: customer.CustomerNumber.Partition,
-		},
+		Number:    customer.CustomerNumber.Number,
+		Provider:  hera.CustomerNumberProvider(customer.CustomerNumber.Provider),
+		Partition: wrapperspb.String(customer.CustomerNumber.Partition),
 	}
 }
 
@@ -27,29 +25,27 @@ func (s *service) customerNumbers(customerNumbers []*CustomerNumber) []*hera.Cus
 	return numbers
 }
 
-func (s *service) setSecondaryId(customer *Customer) *hera.IndexMapping {
+func (s *service) secondaryID(customer *Customer) *hera.IndexMapping {
 	return &hera.IndexMapping{
-		Key: customer.SecondaryId.Key,
-		Value: &wrapperspb.StringValue{
-			Value: customer.SecondaryId.Value,
-		},
+		Key:   customer.SecondaryID.Key,
+		Value: wrapperspb.String(customer.SecondaryID.Value),
 	}
 }
 
 func (s *service) reminderNotification(notf *hera.ReminderNotification) *ReminderNotification {
 	return &ReminderNotification{
-		CustomerId: notf.CustomerId,
+		CustomerID: notf.CustomerId,
 		Reminder: &Reminder{
 			Key:        notf.Reminder.Key,
 			Payload:    notf.Reminder.Payload.Value,
 			Expiration: notf.Reminder.Expiration.AsTime(),
-			Interval:   notf.Reminder.Interval.Seconds,
+			Interval:   notf.Reminder.Interval.AsDuration(),
 		},
 		Tag: &Tag{
 			Key:        notf.Tag.Mapping.Key,
 			Value:      notf.Tag.Mapping.Value.Value,
 			Expiration: notf.Tag.Expiration.AsTime(),
 		},
-		WorkId: notf.WorkId.Value,
+		WorkID: notf.WorkId.Value,
 	}
 }

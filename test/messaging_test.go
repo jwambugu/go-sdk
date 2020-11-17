@@ -10,19 +10,19 @@ import (
 
 func Test_Messaging(t *testing.T) {
 	var opts *elarian.Options
-	opts.ApiKey = APIKey
-	opts.AppId = AppId
-	opts.OrgId = OrgId
+	opts.APIKey = APIKey
+	opts.AppID = AppID
+	opts.OrgID = OrgID
 
 	service, err := elarian.Initialize(opts)
 	if err != nil {
 		log.Fatal(err)
 	}
 	var customer *elarian.Customer
-	customer.Id = "el_cst_c617c20cec9b52bf7698ea58695fb8bc"
+	customer.ID = "el_cst_c617c20cec9b52bf7698ea58695fb8bc"
 	customer.CustomerNumber = &elarian.CustomerNumber{
 		Number:   "+254712876967",
-		Provider: elarian.CUSTOMER_NUMBER_PROVIDER_TELCO,
+		Provider: elarian.CustomerNumberProviderTelco,
 	}
 
 	t.Run("It should send a text message", func(t *testing.T) {
@@ -31,7 +31,7 @@ func Test_Messaging(t *testing.T) {
 
 		var channelNumber *elarian.MessagingChannelNumber
 		channelNumber.Number = "41012"
-		channelNumber.Channel = elarian.MESSAGING_CHANNEL_SMS
+		channelNumber.Channel = elarian.MessagingChannelSms
 
 		response, err := service.SendMessage(
 			customer,

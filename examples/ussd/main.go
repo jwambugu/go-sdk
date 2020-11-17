@@ -56,7 +56,7 @@ func ussdApp(srv elarian.Service, cust *elarian.Customer, data interface{}) {
 		}
 		channelNumber := &elarian.MessagingChannelNumber{
 			Number:  "Elarian",
-			Channel: elarian.MESSAGING_CHANNEL_SMS,
+			Channel: elarian.MessagingChannelSms,
 		}
 		_, err := cust.SendMessage(channelNumber, body)
 		errorHandler(err)
@@ -74,7 +74,7 @@ func ussdApp(srv elarian.Service, cust *elarian.Customer, data interface{}) {
 	)
 	errorHandler(err)
 	_, err = srv.ReplyToUssdSession(
-		sessionData.SessionId,
+		sessionData.SessionID,
 		menu)
 	errorHandler(err)
 }
@@ -83,7 +83,7 @@ func main() {
 	service, err := elarian.Initialize(&elarian.Options{})
 	errorHandler(err)
 	err = service.AddNotificationSubscriber(
-		elarian.ELARIAN_USSD_SESSION_NOTIFICATION,
+		elarian.ElarianUssdSessionNotification,
 		ussdApp,
 	)
 	errorHandler(err)

@@ -23,35 +23,33 @@ type (
 		Number  string      `json:"number,omitempty"`
 	}
 
-	// Ussdrequest struct
+	// UssdOptions struct
 	UssdOptions struct {
-		SessionId string    `json:"sessionId,omitempty"`
+		SessionID string    `json:"sessionId,omitempty"`
 		UssdMenu  *UssdMenu `json:"UssdMenu,omitempty"`
 	}
 
 	// UssdSessionNotification struct
 	UssdSessionNotification struct {
-		SessionId      string            `json:"sessionId,omitempty"`
-		CustomerId     string            `json:"customerId,omitempty"`
+		SessionID      string            `json:"sessionId,omitempty"`
+		CustomerID     string            `json:"customerId,omitempty"`
 		Input          string            `json:"input,omitempty"`
 		CustomerNumber *CustomerNumber   `json:"customerNumber,omitempty"`
 		ChannelNumber  UssdChannelNumber `json:"channelNumber,omitempty"`
 	}
 )
 
+// UssdChannel enums
 const (
-	USSD_CHANNEL_UNSPECIFIED UssdChannel = iota
-	USSD_CHANNEL_TELCO
+	UssdChannelUnspecified UssdChannel = iota
+	UssdChannelTelco
 )
 
-func (s *service) ReplyToUssdSession(
-	sessionId string,
-	ussdMenu *UssdMenu,
-) (*hera.WebhookResponseReply, error) {
+func (s *service) ReplyToUssdSession(sessionID string, ussdMenu *UssdMenu) (*hera.WebhookResponseReply, error) {
 	var request hera.WebhookResponse
-	request.AppId = s.appId
-	request.OrgId = s.orgId
-	request.SessionId = sessionId
+	request.AppId = s.appID
+	request.OrgId = s.orgID
+	request.SessionId = sessionID
 	request.UssdMenu = &hera.UssdMenu{
 		IsTerminal: ussdMenu.IsTerminal,
 		Text:       ussdMenu.Text,

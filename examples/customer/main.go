@@ -10,7 +10,7 @@ import (
 
 func getCustomerState(service elarian.Service) {
 	var cust elarian.Customer
-	cust.Id = ""
+	cust.ID = ""
 	res, err := service.GetCustomerState(&cust)
 	if err != nil {
 		log.Fatalf("Error getting customer state %v \n", err)
@@ -19,7 +19,7 @@ func getCustomerState(service elarian.Service) {
 }
 
 func getState(service elarian.Service) {
-	cust := service.NewCustomer(&elarian.CreateCustomer{Id: ""})
+	cust := service.NewCustomer(&elarian.CreateCustomer{ID: ""})
 	res, err := cust.GetState()
 	if err != nil {
 		log.Fatalf("Error getting customer state %v \n", err)
@@ -29,7 +29,7 @@ func getState(service elarian.Service) {
 
 func addReminder(service elarian.Service) {
 	err := service.AddNotificationSubscriber(
-		elarian.ELARIAN_REMINDER_NOTIFICATION,
+		elarian.ElarianReminderNotification,
 		func(svc elarian.Service, cust *elarian.Customer, data interface{}) {
 			notf, ok := data.(elarian.ReminderNotification)
 			if !ok {
@@ -47,7 +47,7 @@ func addReminder(service elarian.Service) {
 	reminder.Payload = "i am a reminder"
 	reminder.Expiration = time.Now().Add(time.Minute + 1)
 
-	cust := service.NewCustomer(&elarian.CreateCustomer{Id: ""})
+	cust := service.NewCustomer(&elarian.CreateCustomer{ID: ""})
 	res, err := cust.AddReminder(&reminder)
 	if err != nil {
 		log.Fatalf("could not set a reminder %v", err)
@@ -57,9 +57,9 @@ func addReminder(service elarian.Service) {
 
 func main() {
 	service, err := elarian.Initialize(&elarian.Options{
-		ApiKey: "test_api_key",
-		OrgId:  "test_org",
-		AppId:  "test_app",
+		APIKey: "test_api_key",
+		OrgID:  "test_org",
+		AppID:  "test_app",
 	})
 	if err != nil {
 		log.Fatalf("Error Initializing Elarian: %v \n", err)

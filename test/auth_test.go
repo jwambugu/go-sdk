@@ -11,9 +11,9 @@ import (
 func Test_GetAuthToken(t *testing.T) {
 	t.Run("Should Get an Auth Token", func(t *testing.T) {
 		var opts *elarian.Options
-		opts.ApiKey = APIKey
-		opts.AppId = AppId
-		opts.OrgId = OrgId
+		opts.APIKey = APIKey
+		opts.AppID = AppID
+		opts.OrgID = OrgID
 
 		service, err := elarian.Initialize(opts)
 		if err != nil {

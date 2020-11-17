@@ -47,7 +47,7 @@ func (s *service) transformVoiceCallActions(actions []interface{}) []*hera.Voice
 						Record:          action.Record,
 						Sequential:      action.Sequential,
 						MaxDuration:     wrapperspb.Int32(action.MaxDuration),
-						CallerId:        wrapperspb.String(action.CallerId),
+						CallerId:        wrapperspb.String(action.CallerID),
 						RingbackTone:    wrapperspb.String(action.RingBackTone),
 						CustomerNumbers: s.customerNumbers(action.CustomerNumbers),
 					},
@@ -181,7 +181,7 @@ func (s *service) transformVoiceCallActions(actions []interface{}) []*hera.Voice
 
 func (s *service) voiceCallNotification(notf *hera.VoiceCallNotification) *VoiceCallNotification {
 	return &VoiceCallNotification{
-		SessionId: notf.SessionId,
+		SessionID: notf.SessionId,
 		ChannelNumber: &VoiceChannelNumber{
 			Channel: VoiceChannel(notf.ChannelNumber.Channel),
 			Number:  notf.ChannelNumber.Number,
@@ -194,7 +194,7 @@ func (s *service) voiceCallNotification(notf *hera.VoiceCallNotification) *Voice
 		Direction: CustomerEventDirection(notf.Direction),
 		Input: &VoiceCallHopInput{
 			DtmfDigits:   notf.Input.DtmfDigits.Value,
-			RecordingUrl: notf.Input.RecordingUrl.Value,
+			RecordingURL: notf.Input.RecordingUrl.Value,
 			Status:       VoiceCallStatus(notf.Input.Status),
 			StartedAt:    notf.Input.StartedAt.AsTime(),
 			HangupCase:   VoiceCallHangupCause(notf.Input.HangupCause),
@@ -208,7 +208,7 @@ func (s *service) voiceCallNotification(notf *hera.VoiceCallNotification) *Voice
 				DequeuedToNumber:    notf.Input.QueueData.DequeuedToNumber.Value,
 				EnqueuedAt:          notf.Input.QueueData.EnqueuedAt.AsTime(),
 				QueueDuration:       notf.Input.QueueData.QueueDuration.AsDuration(),
-				DequeuedToSessionId: notf.Input.QueueData.DequeuedToSessionId.Value,
+				DequeuedToSessionID: notf.Input.QueueData.DequeuedToSessionId.Value,
 			},
 		},
 	}

@@ -6,24 +6,24 @@ import (
 
 func (s *service) paymentStatusNotf(notf *hera.PaymentStatusNotification) *PaymentStatusNotification {
 	return &PaymentStatusNotification{
-		CustomerId:    notf.CustomerId.Value,
-		TransactionId: notf.TransactionId,
+		CustomerID:    notf.CustomerId.Value,
+		TransactionID: notf.TransactionId,
 		Status:        PaymentStatus(notf.GetStatus()),
 	}
 }
 
 func (s *service) walletPaymentStatusNotf(notf *hera.WalletPaymentStatusNotification) *WalletPaymentStatusNotification {
 	return &WalletPaymentStatusNotification{
-		CustomerId:    notf.CustomerId,
+		CustomerID:    notf.CustomerId,
 		Status:        PaymentStatus(notf.Status),
-		TransactionId: notf.TransactionId,
-		WalletId:      notf.WalletId,
+		TransactionID: notf.TransactionId,
+		WalletID:      notf.WalletId,
 	}
 }
 
 func (s *service) recievedPaymentNotf(notf *hera.ReceivedPaymentNotification) *ReceivedPaymentNotification {
 	return &ReceivedPaymentNotification{
-		CustomerId: notf.CustomerId,
+		CustomerID: notf.CustomerId,
 		CustomerNumber: &CustomerNumber{
 			Number:    notf.CustomerNumber.Number,
 			Provider:  NumberProvider(notf.CustomerNumber.Provider),
@@ -33,9 +33,9 @@ func (s *service) recievedPaymentNotf(notf *hera.ReceivedPaymentNotification) *R
 			Number:  notf.ChannelNumber.Number,
 			Channel: PaymentChannel(notf.ChannelNumber.Channel),
 		},
-		PurseId:       notf.PurseId,
+		PurseID:       notf.PurseId,
 		Status:        PaymentStatus(notf.Status),
-		TransactionId: notf.TransactionId,
+		TransactionID: notf.TransactionId,
 		Value: &Cash{
 			CurrencyCode: notf.Value.CurrencyCode,
 			Amount:       notf.Value.Amount,
@@ -46,7 +46,7 @@ func (s *service) recievedPaymentNotf(notf *hera.ReceivedPaymentNotification) *R
 func (s *service) paymentCounterPartyAsPurse(purse *Purse) *hera.PaymentCounterParty_Purse {
 	return &hera.PaymentCounterParty_Purse{
 		Purse: &hera.PaymentPurseCounterParty{
-			PurseId: purse.PurseId,
+			PurseId: purse.PurseID,
 		},
 	}
 }
@@ -69,8 +69,8 @@ func (s *service) paymentCounterPartyAsCustomer(
 func (s *service) paymentCounterPartyAsWallet(wallet *Wallet) *hera.PaymentCounterParty_Wallet {
 	return &hera.PaymentCounterParty_Wallet{
 		Wallet: &hera.PaymentWalletCounterParty{
-			CustomerId: wallet.CustomerId,
-			WalletId:   wallet.WalletId,
+			CustomerId: wallet.CustomerID,
+			WalletId:   wallet.WalletID,
 		},
 	}
 }

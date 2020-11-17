@@ -1,9 +1,5 @@
-run:
-	cd examples
-	go run .
-
 test:
 	go test -v -race ./...
 
 lint:
-	golangci-lint run --enable=depguard,gci,gochecknoglobals,errorlint,exportloopref
+	golangci-lint run --disable-all --enable=golint,depguard,gci,gochecknoglobals,errorlint,exportloopref,typecheck,goimports,misspell,govet,ineffassign,gosimple,deadcode,structcheck

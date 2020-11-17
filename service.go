@@ -6,19 +6,13 @@ import (
 )
 
 type (
-	// Cash defines a cash object
-	Cash struct {
-		CurrencyCode string  `json:"currencyCode"`
-		Amount       float64 `json:"amount"`
-	}
-
 	// Service interface exposes high level consumable elarian functionality
 	Service interface {
 		// GetCustomerState returns a customers state on elarian, the state could me messaging state, metadata, secondaryIds, payments etc.
 		GetCustomerState(customer *Customer) (*hera.CustomerStateReplyData, error)
 
 		// AdoptCustomerState copies the state of the second customer to the first customer. note for the first customer a customer id is required
-		AdoptCustomerState(customer *Customer, otherCustomer *Customer) (*hera.UpdateCustomerStateReply, error)
+		AdoptCustomerState(customerID string, otherCustomer *Customer) (*hera.UpdateCustomerStateReply, error)
 
 		// AddCustomerReminder sets a reminder on elarian for a customer which is triggered on set time. The reminder is push through the notification stream.
 		AddCustomerReminder(customer *Customer, reminder *Reminder) (*hera.UpdateCustomerStateReply, error)
@@ -39,10 +33,10 @@ type (
 		DeleteCustomerTag(customer *Customer, keys []string) (*hera.UpdateCustomerStateReply, error)
 
 		// UpdateSecondaryId adds secondary ids to a customer, this could be the id you associate the customer with locally on your application.
-		UpdateCustomerSecondaryId(customer *Customer, secondaryIds []SecondaryId) (*hera.UpdateCustomerStateReply, error)
+		UpdateCustomerSecondaryID(customer *Customer, secondaryIds []SecondaryID) (*hera.UpdateCustomerStateReply, error)
 
 		// DeleteSecondaryId deletes an associated secondary id from a customer
-		DeleteCustomerSecondaryId(customer *Customer, secondaryIds []SecondaryId) (*hera.UpdateCustomerStateReply, error)
+		DeleteCustomerSecondaryID(customer *Customer, secondaryIds []SecondaryID) (*hera.UpdateCustomerStateReply, error)
 
 		// UpdateCustomerMetaData adds abitrary or application specific information that you may want to tie to a customer.
 		UpdateCustomerMetaData(customer *Customer, metadata map[string]string) (*hera.UpdateCustomerStateReply, error)
@@ -58,15 +52,9 @@ type (
 		// StreamNotifications acts as a pipe of information from elarian example of this would be reminders and payment info
 		// InitializeNotificationStream() error
 
-		AddNotificationSubscriber(
-			notification ElarianNotification,
-			handler func(svc Service, cust *Customer, data interface{}),
-		) error
+		AddNotificationSubscriber(notification Notification, handler NotificationHandler) error
 
-		RemoveNotificationSubscriber(
-			notification ElarianNotification,
-			handler func(svc Service, cust *Customer, data interface{}),
-		) error
+		RemoveNotificationSubscriber(notification Notification, handler NotificationHandler) error
 
 		// InitiatePayment requires a wallet setup and involves the transfer of funds to a customer
 		InitiatePayment(customer *Customer, params *Paymentrequest) (*hera.InitiatePaymentReply, error)
@@ -75,7 +63,7 @@ type (
 		MakeVoiceCall(customer *Customer, channel *VoiceChannelNumber) (*hera.MakeVoiceCallReply, error)
 
 		// ReplyToVoiceCall allows you to reply to a voice call
-		ReplyToVoiceCall(sessionId string, actions []interface{}) (*hera.WebhookResponseReply, error)
+		ReplyToVoiceCall(sessionID string, actions []interface{}) (*hera.WebhookResponseReply, error)
 
 		// SendMessage transmits a message to a customer the message body can be of different types including text, location, media and template
 		SendMessage(
@@ -94,12 +82,12 @@ type (
 		// ReplyToMessage transmits a message to a customer and creates a link of two way communication with a customer that can act as a conversation history. The message body can be of different types including text, location, media and template
 		ReplyToMessage(
 			customer *Customer,
-			messageId string,
+			messageID string,
 			body *MessageBody,
 		) (*hera.SendMessageReply, error)
 
 		ReplyToUssdSession(
-			sessionId string,
+			sessionID string,
 			ussdMenu *UssdMenu,
 		) (*hera.WebhookResponseReply, error)
 
@@ -116,24 +104,19 @@ type (
 
 	service struct {
 		client hera.GrpcWebServiceClient
-		orgId  string
-		appId  string
+		orgID  string
+		appID  string
 		bus    EventBus.Bus
 	}
 )
 
 // NewService Creates a new Elarian service
-func NewService(client *hera.GrpcWebServiceClient, orgId string, appId string) (Service, error) {
+func NewService(client *hera.GrpcWebServiceClient, orgID string, appID string) (Service, error) {
 	srvc := service{
 		client: *client,
-		orgId:  orgId,
-		appId:  appId,
+		orgID:  orgID,
+		appID:  appID,
 		bus:    EventBus.New(),
-	}
-	errchan := srvc.initializeNotificationStream()
-	err := <-errchan
-	if err != nil {
-		return &service{}, err
 	}
 	return &srvc, nil
 }

@@ -12,10 +12,13 @@ type (
 	// VoiceChannel type
 	VoiceChannel int32
 
+	// CustomerEventDirection int
 	CustomerEventDirection int32
 
+	// VoiceCallStatus int
 	VoiceCallStatus int32
 
+	// VoiceCallHangupCause int
 	VoiceCallHangupCause int32
 
 	// VoiceChannelNumber struct
@@ -39,7 +42,7 @@ type (
 
 	// VoiceCallActionDail struct
 	VoiceCallActionDail struct {
-		CallerId        string            `json:"callerId,omitempty"`
+		CallerID        string            `json:"callerId,omitempty"`
 		MaxDuration     int32             `json:"maxDuration,omitempty"`
 		Record          bool              `json:"record,omitempty"`
 		RingBackTone    string            `json:"ringBackTone,omitempty"`
@@ -94,23 +97,25 @@ type (
 		Say  VoiceCallActionSay  `json:"voiceCallActionSay,omitempty"`
 	}
 
+	// VoiceCallDailInput struct
 	VoiceCallDailInput struct {
 		DestinationNumber string        `json:"destinationNumber,omitempty"`
 		Duration          time.Duration `json:"duration,omitempty"`
 		StartedAt         time.Time     `json:"startedAt,omitempty"`
 	}
 
+	// VoiceCallQueueInput struct
 	VoiceCallQueueInput struct {
 		DequeuedAt          time.Time     `json:"dequeuedAt,omitempty"`
 		DequeuedToNumber    string        `json:"dequeuedToNumber,omitempty"`
-		DequeuedToSessionId string        `json:"dequeuedToSessionId,omitempty"`
+		DequeuedToSessionID string        `json:"dequeuedToSessionId,omitempty"`
 		EnqueuedAt          time.Time     `json:"enqueuedAt,omitempty"`
 		QueueDuration       time.Duration `json:"queueDuration,omitempty"`
 	}
-
+	// VoiceCallHopInput struct
 	VoiceCallHopInput struct {
 		DtmfDigits   string               `json:"dtmfDigits,omitempty"`
-		RecordingUrl string               `json:"recordingUrl,omitempty"`
+		RecordingURL string               `json:"recordingUrl,omitempty"`
 		StartedAt    time.Time            `json:"startedAt,omitempty"`
 		Status       VoiceCallStatus      `json:"status,omitempty"`
 		HangupCase   VoiceCallHangupCause `json:"hangupCase,omitempty"`
@@ -118,8 +123,9 @@ type (
 		QueueData    *VoiceCallQueueInput `json:"queueData,omitempty"`
 	}
 
+	// VoiceCallNotification struct
 	VoiceCallNotification struct {
-		SessionId     string                 `json:"sessionId,omitempty"`
+		SessionID     string                 `json:"sessionId,omitempty"`
 		Cost          *Cash                  `json:"cost,omitempty"`
 		Duration      time.Duration          `json:"duration,omitempty"`
 		Input         *VoiceCallHopInput     `json:"input,omitempty"`
@@ -128,66 +134,67 @@ type (
 	}
 )
 
+// VoiceChannel constants
 const (
-	VOICE_CHANNEL_UNSPECIFIED VoiceChannel = iota
-	VOICE_CHANNEL_TELCO
+	VoiceChannelUnspecified VoiceChannel = iota
+	VoiceChannelTelco
 )
 
+// CustomerEventDirect constants
 const (
-	CUSTOMER_EVENT_DIRECTION_UNSPECIFIED CustomerEventDirection = iota
-	CUSTOMER_EVENT_DIRECTION_INBOUND                            = 1
-	CUSTOMER_EVENT_DIRECTION_OUTBOUND                           = 2
+	CustomerEventDirectionUnspecified CustomerEventDirection = iota
+	CustomerEventDirectionInbound                            = 1
+	CustomerEventDirectionOutbound                           = 2
 )
 
+// VoiceCallStatus constants
 const (
-	VOICE_CALL_STATUS_UNSPECIFIED               VoiceCallStatus = 0
-	VOICE_CALL_STATUS_QUEUED                    VoiceCallStatus = 100
-	VOICE_CALL_STATUS_ANSWERED                  VoiceCallStatus = 101
-	VOICE_CALL_STATUS_RINGING                   VoiceCallStatus = 102
-	VOICE_CALL_STATUS_ACTIVE                    VoiceCallStatus = 200
-	VOICE_CALL_STATUS_DIALING                   VoiceCallStatus = 201
-	VOICE_CALL_STATUS_DIAL_COMPLETED            VoiceCallStatus = 202
-	VOICE_CALL_STATUS_BRIDGED                   VoiceCallStatus = 203
-	VOICE_CALL_STATUS_ENQUEUED                  VoiceCallStatus = 204
-	VOICE_CALL_STATUS_DEQUEUED                  VoiceCallStatus = 205
-	VOICE_CALL_STATUS_TRANSFERRED               VoiceCallStatus = 206
-	VOICE_CALL_STATUS_TRANSFER_COMPLETED        VoiceCallStatus = 207
-	VOICE_CALL_STATUS_COMPLETED                 VoiceCallStatus = 300
-	VOICE_CALL_STATUS_INSUFFICIENT_CREDIT       VoiceCallStatus = 400
-	VOICE_CALL_STATUS_NOT_ANSWERED              VoiceCallStatus = 401
-	VOICE_CALL_STATUS_INVALID_PHONE_NUMBER      VoiceCallStatus = 402
-	VOICE_CALL_STATUS_DESTINATION_NOT_SUPPORTED VoiceCallStatus = 403
-	VOICE_CALL_STATUS_DECOMMISSIONED_CUSTOMERID VoiceCallStatus = 404
-	VOICE_CALL_STATUS_EXPIRED                   VoiceCallStatus = 405
-	VOICE_CALL_STATUS_INVALID_CHANNEL_NUMBER    VoiceCallStatus = 406
-	VOICE_CALL_STATUS_APPLICATION_ERROR         VoiceCallStatus = 501
+	VoiceCallStatusUnspecified              VoiceCallStatus = 0
+	VoiceCallStatusQueued                   VoiceCallStatus = 100
+	VoiceCallStatusAnswered                 VoiceCallStatus = 101
+	VoiceCallStatusRinging                  VoiceCallStatus = 102
+	VoiceCallStatusActive                   VoiceCallStatus = 200
+	VoiceCallStatusDialing                  VoiceCallStatus = 201
+	VoiceCallStatusDialCompleted            VoiceCallStatus = 202
+	VoiceCallStatusBridged                  VoiceCallStatus = 203
+	VoiceCallStatusEnqueued                 VoiceCallStatus = 204
+	VoiceCallStatusDequeued                 VoiceCallStatus = 205
+	VoiceCallStatusTransferred              VoiceCallStatus = 206
+	VoiceCallStatusTransferCompleted        VoiceCallStatus = 207
+	VoiceCallStatusCompleted                VoiceCallStatus = 300
+	VoiceCallStatusInsufficientCredit       VoiceCallStatus = 400
+	VoiceCallStatusNotAnswered              VoiceCallStatus = 401
+	VoiceCallStatusInvalidPhoneNumber       VoiceCallStatus = 402
+	VoiceCallStatusDestinationNotSupported  VoiceCallStatus = 403
+	VoiceCallStatusDecommissionedCustomerid VoiceCallStatus = 404
+	VoiceCallStatusExpired                  VoiceCallStatus = 405
+	VoiceCallStatusInvalidChannelNumber     VoiceCallStatus = 406
+	VoiceCallStatusApplicationError         VoiceCallStatus = 501
 )
 
+// VoiceCallHangupCause constants
 const (
-	VOICE_CALL_HANGUP_CAUSE_UNSPECIFIED              VoiceCallHangupCause = 0
-	VOICE_CALL_HANGUP_CAUSE_UNALLOCATED_NUMBER       VoiceCallHangupCause = 1
-	VOICE_CALL_HANGUP_CAUSE_USER_BUSY                VoiceCallHangupCause = 17
-	VOICE_CALL_HANGUP_CAUSE_NORMAL_CLEARING          VoiceCallHangupCause = 16
-	VOICE_CALL_HANGUP_CAUSE_NO_USER_RESPONSE         VoiceCallHangupCause = 18
-	VOICE_CALL_HANGUP_CAUSE_NO_ANSWER                VoiceCallHangupCause = 19
-	VOICE_CALL_HANGUP_CAUSE_SUBSCRIBER_ABSENT        VoiceCallHangupCause = 20
-	VOICE_CALL_HANGUP_CAUSE_CALL_REJECTED            VoiceCallHangupCause = 21
-	VOICE_CALL_HANGUP_CAUSE_NORMAL_UNSPECIFIED       VoiceCallHangupCause = 31
-	VOICE_CALL_HANGUP_CAUSE_NORMAL_TEMPORARY_FAILURE VoiceCallHangupCause = 41
-	VOICE_CALL_HANGUP_CAUSE_SERVICE_UNAVAILABLE      VoiceCallHangupCause = 63
-	VOICE_CALL_HANGUP_CAUSE_RECOVERY_ON_TIMER_EXPIRE VoiceCallHangupCause = 102
-	VOICE_CALL_HANGUP_CAUSE_ORIGINATOR_CANCEL        VoiceCallHangupCause = 487
-	VOICE_CALL_HANGUP_CAUSE_LOSE_RACE                VoiceCallHangupCause = 502
-	VOICE_CALL_HANGUP_CAUSE_USER_NOT_REGISTERED      VoiceCallHangupCause = 606
+	VoiceCallHangupCauseUnspecified            VoiceCallHangupCause = 0
+	VoiceCallHangupCauseUnallocatedNumber      VoiceCallHangupCause = 1
+	VoiceCallHangupCauseUserBusy               VoiceCallHangupCause = 17
+	VoiceCallHangupCauseNormalClearing         VoiceCallHangupCause = 16
+	VoiceCallHangupCauseNoUserResponse         VoiceCallHangupCause = 18
+	VoiceCallHangupCauseNoAnswer               VoiceCallHangupCause = 19
+	VoiceCallHangupCauseSubscriberAbsent       VoiceCallHangupCause = 20
+	VoiceCallHangupCauseCallRejected           VoiceCallHangupCause = 21
+	VoiceCallHangupCauseNormalUnspecified      VoiceCallHangupCause = 31
+	VoiceCallHangupCauseNormalTemporaryFailure VoiceCallHangupCause = 41
+	VoiceCallHangupCauseServiceUnavailable     VoiceCallHangupCause = 63
+	VoiceCallHangupCauseRecoveryOnTimerExpire  VoiceCallHangupCause = 102
+	VoiceCallHangupCauseOriginatorCancel       VoiceCallHangupCause = 487
+	VoiceCallHangupCauseLoseRace               VoiceCallHangupCause = 502
+	VoiceCallHangupCauseUserNotRegistered      VoiceCallHangupCause = 606
 )
 
-func (s *service) MakeVoiceCall(
-	customer *Customer,
-	channel *VoiceChannelNumber,
-) (*hera.MakeVoiceCallReply, error) {
+func (s *service) MakeVoiceCall(customer *Customer, channel *VoiceChannelNumber) (*hera.MakeVoiceCallReply, error) {
 	var request hera.MakeVoiceCallRequest
-	request.AppId = s.appId
-	request.OrgId = s.orgId
+	request.AppId = s.appID
+	request.OrgId = s.orgID
 
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		request.CustomerNumber = s.customerNumber(customer)
@@ -203,14 +210,11 @@ func (s *service) MakeVoiceCall(
 	return s.client.MakeVoiceCall(ctx, &request)
 }
 
-func (s *service) ReplyToVoiceCall(
-	sessionId string,
-	actions []interface{},
-) (*hera.WebhookResponseReply, error) {
+func (s *service) ReplyToVoiceCall(sessionID string, actions []interface{}) (*hera.WebhookResponseReply, error) {
 	var request hera.WebhookResponse
-	request.AppId = s.appId
-	request.OrgId = s.orgId
-	request.SessionId = sessionId
+	request.AppId = s.appID
+	request.OrgId = s.orgID
+	request.SessionId = sessionID
 	request.VoiceCallActions = s.transformVoiceCallActions(actions)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)

@@ -15,6 +15,12 @@ type (
 	// PaymentStatus type
 	PaymentStatus int32
 
+	// Cash defines a cash object
+	Cash struct {
+		CurrencyCode string  `json:"currencyCode"`
+		Amount       float64 `json:"amount"`
+	}
+
 	// PaymentChannelNumber defines a payment channel number
 	PaymentChannelNumber struct {
 		Number  string `json:"number"`
@@ -23,13 +29,13 @@ type (
 
 	// Wallet struct
 	Wallet struct {
-		CustomerId string
-		WalletId   string
+		CustomerID string
+		WalletID   string
 	}
 
 	// Purse struct
 	Purse struct {
-		PurseId string
+		PurseID string
 	}
 
 	// PaymentParty struct
@@ -49,63 +55,66 @@ type (
 
 	// PaymentStatusNotification struct
 	PaymentStatusNotification struct {
-		CustomerId    string        `json:"customerId,omitempty"`
-		TransactionId string        `json:"transactionId,omitempty"`
+		CustomerID    string        `json:"customerId,omitempty"`
+		TransactionID string        `json:"transactionId,omitempty"`
 		Status        PaymentStatus `json:"status,omitempty"`
 	}
 
 	// ReceivedPaymentNotification struct
 	ReceivedPaymentNotification struct {
-		ChannelNumber  *PaymentChannelNumber `json:"channelNumber,omitempty"`
-		CustomerId     string                `json:"customerId,omitempty"`
-		CustomerNumber *CustomerNumber       `json:"customerNumber,omitempty"`
-		PurseId        string                `json:"purseId,omitempty"`
-		Status         PaymentStatus         `json:"status,omitempty"`
-		TransactionId  string                `json:"transactionId,omitempty"`
+		CustomerID     string                `json:"customerId,omitempty"`
+		PurseID        string                `json:"purseId,omitempty"`
+		TransactionID  string                `json:"transactionId,omitempty"`
 		Value          *Cash                 `json:"value,omitempty"`
+		Status         PaymentStatus         `json:"status,omitempty"`
+		CustomerNumber *CustomerNumber       `json:"customerNumber,omitempty"`
+		ChannelNumber  *PaymentChannelNumber `json:"channelNumber,omitempty"`
 	}
 
+	// WalletPaymentStatusNotification struct
 	WalletPaymentStatusNotification struct {
-		CustomerId    string        `json:"customerId,omitempty"`
+		CustomerID    string        `json:"customerId,omitempty"`
+		TransactionID string        `json:"transactionId,omitempty"`
+		WalletID      string        `json:"walletId,omitempty"`
 		Status        PaymentStatus `json:"status,omitempty"`
-		TransactionId string        `json:"transactionId,omitempty"`
-		WalletId      string        `json:"walletId,omitempty"`
 	}
 )
 
+// PaymentChannel constants
 const (
-	PAYMENT_CHANNEL_UNSPECIFIED PaymentChannel = iota
-	PAYMENT_CHANNEL_TELCO
+	PaymentChannelUnspecified PaymentChannel = iota
+	PaymentChannelTelco
 )
 
+// PaymentStatus constants
 const (
-	PAYMENT_STATUS_UNSPECIFIED                PaymentStatus = 0
-	PAYMENT_STATUS_QUEUED                     PaymentStatus = 101
-	PAYMENT_STATUS_PENDING_CONFIRMATION       PaymentStatus = 102
-	PAYMENT_STATUS_PENDING_VALIdATION         PaymentStatus = 103
-	PAYMENT_STATUS_VALIdATED                  PaymentStatus = 104
-	PAYMENT_STATUS_INVALId_REQUEST            PaymentStatus = 200
-	PAYMENT_STATUS_NOT_SUPPORTED              PaymentStatus = 201
-	PAYMENT_STATUS_INSUFFICIENT_FUNDS         PaymentStatus = 202
-	PAYMENT_STATUS_APPLICATION_ERROR          PaymentStatus = 203
-	PAYMENT_STATUS_NOT_ALLOWED                PaymentStatus = 204
-	PAYMENT_STATUS_DUPLICATE_REQUEST          PaymentStatus = 205
-	PAYMENT_STATUS_INVALId_PURSE              PaymentStatus = 206
-	PAYMENT_STATUS_INVALId_WALLET             PaymentStatus = 207
-	PAYMENT_STATUS_DECOMMISSIONED_CUSTOMER_Id PaymentStatus = 299
-	PAYMENT_STATUS_SUCCESS                    PaymentStatus = 300
-	PAYMENT_STATUS_PASS_THROUGH               PaymentStatus = 301
-	PAYMENT_STATUS_FAILED                     PaymentStatus = 400
-	PAYMENT_STATUS_THROTTLED                  PaymentStatus = 401
-	PAYMENT_STATUS_EXPIRED                    PaymentStatus = 402
-	PAYMENT_STATUS_REJECTED                   PaymentStatus = 403
-	PAYMENT_STATUS_REVERSED                   PaymentStatus = 500
+	PaymentStatusUnspecified              PaymentStatus = 0
+	PaymentStatusQueued                   PaymentStatus = 101
+	PaymentStatusPendingConfirmation      PaymentStatus = 102
+	PaymentStatusPendingValidation        PaymentStatus = 103
+	PaymentStatusValidated                PaymentStatus = 104
+	PaymentStatusInvalidRequest           PaymentStatus = 200
+	PaymentStatusNotSupported             PaymentStatus = 201
+	PaymentStatusInsufficientFunds        PaymentStatus = 202
+	PaymentStatusApplicationError         PaymentStatus = 203
+	PaymentStatusNotAllowed               PaymentStatus = 204
+	PaymentStatusDuplicateRequest         PaymentStatus = 205
+	PaymentStatusInvalidPurse             PaymentStatus = 206
+	PaymentStatusInvalidWallet            PaymentStatus = 207
+	PaymentStatusDecommissionedCustomerID PaymentStatus = 299
+	PaymentStatusSuccess                  PaymentStatus = 300
+	PaymentStatusPassThrough              PaymentStatus = 301
+	PaymentStatusFailed                   PaymentStatus = 400
+	PaymentStatusThrottled                PaymentStatus = 401
+	PaymentStatusExpired                  PaymentStatus = 402
+	PaymentStatusRejected                 PaymentStatus = 403
+	PaymentStatusReversed                 PaymentStatus = 500
 )
 
 func (s *service) InitiatePayment(customer *Customer, params *Paymentrequest) (*hera.InitiatePaymentReply, error) {
 	var request hera.InitiatePaymentRequest
-	request.AppId = s.appId
-	request.OrgId = s.orgId
+	request.AppId = s.appID
+	request.OrgId = s.orgID
 	request.Value = &hera.Cash{
 		Amount:       params.Cash.Amount,
 		CurrencyCode: params.Cash.CurrencyCode,

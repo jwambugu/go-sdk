@@ -25,9 +25,9 @@ type (
 
 	// Options required to start get an elarian instance
 	Options struct {
-		ApiKey string `json:"apiKey,omitempty"`
-		OrgId  string `json:"orgId,omitempty"`
-		AppId  string `json:"appId,omitempty"`
+		APIKey string `json:"apiKey,omitempty"`
+		OrgID  string `json:"orgId,omitempty"`
+		AppID  string `json:"appId,omitempty"`
 	}
 )
 
@@ -50,7 +50,8 @@ func (s *rpcservice) connect() (hera.GrpcWebServiceClient, error) {
 	opts = append(opts, grpc.WithTransportCredentials(creds))
 	opts = append(opts, grpc.WithPerRPCCredentials(s.credentials))
 	opts = append(opts, grpc.WithKeepaliveParams(s.keepAlive))
-
+	opts = append(opts, grpc.WithBlock())
+	opts = append(opts, grpc.WithTimeout(time.Duration(60*time.Second)))
 	channel, err := grpc.Dial("api.elarian.dev:443", opts...)
 	if err != nil {
 		return nil, err
@@ -71,12 +72,12 @@ func Initialize(opts *Options) (Service, error) {
 		PermitWithoutStream: true,
 	}
 	rpc.credentials = &Credentials{
-		APIKey: opts.ApiKey,
+		APIKey: opts.APIKey,
 	}
 
 	client, err := rpc.connect()
 	if err != nil {
 		return &service{}, err
 	}
-	return NewService(&client, opts.OrgId, opts.AppId)
+	return NewService(&client, opts.OrgID, opts.AppID)
 }
