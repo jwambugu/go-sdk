@@ -1051,7 +1051,7 @@ func (x *MessagingSessionStatusUpdatedEvent) GetStatus() MessagingSessionStatus 
 	if x != nil {
 		return x.Status
 	}
-	return MessagingSessionStatus_MESSAGING_SESSION_STATUSN_UNSPECIFIED
+	return MessagingSessionStatus_MESSAGING_SESSION_STATUS_UNSPECIFIED
 }
 
 func (x *MessagingSessionStatusUpdatedEvent) GetExpiration() *timestamp.Timestamp {

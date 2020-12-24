@@ -3909,7 +3909,7 @@ func (x *MessagingSessionStatusNotification) GetStatus() MessagingSessionStatus 
 	if x != nil {
 		return x.Status
 	}
-	return MessagingSessionStatus_MESSAGING_SESSION_STATUSN_UNSPECIFIED
+	return MessagingSessionStatus_MESSAGING_SESSION_STATUS_UNSPECIFIED
 }
 
 type ReminderNotification struct {
