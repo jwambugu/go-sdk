@@ -230,9 +230,10 @@ type MessageStateEntry struct {
 	Template       *TextMessageTemplate    `protobuf:"bytes,7,opt,name=template,proto3" json:"template,omitempty"`
 	Media          []*MediaMessageBody     `protobuf:"bytes,8,rep,name=media,proto3" json:"media,omitempty"`
 	Location       *LocationMessageBody    `protobuf:"bytes,9,opt,name=location,proto3" json:"location,omitempty"`
-	CreatedAt      *timestamp.Timestamp    `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt      *timestamp.Timestamp    `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Status         MessageDeliveryStatus   `protobuf:"varint,12,opt,name=status,proto3,enum=com.elarian.hera.proto.MessageDeliveryStatus" json:"status,omitempty"`
+	Email          *EmailMessageBody       `protobuf:"bytes,10,opt,name=email,proto3" json:"email,omitempty"`
+	CreatedAt      *timestamp.Timestamp    `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt      *timestamp.Timestamp    `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Status         MessageDeliveryStatus   `protobuf:"varint,13,opt,name=status,proto3,enum=com.elarian.hera.proto.MessageDeliveryStatus" json:"status,omitempty"`
 }
 
 func (x *MessageStateEntry) Reset() {
@@ -330,6 +331,13 @@ func (x *MessageStateEntry) GetLocation() *LocationMessageBody {
 	return nil
 }
 
+func (x *MessageStateEntry) GetEmail() *EmailMessageBody {
+	if x != nil {
+		return x.Email
+	}
+	return nil
+}
+
 func (x *MessageStateEntry) GetCreatedAt() *timestamp.Timestamp {
 	if x != nil {
 		return x.CreatedAt
@@ -348,7 +356,7 @@ func (x *MessageStateEntry) GetStatus() MessageDeliveryStatus {
 	if x != nil {
 		return x.Status
 	}
-	return MessageDeliveryStatus_MESSAGE_DELIVERY_STATUS_UNSEPCIFIED
+	return MessageDeliveryStatus_MESSAGE_DELIVERY_STATUS_UNSPECIFIED
 }
 
 type MessagingState struct {
@@ -1076,6 +1084,7 @@ type MessageReceivedEvent struct {
 	Text           *wrappers.StringValue   `protobuf:"bytes,8,opt,name=text,proto3" json:"text,omitempty"`
 	Media          []*MediaMessageBody     `protobuf:"bytes,9,rep,name=media,proto3" json:"media,omitempty"`
 	Location       *LocationMessageBody    `protobuf:"bytes,10,opt,name=location,proto3" json:"location,omitempty"`
+	Email          *EmailMessageBody       `protobuf:"bytes,11,opt,name=email,proto3" json:"email,omitempty"`
 }
 
 func (x *MessageReceivedEvent) Reset() {
@@ -1176,6 +1185,13 @@ func (x *MessageReceivedEvent) GetMedia() []*MediaMessageBody {
 func (x *MessageReceivedEvent) GetLocation() *LocationMessageBody {
 	if x != nil {
 		return x.Location
+	}
+	return nil
+}
+
+func (x *MessageReceivedEvent) GetEmail() *EmailMessageBody {
+	if x != nil {
+		return x.Email
 	}
 	return nil
 }
@@ -1314,7 +1330,7 @@ func (x *MessageSentEvent) GetStatus() MessageDeliveryStatus {
 	if x != nil {
 		return x.Status
 	}
-	return MessageDeliveryStatus_MESSAGE_DELIVERY_STATUS_UNSEPCIFIED
+	return MessageDeliveryStatus_MESSAGE_DELIVERY_STATUS_UNSPECIFIED
 }
 
 func (x *MessageSentEvent) GetTag() *CustomerIndex {
@@ -1415,7 +1431,7 @@ func (x *MessageStatusUpdatedEvent) GetStatus() MessageDeliveryStatus {
 	if x != nil {
 		return x.Status
 	}
-	return MessageDeliveryStatus_MESSAGE_DELIVERY_STATUS_UNSEPCIFIED
+	return MessageDeliveryStatus_MESSAGE_DELIVERY_STATUS_UNSPECIFIED
 }
 
 var File_messaging_proto protoreflect.FileDescriptor
@@ -1475,7 +1491,7 @@ var file_messaging_proto_rawDesc = []byte{
 	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x69, 0x6e, 0x67,
 	0x53, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x65, 0x45, 0x6e, 0x74, 0x72,
 	0x79, 0x52, 0x0d, 0x61, 0x63, 0x74, 0x69, 0x76, 0x65, 0x53, 0x65, 0x73, 0x73, 0x69, 0x6f, 0x6e,
-	0x22, 0x9e, 0x06, 0x0a, 0x11, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x53, 0x74, 0x61, 0x74,
+	0x22, 0xde, 0x06, 0x0a, 0x11, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x53, 0x74, 0x61, 0x74,
 	0x65, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x4c, 0x0a, 0x09, 0x64, 0x69, 0x72, 0x65, 0x63, 0x74,
 	0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x2e, 0x2e, 0x63, 0x6f, 0x6d, 0x2e,
 	0x65, 0x6c, 0x61, 0x72, 0x69, 0x61, 0x6e, 0x2e, 0x68, 0x65, 0x72, 0x61, 0x2e, 0x70, 0x72, 0x6f,
@@ -1513,15 +1529,19 @@ var file_messaging_proto_rawDesc = []byte{
 	0x63, 0x6f, 0x6d, 0x2e, 0x65, 0x6c, 0x61, 0x72, 0x69, 0x61, 0x6e, 0x2e, 0x68, 0x65, 0x72, 0x61,
 	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x4d,
 	0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x42, 0x6f, 0x64, 0x79, 0x52, 0x08, 0x6c, 0x6f, 0x63, 0x61,
-	0x74, 0x69, 0x6f, 0x6e, 0x12, 0x39, 0x0a, 0x0a, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x5f,
-	0x61, 0x74, 0x18, 0x0a, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c,
+	0x74, 0x69, 0x6f, 0x6e, 0x12, 0x3e, 0x0a, 0x05, 0x65, 0x6d, 0x61, 0x69, 0x6c, 0x18, 0x0a, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x28, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x65, 0x6c, 0x61, 0x72, 0x69, 0x61,
+	0x6e, 0x2e, 0x68, 0x65, 0x72, 0x61, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x45, 0x6d, 0x61,
+	0x69, 0x6c, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x42, 0x6f, 0x64, 0x79, 0x52, 0x05, 0x65,
+	0x6d, 0x61, 0x69, 0x6c, 0x12, 0x39, 0x0a, 0x0a, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x5f,
+	0x61, 0x74, 0x18, 0x0b, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c,
 	0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73,
 	0x74, 0x61, 0x6d, 0x70, 0x52, 0x09, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x41, 0x74, 0x12,
-	0x39, 0x0a, 0x0a, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x61, 0x74, 0x18, 0x0b, 0x20,
+	0x39, 0x0a, 0x0a, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x61, 0x74, 0x18, 0x0c, 0x20,
 	0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f,
 	0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52,
 	0x09, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x41, 0x74, 0x12, 0x45, 0x0a, 0x06, 0x73, 0x74,
-	0x61, 0x74, 0x75, 0x73, 0x18, 0x0c, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x2d, 0x2e, 0x63, 0x6f, 0x6d,
+	0x61, 0x74, 0x75, 0x73, 0x18, 0x0d, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x2d, 0x2e, 0x63, 0x6f, 0x6d,
 	0x2e, 0x65, 0x6c, 0x61, 0x72, 0x69, 0x61, 0x6e, 0x2e, 0x68, 0x65, 0x72, 0x61, 0x2e, 0x70, 0x72,
 	0x6f, 0x74, 0x6f, 0x2e, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x44, 0x65, 0x6c, 0x69, 0x76,
 	0x65, 0x72, 0x79, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75,
@@ -1734,7 +1754,7 @@ var file_messaging_proto_rawDesc = []byte{
 	0x69, 0x6f, 0x6e, 0x18, 0x08, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67,
 	0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65,
 	0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x0a, 0x65, 0x78, 0x70, 0x69, 0x72, 0x61, 0x74, 0x69, 0x6f,
-	0x6e, 0x22, 0xbf, 0x04, 0x0a, 0x14, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x52, 0x65, 0x63,
+	0x6e, 0x22, 0xff, 0x04, 0x0a, 0x14, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x52, 0x65, 0x63,
 	0x65, 0x69, 0x76, 0x65, 0x64, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x12, 0x15, 0x0a, 0x06, 0x6f, 0x72,
 	0x67, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x6f, 0x72, 0x67, 0x49,
 	0x64, 0x12, 0x1f, 0x0a, 0x0b, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x65, 0x72, 0x5f, 0x69, 0x64,
@@ -1770,7 +1790,11 @@ var file_messaging_proto_rawDesc = []byte{
 	0x6f, 0x6d, 0x2e, 0x65, 0x6c, 0x61, 0x72, 0x69, 0x61, 0x6e, 0x2e, 0x68, 0x65, 0x72, 0x61, 0x2e,
 	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x4c, 0x6f, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x4d, 0x65,
 	0x73, 0x73, 0x61, 0x67, 0x65, 0x42, 0x6f, 0x64, 0x79, 0x52, 0x08, 0x6c, 0x6f, 0x63, 0x61, 0x74,
-	0x69, 0x6f, 0x6e, 0x22, 0xb7, 0x06, 0x0a, 0x10, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x53,
+	0x69, 0x6f, 0x6e, 0x12, 0x3e, 0x0a, 0x05, 0x65, 0x6d, 0x61, 0x69, 0x6c, 0x18, 0x0b, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x28, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x65, 0x6c, 0x61, 0x72, 0x69, 0x61, 0x6e,
+	0x2e, 0x68, 0x65, 0x72, 0x61, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x45, 0x6d, 0x61, 0x69,
+	0x6c, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x42, 0x6f, 0x64, 0x79, 0x52, 0x05, 0x65, 0x6d,
+	0x61, 0x69, 0x6c, 0x22, 0xb7, 0x06, 0x0a, 0x10, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x53,
 	0x65, 0x6e, 0x74, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x12, 0x15, 0x0a, 0x06, 0x6f, 0x72, 0x67, 0x5f,
 	0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x6f, 0x72, 0x67, 0x49, 0x64, 0x12,
 	0x1f, 0x0a, 0x0b, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x65, 0x72, 0x5f, 0x69, 0x64, 0x18, 0x02,
@@ -1879,13 +1903,14 @@ var file_messaging_proto_goTypes = []interface{}{
 	(*TextMessageTemplate)(nil),                // 20: com.elarian.hera.proto.TextMessageTemplate
 	(*MediaMessageBody)(nil),                   // 21: com.elarian.hera.proto.MediaMessageBody
 	(*LocationMessageBody)(nil),                // 22: com.elarian.hera.proto.LocationMessageBody
-	(MessageDeliveryStatus)(0),                 // 23: com.elarian.hera.proto.MessageDeliveryStatus
-	(*AppConnectionProps)(nil),                 // 24: com.elarian.hera.proto.AppConnectionProps
-	(MessagingConsentAction)(0),                // 25: com.elarian.hera.proto.MessagingConsentAction
-	(MessagingSessionStatus)(0),                // 26: com.elarian.hera.proto.MessagingSessionStatus
-	(*CustomerMessageBody)(nil),                // 27: com.elarian.hera.proto.CustomerMessageBody
-	(CustomerRequestOrigin)(0),                 // 28: com.elarian.hera.proto.CustomerRequestOrigin
-	(*CustomerIndex)(nil),                      // 29: com.elarian.hera.proto.CustomerIndex
+	(*EmailMessageBody)(nil),                   // 23: com.elarian.hera.proto.EmailMessageBody
+	(MessageDeliveryStatus)(0),                 // 24: com.elarian.hera.proto.MessageDeliveryStatus
+	(*AppConnectionProps)(nil),                 // 25: com.elarian.hera.proto.AppConnectionProps
+	(MessagingConsentAction)(0),                // 26: com.elarian.hera.proto.MessagingConsentAction
+	(MessagingSessionStatus)(0),                // 27: com.elarian.hera.proto.MessagingSessionStatus
+	(*CustomerMessageBody)(nil),                // 28: com.elarian.hera.proto.CustomerMessageBody
+	(CustomerRequestOrigin)(0),                 // 29: com.elarian.hera.proto.CustomerRequestOrigin
+	(*CustomerIndex)(nil),                      // 30: com.elarian.hera.proto.CustomerIndex
 }
 var file_messaging_proto_depIdxs = []int32{
 	14, // 0: com.elarian.hera.proto.MessagingConsentStateEntry.status:type_name -> com.elarian.hera.proto.MessagingConsentStatus
@@ -1905,66 +1930,68 @@ var file_messaging_proto_depIdxs = []int32{
 	20, // 14: com.elarian.hera.proto.MessageStateEntry.template:type_name -> com.elarian.hera.proto.TextMessageTemplate
 	21, // 15: com.elarian.hera.proto.MessageStateEntry.media:type_name -> com.elarian.hera.proto.MediaMessageBody
 	22, // 16: com.elarian.hera.proto.MessageStateEntry.location:type_name -> com.elarian.hera.proto.LocationMessageBody
-	15, // 17: com.elarian.hera.proto.MessageStateEntry.created_at:type_name -> google.protobuf.Timestamp
-	15, // 18: com.elarian.hera.proto.MessageStateEntry.updated_at:type_name -> google.protobuf.Timestamp
-	23, // 19: com.elarian.hera.proto.MessageStateEntry.status:type_name -> com.elarian.hera.proto.MessageDeliveryStatus
-	2,  // 20: com.elarian.hera.proto.MessagingState.channel_state:type_name -> com.elarian.hera.proto.MessagingChannelStateEntry
-	3,  // 21: com.elarian.hera.proto.MessagingState.messages:type_name -> com.elarian.hera.proto.MessageStateEntry
-	17, // 22: com.elarian.hera.proto.MessagingState.customer_numbers:type_name -> com.elarian.hera.proto.CustomerNumber
-	18, // 23: com.elarian.hera.proto.MessagingState.channel_numbers:type_name -> com.elarian.hera.proto.MessagingChannelNumber
-	6,  // 24: com.elarian.hera.proto.MessagingEvent.state_adopted:type_name -> com.elarian.hera.proto.MessagingStateAdoptedEvent
-	7,  // 25: com.elarian.hera.proto.MessagingEvent.entity_decommissioned:type_name -> com.elarian.hera.proto.MessagingEntityDecommissionedEvent
-	8,  // 26: com.elarian.hera.proto.MessagingEvent.messaging_consent_requested:type_name -> com.elarian.hera.proto.MessagingConsentRequestedEvent
-	9,  // 27: com.elarian.hera.proto.MessagingEvent.messaging_consent_status_updated:type_name -> com.elarian.hera.proto.MessagingConsentStatusUpdatedEvent
-	10, // 28: com.elarian.hera.proto.MessagingEvent.messaging_session_status_updated:type_name -> com.elarian.hera.proto.MessagingSessionStatusUpdatedEvent
-	11, // 29: com.elarian.hera.proto.MessagingEvent.message_received:type_name -> com.elarian.hera.proto.MessageReceivedEvent
-	12, // 30: com.elarian.hera.proto.MessagingEvent.message_sent:type_name -> com.elarian.hera.proto.MessageSentEvent
-	13, // 31: com.elarian.hera.proto.MessagingEvent.message_status_updated:type_name -> com.elarian.hera.proto.MessageStatusUpdatedEvent
-	15, // 32: com.elarian.hera.proto.MessagingStateAdoptedEvent.timestamp:type_name -> google.protobuf.Timestamp
-	24, // 33: com.elarian.hera.proto.MessagingStateAdoptedEvent.cxn_props:type_name -> com.elarian.hera.proto.AppConnectionProps
-	4,  // 34: com.elarian.hera.proto.MessagingStateAdoptedEvent.adopted_state:type_name -> com.elarian.hera.proto.MessagingState
-	15, // 35: com.elarian.hera.proto.MessagingEntityDecommissionedEvent.timestamp:type_name -> google.protobuf.Timestamp
-	24, // 36: com.elarian.hera.proto.MessagingEntityDecommissionedEvent.cxn_props:type_name -> com.elarian.hera.proto.AppConnectionProps
-	15, // 37: com.elarian.hera.proto.MessagingConsentRequestedEvent.timestamp:type_name -> google.protobuf.Timestamp
-	24, // 38: com.elarian.hera.proto.MessagingConsentRequestedEvent.cxn_props:type_name -> com.elarian.hera.proto.AppConnectionProps
-	17, // 39: com.elarian.hera.proto.MessagingConsentRequestedEvent.customer_number:type_name -> com.elarian.hera.proto.CustomerNumber
-	18, // 40: com.elarian.hera.proto.MessagingConsentRequestedEvent.channel_number:type_name -> com.elarian.hera.proto.MessagingChannelNumber
-	14, // 41: com.elarian.hera.proto.MessagingConsentRequestedEvent.status:type_name -> com.elarian.hera.proto.MessagingConsentStatus
-	25, // 42: com.elarian.hera.proto.MessagingConsentRequestedEvent.action:type_name -> com.elarian.hera.proto.MessagingConsentAction
-	15, // 43: com.elarian.hera.proto.MessagingConsentStatusUpdatedEvent.timestamp:type_name -> google.protobuf.Timestamp
-	17, // 44: com.elarian.hera.proto.MessagingConsentStatusUpdatedEvent.customer_number:type_name -> com.elarian.hera.proto.CustomerNumber
-	18, // 45: com.elarian.hera.proto.MessagingConsentStatusUpdatedEvent.channel_number:type_name -> com.elarian.hera.proto.MessagingChannelNumber
-	14, // 46: com.elarian.hera.proto.MessagingConsentStatusUpdatedEvent.status:type_name -> com.elarian.hera.proto.MessagingConsentStatus
-	15, // 47: com.elarian.hera.proto.MessagingSessionStatusUpdatedEvent.timestamp:type_name -> google.protobuf.Timestamp
-	16, // 48: com.elarian.hera.proto.MessagingSessionStatusUpdatedEvent.app_id:type_name -> google.protobuf.StringValue
-	17, // 49: com.elarian.hera.proto.MessagingSessionStatusUpdatedEvent.customer_number:type_name -> com.elarian.hera.proto.CustomerNumber
-	18, // 50: com.elarian.hera.proto.MessagingSessionStatusUpdatedEvent.channel_number:type_name -> com.elarian.hera.proto.MessagingChannelNumber
-	26, // 51: com.elarian.hera.proto.MessagingSessionStatusUpdatedEvent.status:type_name -> com.elarian.hera.proto.MessagingSessionStatus
-	15, // 52: com.elarian.hera.proto.MessagingSessionStatusUpdatedEvent.expiration:type_name -> google.protobuf.Timestamp
-	15, // 53: com.elarian.hera.proto.MessageReceivedEvent.timestamp:type_name -> google.protobuf.Timestamp
-	16, // 54: com.elarian.hera.proto.MessageReceivedEvent.app_id:type_name -> google.protobuf.StringValue
-	17, // 55: com.elarian.hera.proto.MessageReceivedEvent.customer_number:type_name -> com.elarian.hera.proto.CustomerNumber
-	18, // 56: com.elarian.hera.proto.MessageReceivedEvent.channel_number:type_name -> com.elarian.hera.proto.MessagingChannelNumber
-	16, // 57: com.elarian.hera.proto.MessageReceivedEvent.text:type_name -> google.protobuf.StringValue
-	21, // 58: com.elarian.hera.proto.MessageReceivedEvent.media:type_name -> com.elarian.hera.proto.MediaMessageBody
-	22, // 59: com.elarian.hera.proto.MessageReceivedEvent.location:type_name -> com.elarian.hera.proto.LocationMessageBody
-	15, // 60: com.elarian.hera.proto.MessageSentEvent.timestamp:type_name -> google.protobuf.Timestamp
-	24, // 61: com.elarian.hera.proto.MessageSentEvent.cxn_props:type_name -> com.elarian.hera.proto.AppConnectionProps
-	16, // 62: com.elarian.hera.proto.MessageSentEvent.reply_to_message_id:type_name -> google.protobuf.StringValue
-	17, // 63: com.elarian.hera.proto.MessageSentEvent.customer_number:type_name -> com.elarian.hera.proto.CustomerNumber
-	18, // 64: com.elarian.hera.proto.MessageSentEvent.channel_number:type_name -> com.elarian.hera.proto.MessagingChannelNumber
-	27, // 65: com.elarian.hera.proto.MessageSentEvent.body:type_name -> com.elarian.hera.proto.CustomerMessageBody
-	28, // 66: com.elarian.hera.proto.MessageSentEvent.origin:type_name -> com.elarian.hera.proto.CustomerRequestOrigin
-	23, // 67: com.elarian.hera.proto.MessageSentEvent.status:type_name -> com.elarian.hera.proto.MessageDeliveryStatus
-	29, // 68: com.elarian.hera.proto.MessageSentEvent.tag:type_name -> com.elarian.hera.proto.CustomerIndex
-	16, // 69: com.elarian.hera.proto.MessageSentEvent.work_id:type_name -> google.protobuf.StringValue
-	15, // 70: com.elarian.hera.proto.MessageStatusUpdatedEvent.timestamp:type_name -> google.protobuf.Timestamp
-	23, // 71: com.elarian.hera.proto.MessageStatusUpdatedEvent.status:type_name -> com.elarian.hera.proto.MessageDeliveryStatus
-	72, // [72:72] is the sub-list for method output_type
-	72, // [72:72] is the sub-list for method input_type
-	72, // [72:72] is the sub-list for extension type_name
-	72, // [72:72] is the sub-list for extension extendee
-	0,  // [0:72] is the sub-list for field type_name
+	23, // 17: com.elarian.hera.proto.MessageStateEntry.email:type_name -> com.elarian.hera.proto.EmailMessageBody
+	15, // 18: com.elarian.hera.proto.MessageStateEntry.created_at:type_name -> google.protobuf.Timestamp
+	15, // 19: com.elarian.hera.proto.MessageStateEntry.updated_at:type_name -> google.protobuf.Timestamp
+	24, // 20: com.elarian.hera.proto.MessageStateEntry.status:type_name -> com.elarian.hera.proto.MessageDeliveryStatus
+	2,  // 21: com.elarian.hera.proto.MessagingState.channel_state:type_name -> com.elarian.hera.proto.MessagingChannelStateEntry
+	3,  // 22: com.elarian.hera.proto.MessagingState.messages:type_name -> com.elarian.hera.proto.MessageStateEntry
+	17, // 23: com.elarian.hera.proto.MessagingState.customer_numbers:type_name -> com.elarian.hera.proto.CustomerNumber
+	18, // 24: com.elarian.hera.proto.MessagingState.channel_numbers:type_name -> com.elarian.hera.proto.MessagingChannelNumber
+	6,  // 25: com.elarian.hera.proto.MessagingEvent.state_adopted:type_name -> com.elarian.hera.proto.MessagingStateAdoptedEvent
+	7,  // 26: com.elarian.hera.proto.MessagingEvent.entity_decommissioned:type_name -> com.elarian.hera.proto.MessagingEntityDecommissionedEvent
+	8,  // 27: com.elarian.hera.proto.MessagingEvent.messaging_consent_requested:type_name -> com.elarian.hera.proto.MessagingConsentRequestedEvent
+	9,  // 28: com.elarian.hera.proto.MessagingEvent.messaging_consent_status_updated:type_name -> com.elarian.hera.proto.MessagingConsentStatusUpdatedEvent
+	10, // 29: com.elarian.hera.proto.MessagingEvent.messaging_session_status_updated:type_name -> com.elarian.hera.proto.MessagingSessionStatusUpdatedEvent
+	11, // 30: com.elarian.hera.proto.MessagingEvent.message_received:type_name -> com.elarian.hera.proto.MessageReceivedEvent
+	12, // 31: com.elarian.hera.proto.MessagingEvent.message_sent:type_name -> com.elarian.hera.proto.MessageSentEvent
+	13, // 32: com.elarian.hera.proto.MessagingEvent.message_status_updated:type_name -> com.elarian.hera.proto.MessageStatusUpdatedEvent
+	15, // 33: com.elarian.hera.proto.MessagingStateAdoptedEvent.timestamp:type_name -> google.protobuf.Timestamp
+	25, // 34: com.elarian.hera.proto.MessagingStateAdoptedEvent.cxn_props:type_name -> com.elarian.hera.proto.AppConnectionProps
+	4,  // 35: com.elarian.hera.proto.MessagingStateAdoptedEvent.adopted_state:type_name -> com.elarian.hera.proto.MessagingState
+	15, // 36: com.elarian.hera.proto.MessagingEntityDecommissionedEvent.timestamp:type_name -> google.protobuf.Timestamp
+	25, // 37: com.elarian.hera.proto.MessagingEntityDecommissionedEvent.cxn_props:type_name -> com.elarian.hera.proto.AppConnectionProps
+	15, // 38: com.elarian.hera.proto.MessagingConsentRequestedEvent.timestamp:type_name -> google.protobuf.Timestamp
+	25, // 39: com.elarian.hera.proto.MessagingConsentRequestedEvent.cxn_props:type_name -> com.elarian.hera.proto.AppConnectionProps
+	17, // 40: com.elarian.hera.proto.MessagingConsentRequestedEvent.customer_number:type_name -> com.elarian.hera.proto.CustomerNumber
+	18, // 41: com.elarian.hera.proto.MessagingConsentRequestedEvent.channel_number:type_name -> com.elarian.hera.proto.MessagingChannelNumber
+	14, // 42: com.elarian.hera.proto.MessagingConsentRequestedEvent.status:type_name -> com.elarian.hera.proto.MessagingConsentStatus
+	26, // 43: com.elarian.hera.proto.MessagingConsentRequestedEvent.action:type_name -> com.elarian.hera.proto.MessagingConsentAction
+	15, // 44: com.elarian.hera.proto.MessagingConsentStatusUpdatedEvent.timestamp:type_name -> google.protobuf.Timestamp
+	17, // 45: com.elarian.hera.proto.MessagingConsentStatusUpdatedEvent.customer_number:type_name -> com.elarian.hera.proto.CustomerNumber
+	18, // 46: com.elarian.hera.proto.MessagingConsentStatusUpdatedEvent.channel_number:type_name -> com.elarian.hera.proto.MessagingChannelNumber
+	14, // 47: com.elarian.hera.proto.MessagingConsentStatusUpdatedEvent.status:type_name -> com.elarian.hera.proto.MessagingConsentStatus
+	15, // 48: com.elarian.hera.proto.MessagingSessionStatusUpdatedEvent.timestamp:type_name -> google.protobuf.Timestamp
+	16, // 49: com.elarian.hera.proto.MessagingSessionStatusUpdatedEvent.app_id:type_name -> google.protobuf.StringValue
+	17, // 50: com.elarian.hera.proto.MessagingSessionStatusUpdatedEvent.customer_number:type_name -> com.elarian.hera.proto.CustomerNumber
+	18, // 51: com.elarian.hera.proto.MessagingSessionStatusUpdatedEvent.channel_number:type_name -> com.elarian.hera.proto.MessagingChannelNumber
+	27, // 52: com.elarian.hera.proto.MessagingSessionStatusUpdatedEvent.status:type_name -> com.elarian.hera.proto.MessagingSessionStatus
+	15, // 53: com.elarian.hera.proto.MessagingSessionStatusUpdatedEvent.expiration:type_name -> google.protobuf.Timestamp
+	15, // 54: com.elarian.hera.proto.MessageReceivedEvent.timestamp:type_name -> google.protobuf.Timestamp
+	16, // 55: com.elarian.hera.proto.MessageReceivedEvent.app_id:type_name -> google.protobuf.StringValue
+	17, // 56: com.elarian.hera.proto.MessageReceivedEvent.customer_number:type_name -> com.elarian.hera.proto.CustomerNumber
+	18, // 57: com.elarian.hera.proto.MessageReceivedEvent.channel_number:type_name -> com.elarian.hera.proto.MessagingChannelNumber
+	16, // 58: com.elarian.hera.proto.MessageReceivedEvent.text:type_name -> google.protobuf.StringValue
+	21, // 59: com.elarian.hera.proto.MessageReceivedEvent.media:type_name -> com.elarian.hera.proto.MediaMessageBody
+	22, // 60: com.elarian.hera.proto.MessageReceivedEvent.location:type_name -> com.elarian.hera.proto.LocationMessageBody
+	23, // 61: com.elarian.hera.proto.MessageReceivedEvent.email:type_name -> com.elarian.hera.proto.EmailMessageBody
+	15, // 62: com.elarian.hera.proto.MessageSentEvent.timestamp:type_name -> google.protobuf.Timestamp
+	25, // 63: com.elarian.hera.proto.MessageSentEvent.cxn_props:type_name -> com.elarian.hera.proto.AppConnectionProps
+	16, // 64: com.elarian.hera.proto.MessageSentEvent.reply_to_message_id:type_name -> google.protobuf.StringValue
+	17, // 65: com.elarian.hera.proto.MessageSentEvent.customer_number:type_name -> com.elarian.hera.proto.CustomerNumber
+	18, // 66: com.elarian.hera.proto.MessageSentEvent.channel_number:type_name -> com.elarian.hera.proto.MessagingChannelNumber
+	28, // 67: com.elarian.hera.proto.MessageSentEvent.body:type_name -> com.elarian.hera.proto.CustomerMessageBody
+	29, // 68: com.elarian.hera.proto.MessageSentEvent.origin:type_name -> com.elarian.hera.proto.CustomerRequestOrigin
+	24, // 69: com.elarian.hera.proto.MessageSentEvent.status:type_name -> com.elarian.hera.proto.MessageDeliveryStatus
+	30, // 70: com.elarian.hera.proto.MessageSentEvent.tag:type_name -> com.elarian.hera.proto.CustomerIndex
+	16, // 71: com.elarian.hera.proto.MessageSentEvent.work_id:type_name -> google.protobuf.StringValue
+	15, // 72: com.elarian.hera.proto.MessageStatusUpdatedEvent.timestamp:type_name -> google.protobuf.Timestamp
+	24, // 73: com.elarian.hera.proto.MessageStatusUpdatedEvent.status:type_name -> com.elarian.hera.proto.MessageDeliveryStatus
+	74, // [74:74] is the sub-list for method output_type
+	74, // [74:74] is the sub-list for method input_type
+	74, // [74:74] is the sub-list for extension type_name
+	74, // [74:74] is the sub-list for extension extendee
+	0,  // [0:74] is the sub-list for field type_name
 }
 
 func init() { file_messaging_proto_init() }
