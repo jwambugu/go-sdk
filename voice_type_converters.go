@@ -8,7 +8,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-func (s *service) transformVoiceCallActions(actions []interface{}) []*hera.VoiceCallAction {
+func (s *service) transformVoiceCallActions(actions []VoiceAction) []*hera.VoiceCallAction {
 	var voiceActions = []*hera.VoiceCallAction{}
 
 	for _, voiceAction := range actions {
@@ -18,8 +18,8 @@ func (s *service) transformVoiceCallActions(actions []interface{}) []*hera.Voice
 					Dequeue: &hera.DequeueCallAction{
 						Record:    action.Record,
 						QueueName: wrapperspb.String(action.QueueName),
-						ChannelNumber: &hera.VoiceChannelNumber{
-							Channel: hera.VoiceChannel(action.Channel.Channel),
+						ChannelNumber: &hera.MessagingChannelNumber{
+							Channel: hera.MessagingChannel(action.Channel.Channel), // TODO: countercheck enum
 							Number:  action.Channel.Number,
 						},
 					},
@@ -179,37 +179,37 @@ func (s *service) transformVoiceCallActions(actions []interface{}) []*hera.Voice
 	return voiceActions
 }
 
-func (s *service) voiceCallNotification(notf *hera.VoiceCallNotification) *VoiceCallNotification {
-	return &VoiceCallNotification{
-		SessionID: notf.SessionId,
-		ChannelNumber: &VoiceChannelNumber{
-			Channel: VoiceChannel(notf.ChannelNumber.Channel),
-			Number:  notf.ChannelNumber.Number,
-		},
-		Cost: &Cash{
-			CurrencyCode: notf.Cost.CurrencyCode,
-			Amount:       notf.Cost.Amount,
-		},
-		Duration:  notf.Duration.AsDuration(),
-		Direction: CustomerEventDirection(notf.Direction),
-		Input: &VoiceCallHopInput{
-			DtmfDigits:   notf.Input.DtmfDigits.Value,
-			RecordingURL: notf.Input.RecordingUrl.Value,
-			Status:       VoiceCallStatus(notf.Input.Status),
-			StartedAt:    notf.Input.StartedAt.AsTime(),
-			HangupCase:   VoiceCallHangupCause(notf.Input.HangupCause),
-			DailData: &VoiceCallDailInput{
-				DestinationNumber: notf.Input.DialData.DestinationNumber,
-				Duration:          notf.Input.DialData.Duration.AsDuration(),
-				StartedAt:         notf.Input.DialData.StartedAt.AsTime(),
-			},
-			QueueData: &VoiceCallQueueInput{
-				DequeuedAt:          notf.Input.QueueData.DequeuedAt.AsTime(),
-				DequeuedToNumber:    notf.Input.QueueData.DequeuedToNumber.Value,
-				EnqueuedAt:          notf.Input.QueueData.EnqueuedAt.AsTime(),
-				QueueDuration:       notf.Input.QueueData.QueueDuration.AsDuration(),
-				DequeuedToSessionID: notf.Input.QueueData.DequeuedToSessionId.Value,
-			},
-		},
-	}
-}
+// func (s *service) voiceCallNotification(notf *hera.Voi) *VoiceCallNotification {
+// 	return &VoiceCallNotification{
+// 		SessionID: notf.SessionId,
+// 		ChannelNumber: &VoiceChannelNumber{
+// 			Channel: VoiceChannel(notf.ChannelNumber.Channel),
+// 			Number:  notf.ChannelNumber.Number,
+// 		},
+// 		Cost: &Cash{
+// 			CurrencyCode: notf.Cost.CurrencyCode,
+// 			Amount:       notf.Cost.Amount,
+// 		},
+// 		Duration:  notf.Duration.AsDuration(),
+// 		Direction: CustomerEventDirection(notf.Direction),
+// 		Input: &VoiceCallHopInput{
+// 			DtmfDigits:   notf.Input.DtmfDigits.Value,
+// 			RecordingURL: notf.Input.RecordingUrl.Value,
+// 			Status:       VoiceCallStatus(notf.Input.Status),
+// 			StartedAt:    notf.Input.StartedAt.AsTime(),
+// 			HangupCase:   VoiceCallHangupCause(notf.Input.HangupCause),
+// 			DailData: &VoiceCallDailInput{
+// 				DestinationNumber: notf.Input.DialData.DestinationNumber,
+// 				Duration:          notf.Input.DialData.Duration.AsDuration(),
+// 				StartedAt:         notf.Input.DialData.StartedAt.AsTime(),
+// 			},
+// 			QueueData: &VoiceCallQueueInput{
+// 				DequeuedAt:          notf.Input.QueueData.DequeuedAt.AsTime(),
+// 				DequeuedToNumber:    notf.Input.QueueData.DequeuedToNumber.Value,
+// 				EnqueuedAt:          notf.Input.QueueData.EnqueuedAt.AsTime(),
+// 				QueueDuration:       notf.Input.QueueData.QueueDuration.AsDuration(),
+// 				DequeuedToSessionID: notf.Input.QueueData.DequeuedToSessionId.Value,
+// 			},
+// 		},
+// 	}
+// }

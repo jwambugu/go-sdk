@@ -2,19 +2,19 @@ package elarian
 
 import (
 	"context"
+	"log"
 	"reflect"
 	"time"
 
 	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
+	"github.com/golang/protobuf/proto"
+	"github.com/rsocket/rsocket-go/payload"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type (
 	// MessagingChannel is an enum
 	MessagingChannel int32
-
-	// MessagingConsentAction is an enum
-	MessagingConsentAction int32
 
 	// MessagingConsentStatus int
 	MessagingConsentStatus int32
@@ -44,20 +44,35 @@ type (
 	Location struct {
 		Latitude  float64 `json:"latitude,omitempty"`
 		Longitude float64 `json:"longitude,omitempty"`
+		Label     string  `json:"label,omitempty"`
+		Address   string  `json:"address,omitempty"`
 	}
 
 	// Template This refers to a predefined template for your message, the name of the template is used as the identifier and the params should be added in their logical order
 	Template struct {
-		Name   string   `json:"name,omitempty"`
-		Params []string `json:"params,omitempty"`
+		ID     string            `json:"name,omitempty"`
+		Params map[string]string `json:"params,omitempty"`
+	}
+
+	// Email defines the email fields you can use as a message
+	Email struct {
+		Subject     string   `json:"subject,omitempty"`
+		Body        string   `json:"body,omitempty"`
+		HTML        string   `json:"html,omitempty"`
+		CcList      []string `json:"ccList,omitempty"`
+		BccList     []string `json:"bccList,omitempty"`
+		Attachments []string `json:"attachments,omitempty"`
 	}
 
 	// MessageBody defines how the message body should look like Note all the options are optional and the construction of this struct depends on your needs.
 	MessageBody struct {
-		Text     string    `json:"text,omitempty"`
-		Media    *Media    `json:"media,omitempty"`
-		Location *Location `json:"location,omitempty"`
-		Template *Template `json:"template,omitempty"`
+		Text         string        `json:"text,omitempty"`
+		Media        *Media        `json:"media,omitempty"`
+		Location     *Location     `json:"location,omitempty"`
+		Template     *Template     `json:"template,omitempty"`
+		Ussd         *UssdMenu     `json:"ussd,omitempty"`
+		Email        *Email        `json:"email,omitempty"`
+		VoiceActions []VoiceAction `json:"voiceActions,omitempty"`
 	}
 
 	// MessageStatusNotification struct
@@ -106,23 +121,19 @@ const (
 	MediaTypeDocument
 	MediaTypeVoice
 	MediaTypeSticker
+	MediaTypeContact
 )
 
 // MessagingChannel constants
 const (
 	MessagingChannelUnspecified MessagingChannel = iota
-	MessagingChannelGoogleRcs
-	MessagingChannelFbMessenger
 	MessagingChannelSms
+	MessagingChannelVoice
+	MessagingChannelUssd
+	MessagingChannelFBMessanger
 	MessagingChannelTelegram
 	MessagingChannelWhatsapp
-)
-
-// MessagingConsentAction constants
-const (
-	MessagingConsentActionUnspecified MessagingConsentAction = iota
-	MessagingConsentActionOptIn
-	MessagingConsentActionOptOut
+	MessagingChannelEmail
 )
 
 // MessagingSessionStatus constants
@@ -134,32 +145,37 @@ const (
 
 // MessageDeliveryStatus constants
 const (
-	MessageDeliveryStatusUnsepcified              MessageDeliveryStatus = 0
+	MessageDeliveryStatusUnspecified              MessageDeliveryStatus = 0
+	MessageDeliveryStatusQueued                   MessageDeliveryStatus = 100
 	MessageDeliveryStatusSent                     MessageDeliveryStatus = 101
 	MessageDeliveryStatusDelivered                MessageDeliveryStatus = 300
 	MessageDeliveryStatusRead                     MessageDeliveryStatus = 301
 	MessageDeliveryStatusReceived                 MessageDeliveryStatus = 302
+	MessageDeliveryStatusSessionInitiated         MessageDeliveryStatus = 303
 	MessageDeliveryStatusFailed                   MessageDeliveryStatus = 400
 	MessageDeliveryStatusNoConsent                MessageDeliveryStatus = 401
 	MessageDeliveryStatusNoCapability             MessageDeliveryStatus = 402
 	MessageDeliveryStatusExpired                  MessageDeliveryStatus = 403
-	MessageDeliveryStatusOnlyTemplateAllowed      MessageDeliveryStatus = 404
-	MessageDeliveryStatusInvalidChannelNumber     MessageDeliveryStatus = 405
-	MessageDeliveryStatusNotSupported             MessageDeliveryStatus = 406
-	MessageDeliveryStatusInvalidReplyToMessageID  MessageDeliveryStatus = 407
-	MessageDeliveryStatusInvalidCustomerID        MessageDeliveryStatus = 408
-	MessageDeliveryStatusDuplicateRequest         MessageDeliveryStatus = 409
-	MessageDeliveryStatusTagNotFound              MessageDeliveryStatus = 410
-	MessageDeliveryStatusCustomerNumberNotFound   MessageDeliveryStatus = 411
-	MessageDeliveryStatusDecommissionedCustomerid MessageDeliveryStatus = 412
-	MessageDeliveryStatusInvalidRequest           MessageDeliveryStatus = 413
+	MessageDeliveryStatusNoSessionInProgress      MessageDeliveryStatus = 404
+	MessageDeliveryStatusOtherSessionInProgress   MessageDeliveryStatus = 405
+	MessageDeliveryStatusInvalidReplyToken        MessageDeliveryStatus = 406
+	MessageDeliveryStatusInvalidChannelNumber     MessageDeliveryStatus = 407
+	MessageDeliveryStatusNotSupported             MessageDeliveryStatus = 408
+	MessageDeliveryStatusInvalidReplyToMessageID  MessageDeliveryStatus = 409
+	MessageDeliveryStatusInvalidCustomerID        MessageDeliveryStatus = 410
+	MessageDeliveryStatusDuplicateRequest         MessageDeliveryStatus = 411
+	MessageDeliveryStatusTagNotFound              MessageDeliveryStatus = 412
+	MessageDeliveryStatusCustomerNumberNotFound   MessageDeliveryStatus = 413
+	MessageDeliveryStatusDecommissionedCustomerid MessageDeliveryStatus = 414
+	MessageDeliveryStatusRejected                 MessageDeliveryStatus = 415
+	MessageDeliveryStatusInvalidRequest           MessageDeliveryStatus = 416
 	MessageDeliveryStatusApplicationError         MessageDeliveryStatus = 501
 )
 
 // MessagingConsentStatus constants
 const (
 	MessagingConsentStatusUnspecified              MessagingConsentStatus = 0
-	MessagingConsentStatusOptInRequestSent         MessagingConsentStatus = 101
+	MessagingConsentStatusOptInCommandSent         MessagingConsentStatus = 101
 	MessagingConsentStatusOptInCompleted           MessagingConsentStatus = 300
 	MessagingConsentStatusOptOutCompleted          MessagingConsentStatus = 301
 	MessagingConsentStatusInvalidChannelNumber     MessagingConsentStatus = 401
@@ -168,140 +184,172 @@ const (
 )
 
 func (s *service) SendMessage(customer *Customer, channelNumber *MessagingChannelNumber, body *MessageBody) (*hera.SendMessageReply, error) {
-	var request hera.SendMessageRequest
-	request.AppId = s.appID
-	request.OrgId = s.orgID
+	req := new(hera.AppToServerCommand)
+	command := new(hera.AppToServerCommand_SendMessage)
+	command.SendMessage = &hera.SendMessageCommand{}
+	req.Entry = command
 
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		request.CustomerNumber = s.customerNumber(customer)
+		command.SendMessage.CustomerNumber = s.customerNumber(customer)
 	}
+
 	if !reflect.ValueOf(channelNumber).IsZero() {
-		request.ChannelNumber = &hera.MessagingChannelNumber{
+		command.SendMessage.ChannelNumber = &hera.MessagingChannelNumber{
 			Channel: hera.MessagingChannel(channelNumber.Channel),
 			Number:  channelNumber.Number,
 		}
 	}
+
+	message := new(hera.OutboundMessage)
+	command.SendMessage.Message = message
+
 	if body.Text != "" {
-		request.Body = &hera.CustomerMessageBody{
-			Entry: s.messageBodyAsText(body.Text),
-		}
+		message.Body = s.textMessage(body.Text)
 	}
 	if !reflect.ValueOf(body.Template).IsZero() {
-		request.Body = &hera.CustomerMessageBody{
-			Entry: s.messageBodyAsTemplate(body.Template),
-		}
+		message.Body = s.templateMesage(body.Template)
 	}
 	if !reflect.ValueOf(body.Location).IsZero() {
-		request.Body = &hera.CustomerMessageBody{
-			Entry: s.messageBodyAsLocation(body.Location),
-		}
+		message.Body = s.locationMessage(body.Location)
 	}
 	if !reflect.ValueOf(body.Media).IsZero() {
-		request.Body = &hera.CustomerMessageBody{
-			Entry: s.messageBodyAsMedia(body.Media),
-		}
+		message.Body = s.mediaMessage(body.Media)
 	}
+	if !reflect.ValueOf(body.Ussd).IsZero() {
+		message.Body = s.ussdMessage(body.Ussd)
+	}
+	if !reflect.ValueOf(body.VoiceActions).IsZero() {
+		message.Body = s.voiceMessage(body.VoiceActions)
+	}
+	if !reflect.ValueOf(body.Email).IsZero() {
+		message.Body = s.email(body.Email)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	return s.client.SendMessage(ctx, &request)
+
+	data, err := proto.Marshal(req)
+	if err != nil {
+		return &hera.SendMessageReply{}, err
+	}
+
+	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
+	if err != nil {
+		return &hera.SendMessageReply{}, err
+	}
+	reply := new(hera.AppToServerCommandReply)
+	err = proto.Unmarshal(res.Data(), reply)
+	log.Println(reply)
+	return reply.GetSendMessage(), err
 }
 
 func (s *service) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumber, body *MessageBody) (*hera.TagCommandReply, error) {
-	var request hera.SendMessageTagRequest
-	request.AppId = s.appID
-	request.OrgId = s.orgID
+	req := new(hera.AppToServerCommand)
+	command := new(hera.AppToServerCommand_SendMessageTag)
+	req.Entry = command
 
 	if !reflect.ValueOf(tag).IsZero() {
-		request.Tag = &hera.IndexMapping{
+		command.SendMessageTag.Tag = &hera.IndexMapping{
 			Key:   tag.Key,
 			Value: wrapperspb.String(tag.Value),
 		}
 	}
 	if !reflect.ValueOf(channelNumber).IsZero() {
-		request.ChannelNumber = &hera.MessagingChannelNumber{
+		command.SendMessageTag.ChannelNumber = &hera.MessagingChannelNumber{
 			Channel: hera.MessagingChannel(channelNumber.Channel),
 			Number:  channelNumber.Number,
 		}
 	}
 
+	var message = new(hera.OutboundMessage)
+	command.SendMessageTag.Message = message
+
 	if body.Text != "" {
-		request.Body = &hera.CustomerMessageBody{
-			Entry: s.messageBodyAsText(body.Text),
-		}
+		message.Body = s.textMessage(body.Text)
 	}
 	if !reflect.ValueOf(body.Template).IsZero() {
-		request.Body = &hera.CustomerMessageBody{
-			Entry: s.messageBodyAsTemplate(body.Template),
-		}
+		message.Body = s.templateMesage(body.Template)
 	}
 	if !reflect.ValueOf(body.Location).IsZero() {
-		request.Body = &hera.CustomerMessageBody{
-			Entry: s.messageBodyAsLocation(body.Location),
-		}
+		message.Body = s.locationMessage(body.Location)
 	}
 	if !reflect.ValueOf(body.Media).IsZero() {
-		request.Body = &hera.CustomerMessageBody{
-			Entry: s.messageBodyAsMedia(body.Media),
-		}
+		message.Body = s.mediaMessage(body.Media)
 	}
+	if !reflect.ValueOf(body.Ussd).IsZero() {
+		message.Body = s.ussdMessage(body.Ussd)
+	}
+	if !reflect.ValueOf(body.VoiceActions).IsZero() {
+		message.Body = s.voiceMessage(body.VoiceActions)
+	}
+	if !reflect.ValueOf(body.Email).IsZero() {
+		message.Body = s.email(body.Email)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	return s.client.SendMessageByTag(ctx, &request)
+
+	data, err := proto.Marshal(req)
+	if err != nil {
+		return &hera.TagCommandReply{}, err
+	}
+	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
+	if err != nil {
+		return &hera.TagCommandReply{}, err
+	}
+	reply := new(hera.AppToServerCommandReply)
+	err = proto.Unmarshal(res.Data(), reply)
+	return reply.GetTagCommand(), err
 }
 
 func (s *service) ReplyToMessage(customer *Customer, messageID string, body *MessageBody) (*hera.SendMessageReply, error) {
-	var request hera.ReplyToMessageRequest
-	request.AppId = s.appID
-	request.OrgId = s.orgID
-	request.CustomerId = customer.ID
-	request.ReplyToMessageId = messageID
+	req := new(hera.AppToServerCommand)
+	command := new(hera.AppToServerCommand_ReplyToMessage)
+	command.ReplyToMessage = &hera.ReplyToMessageCommand{}
+	req.Entry = command
+
+	if customer.ID != "" {
+		command.ReplyToMessage.CustomerId = customer.ID
+	}
+	command.ReplyToMessage.MessageId = messageID
+
+	var message = new(hera.OutboundMessage)
+	command.ReplyToMessage.Message = message
 
 	if body.Text != "" {
-		request.Body = &hera.CustomerMessageBody{
-			Entry: s.messageBodyAsText(body.Text),
-		}
+		message.Body = s.textMessage(body.Text)
 	}
 	if !reflect.ValueOf(body.Template).IsZero() {
-		request.Body = &hera.CustomerMessageBody{
-			Entry: s.messageBodyAsTemplate(body.Template),
-		}
+		message.Body = s.templateMesage(body.Template)
 	}
 	if !reflect.ValueOf(body.Location).IsZero() {
-		request.Body = &hera.CustomerMessageBody{
-			Entry: s.messageBodyAsLocation(body.Location),
-		}
+		message.Body = s.locationMessage(body.Location)
 	}
 	if !reflect.ValueOf(body.Media).IsZero() {
-		request.Body = &hera.CustomerMessageBody{
-			Entry: s.messageBodyAsMedia(body.Media),
-		}
+		message.Body = s.mediaMessage(body.Media)
 	}
+	if !reflect.ValueOf(body.Ussd).IsZero() {
+		message.Body = s.ussdMessage(body.Ussd)
+	}
+	if !reflect.ValueOf(body.VoiceActions).IsZero() {
+		message.Body = s.voiceMessage(body.VoiceActions)
+	}
+	if !reflect.ValueOf(body.Email).IsZero() {
+		message.Body = s.email(body.Email)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	return s.client.ReplyToMessage(ctx, &request)
-}
 
-func (s *service) MessagingConsent(customer *Customer, channelNumber *MessagingChannelNumber, action MessagingConsentAction) (*hera.MessagingConsentReply, error) {
-	var request hera.MessagingConsentRequest
-	request.AppId = s.appID
-	request.OrgId = s.orgID
-
-	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		request.CustomerNumber = s.customerNumber(customer)
+	data, err := proto.Marshal(req)
+	if err != nil {
+		return &hera.SendMessageReply{}, err
 	}
-	if !reflect.ValueOf(channelNumber).IsZero() {
-		request.ChannelNumber = &hera.MessagingChannelNumber{
-			Channel: hera.MessagingChannel(channelNumber.Channel),
-			Number:  channelNumber.Number,
-		}
+	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
+	if err != nil {
+		return &hera.SendMessageReply{}, err
 	}
-	request.Action = hera.MessagingConsentAction(action)
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-	return s.client.MessagingConsent(ctx, &request)
-}
-
-// SendMessage sends a messsage to a customer
-func (c *Customer) SendMessage(channelNumber *MessagingChannelNumber, body *MessageBody) (*hera.SendMessageReply, error) {
-	return c.service.SendMessage(c, channelNumber, body)
+	reply := &hera.AppToServerCommandReply{}
+	err = proto.Unmarshal(res.Data(), reply)
+	return reply.GetSendMessage(), err
 }

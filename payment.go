@@ -6,6 +6,8 @@ import (
 	"time"
 
 	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
+	"github.com/rsocket/rsocket-go/payload"
+	"google.golang.org/protobuf/proto"
 )
 
 type (
@@ -112,47 +114,61 @@ const (
 )
 
 func (s *service) InitiatePayment(customer *Customer, params *Paymentrequest) (*hera.InitiatePaymentReply, error) {
-	var request hera.InitiatePaymentRequest
-	request.AppId = s.appID
-	request.OrgId = s.orgID
-	request.Value = &hera.Cash{
+	req := new(hera.AppToServerCommand)
+	command := new(hera.AppToServerCommand_InitiatePayment)
+	command.InitiatePayment = &hera.InitiatePaymentCommand{}
+	req.Entry = command
+
+	command.InitiatePayment.Value = &hera.Cash{
 		Amount:       params.Cash.Amount,
 		CurrencyCode: params.Cash.CurrencyCode,
 	}
 
 	if !reflect.ValueOf(params.CreditParty.Customer).IsZero() {
-		request.CreditParty = &hera.PaymentCounterParty{
+		command.InitiatePayment.CreditParty = &hera.PaymentCounterParty{
 			Party: s.paymentCounterPartyAsCustomer(customer, &params.Channel),
 		}
 	}
 	if !reflect.ValueOf(params.CreditParty.Purse).IsZero() {
-		request.CreditParty = &hera.PaymentCounterParty{
+		command.InitiatePayment.CreditParty = &hera.PaymentCounterParty{
 			Party: s.paymentCounterPartyAsPurse(&params.CreditParty.Purse),
 		}
 	}
 	if !reflect.ValueOf(params.CreditParty.Wallet).IsZero() {
-		request.CreditParty = &hera.PaymentCounterParty{
+		command.InitiatePayment.CreditParty = &hera.PaymentCounterParty{
 			Party: s.paymentCounterPartyAsWallet(&params.CreditParty.Wallet),
 		}
 	}
 
 	if !reflect.ValueOf(params.DebitParty.Customer).IsZero() {
-		request.DebitParty = &hera.PaymentCounterParty{
+		command.InitiatePayment.DebitParty = &hera.PaymentCounterParty{
 			Party: s.paymentCounterPartyAsCustomer(customer, &params.Channel),
 		}
 	}
 	if !reflect.ValueOf(params.DebitParty.Purse).IsZero() {
-		request.DebitParty = &hera.PaymentCounterParty{
+		command.InitiatePayment.DebitParty = &hera.PaymentCounterParty{
 			Party: s.paymentCounterPartyAsPurse(&params.DebitParty.Purse),
 		}
 	}
 	if !reflect.ValueOf(params.DebitParty.Wallet).IsZero() {
-		request.DebitParty = &hera.PaymentCounterParty{
+		command.InitiatePayment.DebitParty = &hera.PaymentCounterParty{
 			Party: s.paymentCounterPartyAsWallet(&params.DebitParty.Wallet),
 		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	return s.client.InitiatePayment(ctx, &request)
+
+	data, err := proto.Marshal(req)
+	if err != nil {
+		return &hera.InitiatePaymentReply{}, err
+	}
+	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
+	if err != nil {
+		return &hera.InitiatePaymentReply{}, err
+	}
+
+	reply := new(hera.AppToServerCommandReply)
+	err = proto.Unmarshal(res.Data(), reply)
+	return reply.GetInitiatePayment(), err
 }

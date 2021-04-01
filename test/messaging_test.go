@@ -2,35 +2,31 @@ package test
 
 import (
 	"log"
-	"reflect"
 	"testing"
 
 	elarian "github.com/elarianltd/go-sdk"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_Messaging(t *testing.T) {
-	var opts *elarian.Options
-	opts.APIKey = APIKey
-	opts.AppID = AppID
-	opts.OrgID = OrgID
 
-	service, err := elarian.Initialize(opts)
+	service, err := elarian.Connect(GetOpts())
 	if err != nil {
 		log.Fatal(err)
 	}
-	var customer *elarian.Customer
-	customer.ID = "el_cst_c617c20cec9b52bf7698ea58695fb8bc"
+	defer service.Disconnect()
+	customer := &elarian.Customer{}
 	customer.CustomerNumber = &elarian.CustomerNumber{
 		Number:   "+254712876967",
-		Provider: elarian.CustomerNumberProviderTelco,
+		Provider: elarian.CustomerNumberProviderCellular,
 	}
 
 	t.Run("It should send a text message", func(t *testing.T) {
-		var messageBody *elarian.MessageBody
+		messageBody := &elarian.MessageBody{}
 		messageBody.Text = "hello world"
 
-		var channelNumber *elarian.MessagingChannelNumber
-		channelNumber.Number = "41012"
+		channelNumber := &elarian.MessagingChannelNumber{}
+		channelNumber.Number = "21356"
 		channelNumber.Channel = elarian.MessagingChannelSms
 
 		response, err := service.SendMessage(
@@ -39,11 +35,11 @@ func Test_Messaging(t *testing.T) {
 			messageBody,
 		)
 		if err != nil {
-			t.Errorf("Error %v", err)
+			t.Fatalf("Error %v", err)
 		}
-		if reflect.ValueOf(response.CustomerId).IsZero() {
-			t.Errorf("Expected a customer id but didn't get any")
-		}
-		t.Logf("CustomerId %v", response.CustomerId)
+		assert.NotNil(t, response)
+		assert.NotEqual(t, response.CustomerId, "")
+		// customerID messageId description status
+		t.Logf("CustomerId %v", response.CustomerId.Value)
 	})
 }

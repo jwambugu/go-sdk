@@ -7,21 +7,29 @@ import (
 )
 
 func sendMessage(service elarian.Service) {
-	var custNumber elarian.CustomerNumber
-	custNumber.Number = "+254708752502"
-	custNumber.Provider = elarian.CustomerNumberProviderTelco
+	var (
+		custNumber  *elarian.CustomerNumber
+		channel     *elarian.MessagingChannelNumber
+		messageBody *elarian.MessageBody
+	)
 
-	var cust elarian.Customer
-	cust.CustomerNumber = &custNumber
+	custNumber = &elarian.CustomerNumber{
+		Number:   "+254708752502",
+		Provider: elarian.CustomerNumberProviderCellular,
+	}
+	customer := service.NewCustomer(&elarian.CreateCustomer{
+		CustomerNumber: custNumber,
+	})
 
-	var channel elarian.MessagingChannelNumber
-	channel.Channel = elarian.MessagingChannelSms
-	channel.Number = "Elarian"
+	channel = &elarian.MessagingChannelNumber{
+		Number:  "",
+		Channel: elarian.MessagingChannelSms,
+	}
+	messageBody = &elarian.MessageBody{
+		Text: "Hello world from the go sdk",
+	}
 
-	var messageBody elarian.MessageBody
-	messageBody.Text = "Hello world from the go sdk"
-
-	response, err := service.SendMessage(&cust, &channel, &messageBody)
+	response, err := service.SendMessage(customer, channel, messageBody)
 	if err != nil {
 		log.Fatalf("Message not send %v \n", err.Error())
 	}
@@ -29,11 +37,16 @@ func sendMessage(service elarian.Service) {
 }
 
 func main() {
-	service, err := elarian.Initialize(&elarian.Options{
-		APIKey: "test_api_key",
-		OrgID:  "test_org",
-		AppID:  "test_app",
-	})
+	const (
+		AppID  string = "zordTest"
+		OrgID  string = "og-hv3yFs"
+		APIKey string = "el_api_key_6b3ff181a2d5cf91f62d2133a67a25b3070d2d7305eba70288417b3ab9ebd145"
+	)
+	service, err := elarian.Connect(&elarian.Options{
+		OrgID:  OrgID,
+		AppID:  AppID,
+		APIKey: APIKey,
+	}, nil)
 	if err != nil {
 		log.Fatalf("Error Initializing Elarian: %v \n", err)
 	}

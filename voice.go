@@ -1,11 +1,7 @@
 package elarian
 
 import (
-	"context"
-	"reflect"
 	"time"
-
-	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
 )
 
 type (
@@ -90,6 +86,11 @@ type (
 
 	// VoiceCallActionRecordSession struct
 	VoiceCallActionRecordSession struct{}
+
+	// VoiceAction interface
+	VoiceAction interface {
+		voice()
+	}
 
 	// Prompt struct
 	Prompt struct {
@@ -191,33 +192,13 @@ const (
 	VoiceCallHangupCauseUserNotRegistered      VoiceCallHangupCause = 606
 )
 
-func (s *service) MakeVoiceCall(customer *Customer, channel *VoiceChannelNumber) (*hera.MakeVoiceCallReply, error) {
-	var request hera.MakeVoiceCallRequest
-	request.AppId = s.appID
-	request.OrgId = s.orgID
-
-	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		request.CustomerNumber = s.customerNumber(customer)
-	}
-	if !reflect.ValueOf(channel).IsZero() {
-		request.ChannelNumber = &hera.VoiceChannelNumber{
-			Channel: hera.VoiceChannel(channel.Channel),
-			Number:  channel.Number,
-		}
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-	return s.client.MakeVoiceCall(ctx, &request)
-}
-
-func (s *service) ReplyToVoiceCall(sessionID string, actions []interface{}) (*hera.WebhookResponseReply, error) {
-	var request hera.WebhookResponse
-	request.AppId = s.appID
-	request.OrgId = s.orgID
-	request.SessionId = sessionID
-	request.VoiceCallActions = s.transformVoiceCallActions(actions)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-	return s.client.SendWebhookResponse(ctx, &request)
-}
+func (va VoiceCallActionDequeue) voice()       {}
+func (va VoiceCallActionEnqueue) voice()       {}
+func (va VoiceCallActionDail) voice()          {}
+func (va VoiceCallActionGetDigits) voice()     {}
+func (va VoiceCallActionGetRecording) voice()  {}
+func (va VoiceCallActionPlay) voice()          {}
+func (va VoiceCallActionSay) voice()           {}
+func (va VoiceCallActionRedirect) voice()      {}
+func (va VoiceCallActionReject) voice()        {}
+func (va VoiceCallActionRecordSession) voice() {}

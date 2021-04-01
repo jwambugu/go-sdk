@@ -3,68 +3,67 @@ package main
 import (
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	elarian "github.com/elarianltd/go-sdk"
+	"github.com/rsocket/rsocket-go/payload"
 )
 
-func getCustomerState(service elarian.Service) {
-	var cust elarian.Customer
-	cust.ID = ""
-	res, err := service.GetCustomerState(&cust)
-	if err != nil {
-		log.Fatalf("Error getting customer state %v \n", err)
-	}
-	log.Printf("State %v \n", res)
-}
+const (
+	AppID      string = "zordTest"
+	OrgID      string = "og-hv3yFs"
+	customerID string = "el_cst_27f2e69b82a82176133aeea2cec28e9b"
+	APIKey     string = "el_api_key_6b3ff181a2d5cf91f62d2133a67a25b3070d2d7305eba70288417b3ab9ebd145"
+)
 
-func getState(service elarian.Service) {
-	cust := service.NewCustomer(&elarian.CreateCustomer{ID: ""})
-	res, err := cust.GetState()
-	if err != nil {
-		log.Fatalf("Error getting customer state %v \n", err)
+func getOpts() (*elarian.Options, *elarian.ConnectionOptions) {
+	opts := &elarian.Options{
+		APIKey:             APIKey,
+		OrgID:              OrgID,
+		AppID:              AppID,
+		AllowNotifications: false,
+		Log:                true,
 	}
-	log.Printf("State %v \n", res)
+	conOpts := &elarian.ConnectionOptions{
+		LifeTime:  time.Hour * 60,
+		Keepalive: time.Second * 6000,
+		Resumable: false,
+	}
+	return opts, conOpts
 }
 
 func addReminder(service elarian.Service) {
-	err := service.AddNotificationSubscriber(
-		elarian.ElarianReminderNotification,
-		func(svc elarian.Service, cust *elarian.Customer, data interface{}) {
-			notf, ok := data.(elarian.ReminderNotification)
-			if !ok {
-				log.Fatalf("Corrupted notification data")
-			}
-			fmt.Printf("Reminder %v \n", notf)
-		},
-	)
+	cust := service.NewCustomer(&elarian.CreateCustomer{
+		ID: customerID,
+	})
+	response, err := cust.AddReminder(&elarian.Reminder{Key: "KEY",
+		Payload:  "i am a reminder",
+		RemindAt: time.Now().Add(time.Second * 3),
+		Interval: time.Duration(time.Second * 60),
+	})
 	if err != nil {
-		log.Fatalf("Error adding a subscriber %v \n", err)
+		log.Fatalln("Error: err")
 	}
-
-	var reminder elarian.Reminder
-	reminder.Key = "reminder_key"
-	reminder.Payload = "i am a reminder"
-	reminder.Expiration = time.Now().Add(time.Minute + 1)
-
-	cust := service.NewCustomer(&elarian.CreateCustomer{ID: ""})
-	res, err := cust.AddReminder(&reminder)
-	if err != nil {
-		log.Fatalf("could not set a reminder %v", err)
-	}
-	log.Printf("response %v", res)
+	log.Println(response)
 }
 
 func main() {
-	service, err := elarian.Initialize(&elarian.Options{
-		APIKey: "test_api_key",
-		OrgID:  "test_org",
-		AppID:  "test_app",
+	service, err := elarian.Connect(getOpts())
+	service.On("notification", func(msg payload.Payload) {
+		fmt.Println("MESSAGE RECEIVED", msg)
 	})
 	if err != nil {
-		log.Fatalf("Error Initializing Elarian: %v \n", err)
+		log.Fatalln(err)
 	}
-	getCustomerState(service)
-	getState(service)
 	addReminder(service)
+	defer service.Disconnect()
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		time.Sleep(time.Second * 120)
+		wg.Done()
+	}(wg)
+	wg.Wait()
 }

@@ -1,7 +1,30 @@
 package test
 
-const (
-	AppID  string = "app-j80HNf"
-	OrgID  string = "product-j80HNf"
-	APIKey string = "d14366a119bfb81c46479daf2822262a2bba596fee579e16bb902f1fb8c31e26"
+import (
+	"time"
+
+	elarian "github.com/elarianltd/go-sdk"
 )
+
+const (
+	AppID      string = "zordTest"
+	OrgID      string = "og-hv3yFs"
+	customerID string = "el_cst_27f2e69b82a82176133aeea2cec28e9b"
+	APIKey     string = "el_api_key_6b3ff181a2d5cf91f62d2133a67a25b3070d2d7305eba70288417b3ab9ebd145"
+)
+
+func GetOpts() (*elarian.Options, *elarian.ConnectionOptions) {
+	opts := &elarian.Options{
+		APIKey:             APIKey,
+		OrgID:              OrgID,
+		AppID:              AppID,
+		AllowNotifications: false,
+		Log:                true,
+	}
+	conOpts := &elarian.ConnectionOptions{
+		LifeTime:  time.Hour * 60,
+		Keepalive: time.Second * 6000,
+		Resumable: false,
+	}
+	return opts, conOpts
+}

@@ -32,20 +32,20 @@ func (s *service) secondaryID(customer *Customer) *hera.IndexMapping {
 	}
 }
 
-func (s *service) reminderNotification(notf *hera.ReminderNotification) *ReminderNotification {
-	return &ReminderNotification{
-		CustomerID: notf.CustomerId,
-		Reminder: &Reminder{
-			Key:        notf.Reminder.Key,
-			Payload:    notf.Reminder.Payload.Value,
-			Expiration: notf.Reminder.Expiration.AsTime(),
-			Interval:   notf.Reminder.Interval.AsDuration(),
-		},
-		Tag: &Tag{
-			Key:        notf.Tag.Mapping.Key,
-			Value:      notf.Tag.Mapping.Value.Value,
-			Expiration: notf.Tag.Expiration.AsTime(),
-		},
-		WorkID: notf.WorkId.Value,
-	}
-}
+// func (s *service) reminderNotification(notf *hera.ReminderNotification) *ReminderNotification {
+// 	return &ReminderNotification{
+// 		CustomerID: notf.CustomerId,
+// 		Reminder: &Reminder{
+// 			Key:        notf.Reminder.Key,
+// 			Payload:    notf.Reminder.Payload.Value,
+// 			Expiration: notf.Reminder.RemindAt.AsTime(),
+// 			Interval:   notf.Reminder.Interval.AsDuration(),
+// 		},
+// 		Tag: &Tag{
+// 			Key:        notf.Tag.Mapping.Key,
+// 			Value:      notf.Tag.Mapping.Value.Value,
+// 			Expiration: notf.Tag.Expiration.AsTime(),
+// 		},
+// 		WorkID: notf.WorkId.Value,
+// 	}
+// }

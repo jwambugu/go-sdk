@@ -1,261 +1,300 @@
 package test
 
 import (
-	"reflect"
+	"log"
 	"testing"
 	"time"
 
 	elarian "github.com/elarianltd/go-sdk"
+	"github.com/stretchr/testify/assert"
 )
 
-func Test_Customer(t *testing.T) {
-	var opts *elarian.Options
-	opts.APIKey = APIKey
-	opts.AppID = AppID
-	opts.OrgID = OrgID
-
-	service, err := elarian.Initialize(opts)
+func Test_Customers(t *testing.T) {
+	service, err := elarian.Connect(GetOpts())
 	if err != nil {
-		t.Fatal(err)
+		log.Fatalln(err)
 	}
-	var customer *elarian.Customer
-	customer.ID = "el_cst_c617c20cec9b52bf7698ea58695fb8bc"
-	customer.CustomerNumber = &elarian.CustomerNumber{
-		Number:   "+254712876967",
-		Provider: elarian.CustomerNumberProviderTelco,
-	}
+	defer service.Disconnect()
 
 	t.Run("It Should get customer state", func(t *testing.T) {
-		response, err := service.GetCustomerState(customer)
+		response, err := service.GetCustomerState(&elarian.Customer{ID: customerID})
 		if err != nil {
-			t.Errorf("Error %v", err)
+			t.Fatalf("Error: %v", err)
 		}
-		if reflect.ValueOf(response.MessagingState).IsZero() {
-			t.Errorf("Expected customer messaging state by didn't get any")
-		}
-		t.Logf("customer state %v", response)
-	})
-
-	t.Run("It should adopt customer state", func(t *testing.T) {
-		var otherCustomer elarian.Customer
-		otherCustomer.CustomerNumber = &elarian.CustomerNumber{
-			Number:   "+254711276275",
-			Provider: elarian.CustomerNumberProviderTelco,
-		}
-		response, err := service.AdoptCustomerState(
-			customer.ID,
-			&otherCustomer,
-		)
-		if err != nil {
-			t.Errorf("Error %v", err)
-		}
-		if response.Description == "" {
-			t.Errorf("Expected a description but didn't get any")
-		}
-		if response.Status != true {
-			t.Errorf("Expected status to be: %v but got: %v", true, false)
-		}
-		t.Logf("Response %v", response)
-	})
-
-	t.Run("It should add a customer reminder", func(t *testing.T) {
-		var reminder *elarian.Reminder
-		reminder.Key = "reminder_key"
-		reminder.Expiration = time.Now().Add(time.Minute + 1)
-		reminder.Interval = time.Duration(20 * time.Minute)
-		reminder.Payload = "i am a reminder"
-
-		response, err := service.AddCustomerReminder(customer, reminder)
-		if err != nil {
-			t.Errorf("Error %v", err)
-		}
-		if response.Description == "" {
-			t.Errorf("Expected a description but didn't get any")
-		}
-		t.Logf("response %v", response)
-	})
-
-	t.Run("It should add a customer reminder by tag", func(t *testing.T) {
-		var tag *elarian.Tag
-		tag.Key = "some key"
-		tag.Value = "some value"
-
-		var reminder *elarian.Reminder
-		reminder.Key = "reminder_key"
-		reminder.Expiration = time.Now().Add(time.Minute + 1)
-		reminder.Interval = time.Duration(20 * time.Minute)
-		reminder.Payload = "i am a reminder"
-
-		response, err := service.AddCustomerReminderByTag(tag, reminder)
-		if err != nil {
-			t.Errorf("Error %v", err)
-		}
-		if reflect.ValueOf(response.WorkId).IsZero() {
-			t.Errorf("Expecred a WorkId but didn't get any")
-		}
-		if response.Description == "" {
-			t.Errorf("Expected a description but didn't get any")
-		}
-		t.Logf("response %v", response)
-	})
-
-	t.Run("It should cancel a customer reminder", func(t *testing.T) {
-		var reminder *elarian.Reminder
-		reminder.Key = "reminder_key"
-		reminder.Expiration = time.Now().Add(time.Minute + 1)
-		reminder.Interval = time.Duration(20 * time.Minute)
-		reminder.Payload = "i am a reminder"
-
-		response, err := service.AddCustomerReminder(customer, reminder)
-		if err != nil {
-			t.Errorf("Error %v", err)
-		}
-		if response.Description == "" {
-			t.Errorf("Expected a description but didn't get any")
-		}
-		t.Logf("response %v", response)
-		res, err := service.CancelCustomerReminder(customer, "reminder_key")
-		if err != nil {
-			t.Errorf("Error %v", err)
-		}
-		if res.Description == "" {
-			t.Errorf("Expected a description but didn't get any")
-		}
-		t.Logf("Response %v", res)
-	})
-
-	t.Run("It should cancel a customer reminder by tag", func(t *testing.T) {
-
-		var tag *elarian.Tag
-		tag.Key = "some key"
-		tag.Value = "some value"
-
-		var reminder *elarian.Reminder
-		reminder.Key = "reminder_key"
-		reminder.Expiration = time.Now().Add(time.Minute + 1)
-		reminder.Interval = time.Duration(20 * time.Minute)
-		reminder.Payload = "i am a reminder"
-
-		response, err := service.AddCustomerReminderByTag(tag, reminder)
-		if err != nil {
-			t.Errorf("Error %v", err)
-		}
-		if reflect.ValueOf(response.WorkId).IsZero() {
-			t.Errorf("Expecred a WorkId but didn't get any")
-		}
-		if response.Description == "" {
-			t.Errorf("Expected a description but didn't get any")
-		}
-		t.Logf("response %v", response)
-
-		res, err := service.CancelCustomerReminderByTag(tag, "reminder_key")
-		if err != nil {
-			t.Errorf("Erorr %v", err)
-		}
-		if response.Description == "" {
-			t.Errorf("Expected a description but didn't get any")
-		}
-		t.Logf("response %v", res)
+		assert.NotNil(t, response.Data)
+		assert.True(t, response.Status)
+		assert.NotNil(t, response.Data)
 	})
 
 	t.Run("It should update a customer's tags", func(t *testing.T) {
-		var tag elarian.Tag
-		tag.Key = "some key"
-		tag.Value = "some value"
-
-		tags := []elarian.Tag{tag}
-
-		res, err := service.UpdateCustomerTag(customer, tags)
-		if err != nil {
-			t.Errorf("Error %v", err)
-		}
-		if res.Description == "" {
-			t.Errorf("Expected a description but didn't get any")
-		}
-		t.Logf("Response %v", res)
-	})
-
-	t.Run("It should delete a customer's tags", func(t *testing.T) {
-		keys := []string{"new_tag"}
-		res, err := service.DeleteCustomerTag(customer, keys)
-		if err != nil {
-			t.Errorf("Error %v", err)
-		}
-		if res.Description == "" {
-			t.Errorf("Expected a description but didn't get any")
-		}
-		t.Logf("Response %v", res)
-	})
-
-	t.Run("It should update a customer's secondary ids", func(t *testing.T) {
-		secondaryIds := []elarian.SecondaryID{
-			{
-				Key:        "my_app_customer_Id",
-				Value:      "123456wq",
-				Expiration: time.Now().Add(time.Duration(1 * time.Minute)),
+		response, err := service.UpdateCustomerTag(
+			&elarian.Customer{ID: customerID},
+			&elarian.Tag{
+				Key:        "TestTag",
+				Value:      "Test Tag Value",
+				Expiration: time.Now().Add(time.Minute * 2),
 			},
-		}
-		res, err := service.UpdateCustomerSecondaryID(customer, secondaryIds)
+		)
 		if err != nil {
-			t.Errorf("Error %v", err)
+			t.Errorf("Error: %v \n", err)
 		}
-		if res.Description == "" {
-			t.Error("Expected a description but didn't get any")
-		}
-		t.Logf("Response %v", res)
+		assert.NotNil(t, response)
+		assert.True(t, response.Status)
+		assert.Equal(t, response.CustomerId.Value, customerID)
 	})
 
-	t.Run("It should delete a customer's secondary ids", func(t *testing.T) {
-		secondaryIds := []elarian.SecondaryID{
-			{
-				Key:   "my_app_customer_Id",
-				Value: "123456wq",
+	t.Run("It should add a customer reminder", func(t *testing.T) {
+		response, err := service.AddCustomerReminder(
+			&elarian.Customer{ID: customerID},
+			&elarian.Reminder{Key: "KEY",
+				Payload:  "i am a reminder",
+				RemindAt: time.Now().Add(time.Second * 3),
+				Interval: time.Duration(time.Second * 60),
 			},
-		}
-		res, err := service.DeleteCustomerSecondaryID(customer, secondaryIds)
+		)
 		if err != nil {
-			t.Errorf("Error %v", err)
+			t.Fatalf("Error %v", err)
 		}
-		if res.Description == "" {
-			t.Error("Expected a description but didn't get any")
-		}
-		t.Logf("Response %v", res)
+		assert.NotNil(t, response)
+		assert.True(t, response.Status)
+		assert.NotEmpty(t, response.CustomerId)
+		assert.Equal(t, response.CustomerId.Value, customerID)
+		time.Sleep(time.Duration(time.Second * 5))
 	})
 
-	t.Run("It should update a customers metadata", func(t *testing.T) {
-
-		metadata := make(map[string]string)
-		metadata["some_key"] = "some_value"
-		metadata["some_other_key"] = "some_other_value"
-
-		res, err := service.UpdateCustomerMetaData(customer, metadata)
+	t.Run("It should add a customer reminder by tag", func(t *testing.T) {
+		response, err := service.AddCustomerReminderByTag(
+			&elarian.Tag{Key: "TestTag", Value: "Test Tag value"},
+			&elarian.Reminder{Key: "REMINDER_KEY",
+				Payload:  "i am  a reminder",
+				RemindAt: time.Now().Add(time.Second * 2),
+				Interval: time.Duration(time.Hour * 2),
+			},
+		)
 		if err != nil {
-			t.Errorf("Error %v", err)
+			t.Fatalf("Error %v", err)
 		}
-		if res.Description == "" {
-			t.Error("Expected a description but didn't get any")
+		assert.NotNil(t, response)
+		assert.True(t, response.Status)
+	})
+
+	t.Run("It should cancel a customer reminder", func(t *testing.T) {
+		key := "REMINDER_KEY"
+		response, err := service.AddCustomerReminder(
+			&elarian.Customer{ID: customerID},
+			&elarian.Reminder{Key: key,
+				Payload:  "i am a reminder",
+				RemindAt: time.Now().Add(time.Second * 2),
+				Interval: time.Duration(time.Hour * 2),
+			},
+		)
+		if err != nil {
+			t.Errorf("Error: %v \n", err)
 		}
-		if res.Status != true {
-			t.Errorf("Expected status to be: %v but got: %v", true, false)
+		assert.NotNil(t, response)
+		assert.True(t, response.Status)
+
+		response, err = service.CancelCustomerReminder(
+			&elarian.Customer{ID: customerID},
+			key,
+		)
+		if err != nil {
+			t.Errorf("Error: %v", err)
 		}
-		t.Logf("Response %v", res)
+		assert.NotNil(t, response)
+		assert.True(t, response.Status)
+	})
+
+	t.Run("It should cancel a customer reminder by tag", func(t *testing.T) {
+		key := "REMINDER_KEY"
+		response, err := service.AddCustomerReminderByTag(
+			&elarian.Tag{Key: "TestTag", Value: "Test Tag value"},
+			&elarian.Reminder{Key: key,
+				Payload:  "i am a reminder",
+				RemindAt: time.Now().Add(time.Second * 2),
+				Interval: time.Duration(time.Hour * 2),
+			},
+		)
+		if err != nil {
+			t.Errorf("Error: %v \n", err)
+		}
+		assert.NotNil(t, response)
+		assert.True(t, response.Status)
+
+		response, err = service.CancelCustomerReminderByTag(
+			&elarian.Tag{Key: "TestTag", Value: "Test Tag value"},
+			key,
+		)
+		if err != nil {
+			t.Errorf("Error: %v \n", err)
+		}
+		assert.NotNil(t, response)
+		assert.True(t, response.Status)
+	})
+
+	t.Run("It should update a customer's secondary id", func(t *testing.T) {
+		response, err := service.UpdateCustomerSecondaryID(
+			&elarian.Customer{ID: customerID},
+			&elarian.SecondaryID{
+				Key:        "email",
+				Value:      "fakeemail@test.com",
+				Expiration: time.Now().Add(time.Minute * 2),
+			},
+		)
+		if err != nil {
+			t.Errorf("Error: %v \n", err)
+		}
+		assert.NotNil(t, response)
+		assert.True(t, response.Status)
+	})
+
+	t.Run("It should delete a customer's Tag", func(t *testing.T) {
+		response, err := service.DeleteCustomerTag(
+			&elarian.Customer{ID: customerID},
+			"TestTag",
+		)
+		if err != nil {
+			t.Errorf("Error: %v \n", err)
+		}
+		assert.NotNil(t, response)
+		assert.True(t, response.Status)
+	})
+
+	t.Run("It should delete a customer's secondary id", func(t *testing.T) {
+		response, err := service.DeleteCustomerSecondaryID(
+			&elarian.Customer{ID: customerID},
+			&elarian.SecondaryID{
+				Key:   "email",
+				Value: "fakeemail@test.com",
+			},
+		)
+		if err != nil {
+			t.Errorf("Error: %v \n", err)
+		}
+		assert.NotNil(t, response)
+		assert.True(t, response.Status)
+		assert.Equal(t, response.CustomerId.Value, customerID)
+	})
+
+	// update customer appData
+	t.Run("It should update a customer's app data", func(t *testing.T) {
+		response, err := service.UpdateCustomerAppData(
+			&elarian.Customer{ID: customerID},
+			map[string]string{
+				"key":        "some-key",
+				"sessionId":  "fake-session-id",
+				"properties": `{ "ok": 1, "val": "false" }`,
+			},
+		)
+		if err != nil {
+			t.Errorf("Error: %v \n", err)
+		}
+		assert.NotNil(t, response)
+		assert.True(t, response.Status)
+		assert.Equal(t, response.CustomerId.Value, customerID)
+	})
+
+	// lease customer appData
+	t.Run("It should lease a customer's app data", func(t *testing.T) {
+		response, err := service.LeaseCustomerAppData(&elarian.Customer{ID: customerID})
+		if err != nil {
+			t.Errorf("Error: %v \n", err)
+		}
+		assert.NotNil(t, response)
+		assert.True(t, response.Status)
+		assert.Equal(t, response.CustomerId.Value, customerID)
+		assert.Contains(t, response.Value.GetStringVal(), "properties")
+	})
+
+	// delete customer appData
+	t.Run("It should delete a customer's app data", func(t *testing.T) {
+		response, err := service.DeleteCustomerAppData(&elarian.Customer{ID: customerID})
+		if err != nil {
+			t.Errorf("Error: %v \n", err)
+		}
+		assert.NotNil(t, response)
+		assert.True(t, response.Status)
+		assert.Equal(t, response.CustomerId.Value, customerID)
+	})
+
+	t.Run("It should update a customer's metadata", func(t *testing.T) {
+		response, err := service.UpdateCustomerMetaData(
+			&elarian.Customer{ID: customerID},
+			&elarian.Metadata{
+				Key:   "DOB",
+				Value: `{"year": 2020, "day": 13, "month": 10 }`,
+			},
+		)
+		if err != nil {
+			t.Errorf("Error: %v \n", err)
+		}
+		t.Log(response)
+		assert.NotNil(t, response)
+		assert.True(t, response.Status)
+		assert.Equal(t, response.CustomerId.Value, customerID)
 	})
 
 	t.Run("It should delete a customer's metadata", func(t *testing.T) {
-		metadata := []string{
-			"some_key",
-			"some_other_key",
-		}
-		res, err := service.DeleteCustomerMetaData(customer, metadata)
+		response, err := service.DeleteCustomerMetaData(
+			&elarian.Customer{ID: customerID},
+			"DOB",
+		)
 		if err != nil {
-			t.Errorf("Error %v", err)
+			t.Errorf("Errror: %v \n", err)
 		}
-		if res.Description == "" {
-			t.Error("Expected a description but didn't get any")
-		}
-		if res.Status != true {
-			t.Errorf("Expected status to be: %v but got: %v", true, false)
-		}
-		t.Logf("Response %v", res)
+		assert.NotNil(t, response)
+		assert.True(t, response.Status)
+		assert.Equal(t, response.CustomerId.Value, customerID)
 	})
+
+	t.Run("It should update message consent", func(t *testing.T) {
+		response, err := service.UpdateMessagingConsent(
+			&elarian.CustomerNumber{
+				Number:   "+254712876967",
+				Provider: elarian.CustomerNumberProviderCellular,
+			},
+			&elarian.MessagingChannelNumber{
+				Number:  "21356",
+				Channel: elarian.MessagingChannelSms,
+			},
+			elarian.MessagingConsentUpdateAllow,
+		)
+		if err != nil {
+			t.Errorf("Error: %v \n", err)
+		}
+		t.Log("RESPONSE: ", response)
+		assert.NotNil(t, response)
+		assert.Equal(t, response.CustomerId.Value, customerID)
+	})
+
+	// get customer activity
+	// t.Run("It should get a customer's activity", func(t *testing.T) {
+	// 	response, err := service.GetCustomerActivity(
+	// 		&elarian.CustomerNumber{},
+	// 		&elarian.ActivityChannelNumber{},
+	// 		"",
+	// 	)
+	// 	if err != nil {
+	// 		t.Errorf("Error: %v \n", err)
+	// 	}
+	// 	assert.NotNil(t, response)
+	// 	assert.True(t, response.Status)
+	// 	assert.Equal(t, response.CustomerId.Value, customerID)
+	// })
+
+	// adopt customer state
+
+	// t.Run("It should adopt customer state", func(t *testing.T) {
+	// 	response, err := service.AdoptCustomerState(
+	// 		customerID,
+	// 		&elarian.Customer{},
+	// 	)
+	// 	if err != nil {
+	// 		t.Errorf("Error: %v \n", err)
+	// 	}
+	// 	assert.NotNil(t, response)
+	// 	assert.True(t, response.Status)
+	// 	assert.Equal(t, response.CustomerId.Value, customerID)
+	// })
+
 }

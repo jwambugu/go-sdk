@@ -2,32 +2,24 @@ package test
 
 import (
 	"log"
-	"reflect"
 	"testing"
 
 	elarian "github.com/elarianltd/go-sdk"
+	"github.com/stretchr/testify/assert"
 )
 
-func Test_GetAuthToken(t *testing.T) {
-	t.Run("Should Get an Auth Token", func(t *testing.T) {
-		var opts *elarian.Options
-		opts.APIKey = APIKey
-		opts.AppID = AppID
-		opts.OrgID = OrgID
-
-		service, err := elarian.Initialize(opts)
+func Test_GenerateAuthToken(t *testing.T) {
+	service, err := elarian.Connect(GetOpts())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer service.Disconnect()
+	t.Run("Should Generate an Auth Token", func(t *testing.T) {
+		response, err := service.GenerateAuthToken()
 		if err != nil {
-			log.Fatal(err)
+			t.Fatalf("Error %v", err)
 		}
-		response, err := service.GetAuthToken()
-		if err != nil {
-			t.Errorf("Error %v", err)
-		}
-		if reflect.ValueOf(response.Lifetime).IsZero() {
-			t.Errorf("Expected auth token lifetime")
-		}
-		if response.Token == "" {
-			t.Errorf("Expected auth token %v", response.Token)
-		}
+		assert.NotNil(t, response)
+		assert.NotEqual(t, response.Token, "")
 	})
 }

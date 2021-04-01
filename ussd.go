@@ -1,12 +1,5 @@
 package elarian
 
-import (
-	"context"
-	"time"
-
-	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
-)
-
 type (
 	// UssdChannel type
 	UssdChannel int32
@@ -38,23 +31,3 @@ type (
 		ChannelNumber  UssdChannelNumber `json:"channelNumber,omitempty"`
 	}
 )
-
-// UssdChannel enums
-const (
-	UssdChannelUnspecified UssdChannel = iota
-	UssdChannelTelco
-)
-
-func (s *service) ReplyToUssdSession(sessionID string, ussdMenu *UssdMenu) (*hera.WebhookResponseReply, error) {
-	var request hera.WebhookResponse
-	request.AppId = s.appID
-	request.OrgId = s.orgID
-	request.SessionId = sessionID
-	request.UssdMenu = &hera.UssdMenu{
-		IsTerminal: ussdMenu.IsTerminal,
-		Text:       ussdMenu.Text,
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-	return s.client.SendWebhookResponse(ctx, &request)
-}
