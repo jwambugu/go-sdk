@@ -8,6 +8,8 @@ import (
 	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
 	"github.com/golang/protobuf/proto"
 	"github.com/rsocket/rsocket-go/payload"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -350,4 +352,110 @@ func (s *service) ReplyToMessage(customer *Customer, messageID string, body *Out
 	reply := &hera.AppToServerCommandReply{}
 	err = proto.Unmarshal(res.Data(), reply)
 	return reply.GetSendMessage(), err
+}
+
+func (s *service) ReceiveMessage(customerNumber string, channel *MessagingChannelNumber, parts []*InBoundMessageBody) (*hera.SimulatorToServerCommandReply, error) {
+	req := new(hera.SimulatorToServerCommand)
+	command := new(hera.SimulatorToServerCommand_ReceiveMessage)
+	req.Entry = command
+	command.ReceiveMessage.CustomerNumber = customerNumber
+	command.ReceiveMessage.ChannelNumber = &hera.MessagingChannelNumber{
+		Channel: hera.MessagingChannel(channel.Channel),
+		Number:  channel.Number,
+	}
+	command.ReceiveMessage.Parts = []*hera.InboundMessageBody{}
+	for _, part := range parts {
+		if !reflect.ValueOf(part.Text).IsZero() {
+			command.ReceiveMessage.Parts = append(command.ReceiveMessage.Parts, &hera.InboundMessageBody{
+				Entry: &hera.InboundMessageBody_Text{Text: part.Text},
+			})
+			continue
+		}
+		if !reflect.ValueOf(part.Ussd).IsZero() {
+			command.ReceiveMessage.Parts = append(command.ReceiveMessage.Parts, &hera.InboundMessageBody{
+				Entry: &hera.InboundMessageBody_Ussd{
+					Ussd: wrapperspb.String(part.Ussd.Input),
+				},
+			})
+			continue
+		}
+		if !reflect.ValueOf(part.Email).IsZero() {
+			command.ReceiveMessage.Parts = append(command.ReceiveMessage.Parts, &hera.InboundMessageBody{
+				Entry: &hera.InboundMessageBody_Email{
+					Email: &hera.EmailMessageBody{
+						BodyPlain:   part.Email.Body,
+						BodyHtml:    part.Email.HTML,
+						CcList:      part.Email.CcList,
+						BccList:     part.Email.BccList,
+						Attachments: part.Email.Attachments,
+						Subject:     part.Email.Subject,
+					},
+				},
+			})
+			continue
+		}
+		if !reflect.ValueOf(part.Location).IsZero() {
+			command.ReceiveMessage.Parts = append(command.ReceiveMessage.Parts, &hera.InboundMessageBody{
+				Entry: &hera.InboundMessageBody_Location{
+					Location: &hera.LocationMessageBody{
+						Latitude:  part.Location.Latitude,
+						Longitude: part.Location.Longitude,
+						Label:     wrapperspb.String(part.Location.Label),
+						Address:   wrapperspb.String(part.Location.Address),
+					},
+				},
+			})
+			continue
+		}
+
+		if !reflect.ValueOf(part.Media).IsZero() {
+			command.ReceiveMessage.Parts = append(command.ReceiveMessage.Parts, &hera.InboundMessageBody{
+				Entry: &hera.InboundMessageBody_Media{
+					Media: &hera.MediaMessageBody{
+						Url:   part.Media.URL,
+						Media: hera.MediaType(part.Media.Type),
+					},
+				},
+			})
+			continue
+		}
+
+		if !reflect.ValueOf(part.Voice).IsZero() {
+			command.ReceiveMessage.Parts = append(command.ReceiveMessage.Parts, &hera.InboundMessageBody{
+				Entry: &hera.InboundMessageBody_Voice{Voice: &hera.VoiceCallInputMessageBody{
+					Direction:    hera.CustomerEventDirection(part.Voice.Direction),
+					Status:       hera.VoiceCallStatus(part.Voice.Status),
+					StartedAt:    timestamppb.New(part.Voice.StartedAt),
+					HangupCause:  hera.VoiceCallHangupCause(part.Voice.HangupCase),
+					DtmfDigits:   wrapperspb.String(part.Voice.DtmfDigits),
+					RecordingUrl: wrapperspb.String(part.Voice.RecordingURL),
+					DialData: &hera.VoiceCallDialInput{
+						DestinationNumber: part.Voice.DailData.DestinationNumber,
+						StartedAt:         timestamppb.New(part.Voice.DailData.StartedAt),
+						Duration:          durationpb.New(part.Voice.DailData.Duration),
+					},
+					QueueData: &hera.VoiceCallQueueInput{
+						EnqueuedAt:          timestamppb.New(part.Voice.QueueData.EnqueuedAt),
+						DequeuedAt:          timestamppb.New(part.Voice.QueueData.DequeuedAt),
+						DequeuedToNumber:    wrapperspb.String(part.Voice.QueueData.DequeuedToNumber),
+						DequeuedToSessionId: wrapperspb.String(part.Voice.QueueData.DequeuedToSessionID),
+						QueueDuration:       durationpb.New(part.Voice.QueueData.QueueDuration),
+					},
+				}},
+			})
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	data, err := proto.Marshal(req)
+	if err != nil {
+		return &hera.SimulatorToServerCommandReply{}, err
+	}
+	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
+	reply := new(hera.SimulatorToServerCommandReply)
+	if err != nil {
+		return reply, err
+	}
+	err = proto.Unmarshal(payload.Data(), reply)
+	return reply, err
 }

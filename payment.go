@@ -59,7 +59,7 @@ type (
 // PaymentChannel constants
 const (
 	PaymentChannelUnspecified PaymentChannel = iota
-	PaymentChannelTelco
+	PaymentChannelCellular
 )
 
 // PaymentStatus constants
@@ -145,4 +145,57 @@ func (s *service) InitiatePayment(customer *Customer, params *Paymentrequest) (*
 	reply := new(hera.AppToServerCommandReply)
 	err = proto.Unmarshal(res.Data(), reply)
 	return reply.GetInitiatePayment(), err
+}
+
+func (s *service) ReceivePayment(channel *PaymentChannelNumber, customerNumber, transactionID string) (*hera.SimulatorToServerCommandReply, error) {
+	req := new(hera.SimulatorToServerCommand)
+	command := new(hera.SimulatorToServerCommand_ReceivePayment)
+	req.Entry = command
+	if !reflect.ValueOf(customerNumber).IsZero() {
+		command.ReceivePayment.CustomerNumber = customerNumber
+	}
+	if !reflect.ValueOf(channel).IsZero() {
+		command.ReceivePayment.ChannelNumber = &hera.PaymentChannelNumber{
+			Channel: hera.PaymentChannel(channel.Channel),
+			Number:  channel.Number,
+		}
+	}
+	command.ReceivePayment.TransactionId = transactionID
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	data, err := proto.Marshal(req)
+	if err != nil {
+		return &hera.SimulatorToServerCommandReply{}, err
+	}
+	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
+	reply := new(hera.SimulatorToServerCommandReply)
+	if err != nil {
+		return reply, err
+	}
+	err = proto.Unmarshal(payload.Data(), reply)
+	return reply, err
+}
+
+func (s *service) UpdatePaymentStatus(transactionID string, paymentStatus PaymentStatus) (*hera.SimulatorToServerCommandReply, error) {
+	req := new(hera.SimulatorToServerCommand)
+	command := new(hera.SimulatorToServerCommand_UpdatePaymentStatus)
+	req.Entry = command
+	command.UpdatePaymentStatus = &hera.UpdatePaymentStatusSimulatorCommand{}
+	command.UpdatePaymentStatus.Status = hera.PaymentStatus(paymentStatus)
+	command.UpdatePaymentStatus.TransactionId = transactionID
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	data, err := proto.Marshal(req)
+	if err != nil {
+		return &hera.SimulatorToServerCommandReply{}, err
+	}
+	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
+	reply := new(hera.SimulatorToServerCommandReply)
+	if err != nil {
+		return reply, err
+	}
+	err = proto.Unmarshal(payload.Data(), reply)
+	return reply, err
 }
