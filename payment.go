@@ -54,32 +54,6 @@ type (
 		CreditParty PaymentParty         `json:"creditparty,omitempty"`
 		DebitParty  PaymentParty         `json:"debitparty,omitempty"`
 	}
-
-	// PaymentStatusNotification struct
-	PaymentStatusNotification struct {
-		CustomerID    string        `json:"customerId,omitempty"`
-		TransactionID string        `json:"transactionId,omitempty"`
-		Status        PaymentStatus `json:"status,omitempty"`
-	}
-
-	// ReceivedPaymentNotification struct
-	ReceivedPaymentNotification struct {
-		CustomerID     string                `json:"customerId,omitempty"`
-		PurseID        string                `json:"purseId,omitempty"`
-		TransactionID  string                `json:"transactionId,omitempty"`
-		Value          *Cash                 `json:"value,omitempty"`
-		Status         PaymentStatus         `json:"status,omitempty"`
-		CustomerNumber *CustomerNumber       `json:"customerNumber,omitempty"`
-		ChannelNumber  *PaymentChannelNumber `json:"channelNumber,omitempty"`
-	}
-
-	// WalletPaymentStatusNotification struct
-	WalletPaymentStatusNotification struct {
-		CustomerID    string        `json:"customerId,omitempty"`
-		TransactionID string        `json:"transactionId,omitempty"`
-		WalletID      string        `json:"walletId,omitempty"`
-		Status        PaymentStatus `json:"status,omitempty"`
-	}
 )
 
 // PaymentChannel constants
@@ -91,10 +65,10 @@ const (
 // PaymentStatus constants
 const (
 	PaymentStatusUnspecified              PaymentStatus = 0
-	PaymentStatusQueued                   PaymentStatus = 101
-	PaymentStatusPendingConfirmation      PaymentStatus = 102
-	PaymentStatusPendingValidation        PaymentStatus = 103
-	PaymentStatusValidated                PaymentStatus = 104
+	PaymentStatusQueued                   PaymentStatus = 100
+	PaymentStatusPendingConfirmation      PaymentStatus = 101
+	PaymentStatusPendingValidation        PaymentStatus = 102
+	PaymentStatusValidated                PaymentStatus = 103
 	PaymentStatusInvalidRequest           PaymentStatus = 200
 	PaymentStatusNotSupported             PaymentStatus = 201
 	PaymentStatusInsufficientFunds        PaymentStatus = 202

@@ -22,7 +22,7 @@ func Test_Messaging(t *testing.T) {
 	}
 
 	t.Run("It should send a text message", func(t *testing.T) {
-		messageBody := &elarian.MessageBody{}
+		messageBody := &elarian.OutBoundMessageBody{}
 		messageBody.Text = "hello world"
 
 		channelNumber := &elarian.MessagingChannelNumber{}

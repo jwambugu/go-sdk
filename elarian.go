@@ -2,7 +2,6 @@ package elarian
 
 import (
 	"context"
-	"encoding/json"
 	"reflect"
 	"time"
 
@@ -20,9 +19,6 @@ type (
 
 	// ActivityChannel is an enum that defines a type of activity  channel. it could be a web and mobile
 	ActivityChannel int32
-
-	// MessagingConsentUpdate Enum
-	MessagingConsentUpdate int32
 
 	// CustomerNumber struct
 	CustomerNumber struct {
@@ -60,14 +56,6 @@ type (
 		RemindAt time.Time     `json:"expiration,omitempty"`
 	}
 
-	// ReminderNotification struct
-	ReminderNotification struct {
-		CustomerID string    `json:"customerId,omitempty"`
-		WorkID     string    `json:"workId,omitempty"`
-		Reminder   *Reminder `json:"reminder,omitempty"`
-		Tag        *Tag      `json:"tag,omitempty"`
-	}
-
 	// Tag defines a customer tag
 	Tag struct {
 		Key        string    `json:"key,omitempty"`
@@ -82,10 +70,23 @@ type (
 		BytesValue []byte `json:"bytesValue,omitempty"`
 	}
 
+	// Appdata defines a customer's metadata oneOf value of bytes value should be provided
+	Appdata struct {
+		Value      string `json:"value,omitempty"`
+		BytesValue []byte `json:"bytesValue,omitempty"`
+	}
+
 	// ActivityChannelNumber defines an activity channel
 	ActivityChannelNumber struct {
 		Number  string          `json:"number,omitempty"`
 		Channel ActivityChannel `json:"activityChannel,omitempty"`
+	}
+
+	// CustomerActivity struct
+	CustomerActivity struct {
+		Key        string            `json:"key,omitempty"`
+		CreatedAt  time.Time         `json:"createdAt,omitempty"`
+		Properties map[string]string `json:"properties,omitempty"`
 	}
 )
 
@@ -186,6 +187,45 @@ func (s *service) GetCustomerActivity(customerNumber *CustomerNumber, channelNum
 	return reply.GetCustomerActivity(), err
 }
 
+func (s *service) UpdateCustomerActivity(customerNumber *CustomerNumber, channel *ActivityChannelNumber, sessionID, key string, properties map[string]string) (*hera.CustomerActivityReply, error) {
+	req := new(hera.AppToServerCommand)
+	command := new(hera.CustomerActivityCommand)
+	if !reflect.ValueOf(customerNumber).IsZero() {
+		command.CustomerNumber = &hera.CustomerNumber{
+			Provider:  hera.CustomerNumberProvider(customerNumber.Provider),
+			Number:    customerNumber.Number,
+			Partition: wrapperspb.String(customerNumber.Partition),
+		}
+	}
+	if !reflect.ValueOf(channel).IsZero() {
+		command.ChannelNumber = &hera.ActivityChannelNumber{
+			Channel: hera.ActivityChannel(channel.Channel),
+			Number:  channel.Number,
+		}
+	}
+	command.SessionId = sessionID
+	command.Key = key
+	command.Properties = properties
+	req.Entry = &hera.AppToServerCommand_CustomerActivity{
+		CustomerActivity: command,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	data, err := proto.Marshal(req)
+	if err != nil {
+		return &hera.CustomerActivityReply{}, err
+	}
+	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
+	reply := new(hera.AppToServerCommandReply)
+	if err != nil {
+		return &hera.CustomerActivityReply{}, err
+	}
+	err = proto.Unmarshal(payload.Data(), reply)
+	return reply.GetCustomerActivity(), err
+}
+
 func (s *service) AdoptCustomerState(customerID string, otherCustomer *Customer) (*hera.UpdateCustomerStateReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_AdoptCustomerState)
@@ -250,9 +290,11 @@ func (s *service) AddCustomerReminder(customer *Customer, reminder *Reminder) (*
 	}
 	command.AddCustomerReminder.Reminder = &hera.CustomerReminder{
 		Key:      reminder.Key,
-		Interval: durationpb.New(reminder.Interval),
 		Payload:  wrapperspb.String(reminder.Payload),
 		RemindAt: timestamppb.New(reminder.RemindAt),
+	}
+	if reminder.Interval != 0 {
+		command.AddCustomerReminder.Reminder.Interval = durationpb.New(reminder.Interval)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -596,7 +638,7 @@ func (s *service) LeaseCustomerAppData(customer *Customer) (*hera.LeaseCustomerA
 	return reply.GetLeaseCustomerAppData(), err
 }
 
-func (s *service) UpdateCustomerAppData(customer *Customer, appdata map[string]string) (*hera.UpdateCustomerAppDataReply, error) {
+func (s *service) UpdateCustomerAppData(customer *Customer, appdata *Appdata) (*hera.UpdateCustomerAppDataReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_UpdateCustomerAppData)
 	command.UpdateCustomerAppData = new(hera.UpdateCustomerAppDataCommand)
@@ -617,15 +659,19 @@ func (s *service) UpdateCustomerAppData(customer *Customer, appdata map[string]s
 			CustomerId: customer.ID,
 		}
 	}
-	jsonData, err := json.Marshal(appdata)
-	if err != nil {
-		return &hera.UpdateCustomerAppDataReply{}, err
+
+	command.UpdateCustomerAppData.Update = &hera.DataMapValue{}
+	if appdata.Value != "" {
+		command.UpdateCustomerAppData.Update.Value = &hera.DataMapValue_StringVal{
+			StringVal: string(appdata.Value),
+		}
 	}
-	command.UpdateCustomerAppData.Update = &hera.DataMapValue{
-		Value: &hera.DataMapValue_StringVal{
-			StringVal: string(jsonData),
-		},
+	if len(appdata.BytesValue) > 0 {
+		command.UpdateCustomerAppData.Update.Value = &hera.DataMapValue_BytesVal{
+			BytesVal: appdata.BytesValue,
+		}
 	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 

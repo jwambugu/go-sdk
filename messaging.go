@@ -2,7 +2,6 @@ package elarian
 
 import (
 	"context"
-	"log"
 	"reflect"
 	"time"
 
@@ -13,17 +12,27 @@ import (
 )
 
 type (
+
+	// MessageReaction Enum
+	MessageReaction int32
+
 	// MessagingChannel is an enum
 	MessagingChannel int32
 
-	// MessagingConsentStatus int
-	MessagingConsentStatus int32
+	// MessagingConsentUpdate Enum
+	MessagingConsentUpdate int32
+
+	// MessagingConsentUpdateStatus int
+	MessagingConsentUpdateStatus int32
 
 	// MessageDeliveryStatus int
 	MessageDeliveryStatus int32
 
 	// MessagingSessionStatus int
 	MessagingSessionStatus int32
+
+	// MessagingSessionEndReason enum
+	MessagingSessionEndReason int32
 
 	// MediaType int
 	MediaType int32
@@ -64,8 +73,8 @@ type (
 		Attachments []string `json:"attachments,omitempty"`
 	}
 
-	// MessageBody defines how the message body should look like Note all the options are optional and the construction of this struct depends on your needs.
-	MessageBody struct {
+	// OutBoundMessageBody defines how the message body should look like Note all the options are optional and the construction of this struct depends on your needs.
+	OutBoundMessageBody struct {
 		Text         string        `json:"text,omitempty"`
 		Media        *Media        `json:"media,omitempty"`
 		Location     *Location     `json:"location,omitempty"`
@@ -75,40 +84,15 @@ type (
 		VoiceActions []VoiceAction `json:"voiceActions,omitempty"`
 	}
 
-	// MessageStatusNotification struct
-	MessageStatusNotification struct {
-		CustomerID string                `json:"customerId,omitempty"`
-		Status     MessageDeliveryStatus `json:"status,omitempty"`
-		MessageID  string                `json:"messageId,omitempty"`
-	}
-
-	// MessageSessionStatusNotification struct
-	MessageSessionStatusNotification struct {
-		CustomerID     string                  `json:"customerId,omitempty"`
-		Expiration     int64                   `json:"expiration,omitempty"`
-		CustomerNumber *CustomerNumber         `json:"customerNumber,omitempty"`
-		ChannelNumber  *MessagingChannelNumber `json:"channelNumber,omitempty"`
-		Status         MessagingSessionStatus  `json:"status,omitempty"`
-	}
-
-	// MessagingConsentStatusNotification struct
-	MessagingConsentStatusNotification struct {
-		CustomerID     string                  `json:"customerId,omitempty"`
-		CustomerNumber *CustomerNumber         `json:"customerNumber,omitempty"`
-		ChannelNumber  *MessagingChannelNumber `json:"channelNumber,omitempty"`
-		Status         MessagingConsentStatus  `json:"status,omitempty"`
-	}
-
-	// RecievedMessageNotification struct
-	RecievedMessageNotification struct {
-		CustomerID     string                  `json:"customerId,omitempty"`
-		MessageID      string                  `json:"messageId,omitempty"`
-		Text           string                  `json:"text,omitempty"`
-		Media          []*Media                `json:"media,omitempty"`
-		Location       *Location               `json:"location,omitempty"`
-		Template       *Template               `json:"template,omitempty"`
-		CustomerNumber *CustomerNumber         `json:"customerNumber,omitempty"`
-		ChannelNumber  *MessagingChannelNumber `json:"channelNumber,omitempty"`
+	// InBoundMessageBody defines how the message body should look like Note all the options are optional and the construction of this struct depends on your needs.
+	InBoundMessageBody struct {
+		Text     string                   `json:"text,omitempty"`
+		Media    *Media                   `json:"media,omitempty"`
+		Location *Location                `json:"location,omitempty"`
+		Template *Template                `json:"template,omitempty"`
+		Ussd     *UssdSessionNotification `json:"ussd,omitempty"`
+		Email    *Email                   `json:"email,omitempty"`
+		Voice    *Voice                   `json:"voice,omitempty"`
 	}
 )
 
@@ -143,6 +127,14 @@ const (
 	MessagingSessionStatusnExpired     MessagingSessionStatus = 200
 )
 
+// MessagingSessionEndReason constants
+const (
+	MessagingSessionEndReasonUnspecified    MessagingSessionEndReason = 0
+	MessagingSessionEndReasonNormalClearing MessagingSessionEndReason = 100
+	MessagingSessionEndReasonInactivity     MessagingSessionEndReason = 200
+	MessagingSessionEndReasonFailure        MessagingSessionEndReason = 300
+)
+
 // MessageDeliveryStatus constants
 const (
 	MessageDeliveryStatusUnspecified              MessageDeliveryStatus = 0
@@ -174,16 +166,23 @@ const (
 
 // MessagingConsentStatus constants
 const (
-	MessagingConsentStatusUnspecified              MessagingConsentStatus = 0
-	MessagingConsentStatusOptInCommandSent         MessagingConsentStatus = 101
-	MessagingConsentStatusOptInCompleted           MessagingConsentStatus = 300
-	MessagingConsentStatusOptOutCompleted          MessagingConsentStatus = 301
-	MessagingConsentStatusInvalidChannelNumber     MessagingConsentStatus = 401
-	MessagingConsentStatusDecommissionedCustomerID MessagingConsentStatus = 402
-	MessagingConsentStatusApplicationError         MessagingConsentStatus = 501
+	MessagingConsentStatusUnspecified              MessagingConsentUpdateStatus = 0
+	MessagingConsentStatusQueued                   MessagingConsentUpdateStatus = 100
+	MessagingConsentStatusCompleted                MessagingConsentUpdateStatus = 300
+	MessagingConsentStatusInvalidChannelNumber     MessagingConsentUpdateStatus = 401
+	MessagingConsentStatusDecommissionedCustomerID MessagingConsentUpdateStatus = 402
+	MessagingConsentStatusApplicationError         MessagingConsentUpdateStatus = 501
 )
 
-func (s *service) SendMessage(customer *Customer, channelNumber *MessagingChannelNumber, body *MessageBody) (*hera.SendMessageReply, error) {
+// MesageReaction constants
+const (
+	MessageReactionUnspecified  MessageReaction = 0
+	MessageReactionClicked      MessageReaction = 100
+	MessageReactionUnsubscribed MessageReaction = 200
+	MessageReactionComplained   MessageReaction = 201
+)
+
+func (s *service) SendMessage(customer *Customer, channelNumber *MessagingChannelNumber, body *OutBoundMessageBody) (*hera.SendMessageReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_SendMessage)
 	command.SendMessage = &hera.SendMessageCommand{}
@@ -239,11 +238,10 @@ func (s *service) SendMessage(customer *Customer, channelNumber *MessagingChanne
 	}
 	reply := new(hera.AppToServerCommandReply)
 	err = proto.Unmarshal(res.Data(), reply)
-	log.Println(reply)
 	return reply.GetSendMessage(), err
 }
 
-func (s *service) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumber, body *MessageBody) (*hera.TagCommandReply, error) {
+func (s *service) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumber, body *OutBoundMessageBody) (*hera.TagCommandReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_SendMessageTag)
 	req.Entry = command
@@ -302,7 +300,7 @@ func (s *service) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumb
 	return reply.GetTagCommand(), err
 }
 
-func (s *service) ReplyToMessage(customer *Customer, messageID string, body *MessageBody) (*hera.SendMessageReply, error) {
+func (s *service) ReplyToMessage(customer *Customer, messageID string, body *OutBoundMessageBody) (*hera.SendMessageReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_ReplyToMessage)
 	command.ReplyToMessage = &hera.ReplyToMessageCommand{}

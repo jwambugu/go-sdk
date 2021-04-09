@@ -4,7 +4,6 @@ import (
 	"github.com/asaskevich/EventBus"
 	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
 	"github.com/rsocket/rsocket-go"
-	"github.com/rsocket/rsocket-go/payload"
 )
 
 /*
@@ -39,13 +38,9 @@ import (
 	SendChannelPayment
 	CheckoutPayment
 
-
-
-
 */
 
 type (
-	notificationHandler func(msg payload.Payload)
 	// Service interface exposes high level consumable elarian functionality
 	Service interface {
 		GenerateAuthToken() (*hera.GenerateAuthTokenReply, error)
@@ -90,21 +85,25 @@ type (
 		LeaseCustomerAppData(customer *Customer) (*hera.LeaseCustomerAppDataReply, error)
 
 		// UpdateCustomerAppData adds abitrary or application specific information that you may want to tie to a customer.
-		UpdateCustomerAppData(customer *Customer, metadata map[string]string) (*hera.UpdateCustomerAppDataReply, error)
+		UpdateCustomerAppData(customer *Customer, appdata *Appdata) (*hera.UpdateCustomerAppDataReply, error)
 
 		// DeleteCustomerAppData removes a customers metadata.
 		DeleteCustomerAppData(customer *Customer) (*hera.UpdateCustomerAppDataReply, error)
 
+		// UpdateCustomerActivity func
+		UpdateCustomerActivity(customerNumber *CustomerNumber, channel *ActivityChannelNumber, sessionID, key string, properties map[string]string) (*hera.CustomerActivityReply, error)
+
+		// GetCustomerActivity func
 		GetCustomerActivity(customerNumber *CustomerNumber, channelNumber *ActivityChannelNumber, sessionID string) (*hera.CustomerActivityReply, error)
 
 		// SendMessage transmits a message to a customer the message body can be of different types including text, location, media and template
-		SendMessage(customer *Customer, channelNumber *MessagingChannelNumber, body *MessageBody) (*hera.SendMessageReply, error)
+		SendMessage(customer *Customer, channelNumber *MessagingChannelNumber, body *OutBoundMessageBody) (*hera.SendMessageReply, error)
 
 		// SendMessageByTag transmits a message to customers with the given tag. The message body can be of different types including text, location, media and template
-		SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumber, body *MessageBody) (*hera.TagCommandReply, error)
+		SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumber, body *OutBoundMessageBody) (*hera.TagCommandReply, error)
 
 		// ReplyToMessage transmits a message to a customer and creates a link of two way communication with a customer that can act as a conversation history. The message body can be of different types including text, location, media and template
-		ReplyToMessage(customer *Customer, messageID string, body *MessageBody) (*hera.SendMessageReply, error)
+		ReplyToMessage(customer *Customer, messageID string, body *OutBoundMessageBody) (*hera.SendMessageReply, error)
 
 		// MessagingConsent func
 		UpdateMessagingConsent(customer *CustomerNumber, channelNumber *MessagingChannelNumber, action MessagingConsentUpdate) (*hera.UpdateMessagingConsentReply, error)
@@ -118,12 +117,17 @@ type (
 		// Disconnect closes the elarian connection
 		Disconnect() error
 
-		On(event string, handler notificationHandler)
+		On(event Event, handler NotificationHandler)
+
+		InitializeNotificationStream()
 	}
 
 	service struct {
-		client rsocket.Client
-		bus    EventBus.Bus
+		client       rsocket.Client
+		bus          EventBus.Bus
+		msgChannel   chan *hera.ServerToAppNotification
+		replyChannel chan *hera.ServerToAppNotificationReply
+		errChannel   chan error
 	}
 )
 
@@ -131,25 +135,31 @@ func (s *service) Disconnect() error {
 	return s.client.Close()
 }
 
-func (s *service) On(event string, handler notificationHandler) {
-	s.bus.SubscribeAsync(event, handler, false)
-}
-
 // NewService Creates a new Elarian service
 func NewService(options *Options, connectionOptions *ConnectionOptions) (Service, error) {
-	bus := EventBus.New()
 	rservice := new(rSocketService)
 	rservice.host = "tcp.elarian.dev"
 	rservice.port = 8082
-	rservice.bus = bus
+
+	msgChan := make(chan *hera.ServerToAppNotification)
+	replyChan := make(chan *hera.ServerToAppNotificationReply)
+	errChan := make(chan error)
+
+	rservice.msgChannel = msgChan
+	rservice.errChannel = errChan
+	rservice.replyChannel = replyChan
 
 	client, err := rservice.connect(options, connectionOptions)
 
+	bus := EventBus.New()
 	elarianService := new(service)
 	if err != nil {
 		return &service{}, err
 	}
 	elarianService.client = client
 	elarianService.bus = bus
+	elarianService.msgChannel = msgChan
+	elarianService.errChannel = errChan
+	elarianService.replyChannel = replyChan
 	return elarianService, nil
 }

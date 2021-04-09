@@ -25,18 +25,18 @@ func (c *Customer) AdoptState(otherCustomer *Customer) (*hera.UpdateCustomerStat
 }
 
 // SendMessage sends a messsage to a customer
-func (c *Customer) SendMessage(channelNumber *MessagingChannelNumber, body *MessageBody) (*hera.SendMessageReply, error) {
+func (c *Customer) SendMessage(channelNumber *MessagingChannelNumber, body *OutBoundMessageBody) (*hera.SendMessageReply, error) {
 	return c.service.SendMessage(c, channelNumber, body)
 }
 
 // ReplyToMessage replys to a message sent by the customer
-func (c *Customer) ReplyToMessage(messageID string, body *MessageBody) (*hera.SendMessageReply, error) {
+func (c *Customer) ReplyToMessage(messageID string, body *OutBoundMessageBody) (*hera.SendMessageReply, error) {
 	return c.service.ReplyToMessage(c, messageID, body)
 }
 
 // UpdateActivity func
-func (c *Customer) UpdateActivity() {
-	// TODO: Implement update activity on customer
+func (c *Customer) UpdateActivity(channel *ActivityChannelNumber, sessionID, key string, properties map[string]string) (*hera.CustomerActivityReply, error) {
+	return c.service.UpdateCustomerActivity(c.CustomerNumber, channel, sessionID, key, properties)
 }
 
 // UpdateMesssagingConsent func
@@ -50,8 +50,8 @@ func (c *Customer) LeaseAppData() (*hera.LeaseCustomerAppDataReply, error) {
 }
 
 // UpdateAppData adds abitrary or application specific information that you may want to tie to a customer.
-func (c *Customer) UpdateAppData(metadata map[string]string) (*hera.UpdateCustomerAppDataReply, error) {
-	return c.service.UpdateCustomerAppData(c, metadata)
+func (c *Customer) UpdateAppData(appdata *Appdata) (*hera.UpdateCustomerAppDataReply, error) {
+	return c.service.UpdateCustomerAppData(c, appdata)
 }
 
 // DeleteAppData removes a customers metadata
@@ -105,22 +105,23 @@ func (c *Customer) DeleteSecondaryID(secondaryIds ...*SecondaryID) (*hera.Update
 }
 
 // GetMetadata returns customer metadata
-func (c *Customer) GetMetadata() ([]*Metadata, error) {
+func (c *Customer) GetMetadata() (map[string]*Metadata, error) {
 	state, err := c.service.GetCustomerState(c)
-	metaArr := []*Metadata{}
+	metaMap := make(map[string]*Metadata)
+
 	if err != nil {
-		return metaArr, err
+		return metaMap, err
 	}
 	if reflect.ValueOf(state.Data.IdentityState).IsZero() {
-		return metaArr, err
+		return metaMap, err
 	}
 	metadata := state.Data.IdentityState.Metadata
 	for key, value := range metadata {
-		metaArr = append(metaArr, &Metadata{
+		metaMap[key] = &Metadata{
 			Key:        key,
 			Value:      value.GetStringVal(),
 			BytesValue: value.GetBytesVal(),
-		})
+		}
 	}
-	return metaArr, nil
+	return metaMap, nil
 }

@@ -19,7 +19,7 @@ func (s *service) transformVoiceCallActions(actions []VoiceAction) []*hera.Voice
 						Record:    action.Record,
 						QueueName: wrapperspb.String(action.QueueName),
 						ChannelNumber: &hera.MessagingChannelNumber{
-							Channel: hera.MessagingChannel(action.Channel.Channel), // TODO: countercheck enum
+							Channel: hera.MessagingChannel_MESSAGING_CHANNEL_VOICE,
 							Number:  action.Channel.Number,
 						},
 					},
@@ -75,7 +75,7 @@ func (s *service) transformVoiceCallActions(actions []VoiceAction) []*hera.Voice
 					Say: &hera.SayCallAction{
 						PlayBeep: action.Prompt.Say.PlayBeep,
 						Text:     action.Prompt.Say.Text,
-						Voice:    hera.TextToSpeechVoice(action.Prompt.Say.Voice),
+						Voice:    hera.TextToSpeechVoice(action.Prompt.Say.TextToSpeechVoice),
 					},
 				}
 			}
@@ -110,7 +110,7 @@ func (s *service) transformVoiceCallActions(actions []VoiceAction) []*hera.Voice
 					Say: &hera.SayCallAction{
 						PlayBeep: action.Prompt.Say.PlayBeep,
 						Text:     action.Prompt.Say.Text,
-						Voice:    hera.TextToSpeechVoice(action.Prompt.Say.Voice),
+						Voice:    hera.TextToSpeechVoice(action.Prompt.Say.TextToSpeechVoice),
 					},
 				}
 			}
@@ -140,7 +140,7 @@ func (s *service) transformVoiceCallActions(actions []VoiceAction) []*hera.Voice
 					Say: &hera.SayCallAction{
 						PlayBeep: action.PlayBeep,
 						Text:     action.Text,
-						Voice:    hera.TextToSpeechVoice(action.Voice), //FIXME
+						Voice:    hera.TextToSpeechVoice(action.TextToSpeechVoice),
 					},
 				},
 			})
@@ -179,37 +179,25 @@ func (s *service) transformVoiceCallActions(actions []VoiceAction) []*hera.Voice
 	return voiceActions
 }
 
-// func (s *service) voiceCallNotification(notf *hera.Voi) *VoiceCallNotification {
-// 	return &VoiceCallNotification{
-// 		SessionID: notf.SessionId,
-// 		ChannelNumber: &VoiceChannelNumber{
-// 			Channel: VoiceChannel(notf.ChannelNumber.Channel),
-// 			Number:  notf.ChannelNumber.Number,
-// 		},
-// 		Cost: &Cash{
-// 			CurrencyCode: notf.Cost.CurrencyCode,
-// 			Amount:       notf.Cost.Amount,
-// 		},
-// 		Duration:  notf.Duration.AsDuration(),
-// 		Direction: CustomerEventDirection(notf.Direction),
-// 		Input: &VoiceCallHopInput{
-// 			DtmfDigits:   notf.Input.DtmfDigits.Value,
-// 			RecordingURL: notf.Input.RecordingUrl.Value,
-// 			Status:       VoiceCallStatus(notf.Input.Status),
-// 			StartedAt:    notf.Input.StartedAt.AsTime(),
-// 			HangupCase:   VoiceCallHangupCause(notf.Input.HangupCause),
-// 			DailData: &VoiceCallDailInput{
-// 				DestinationNumber: notf.Input.DialData.DestinationNumber,
-// 				Duration:          notf.Input.DialData.Duration.AsDuration(),
-// 				StartedAt:         notf.Input.DialData.StartedAt.AsTime(),
-// 			},
-// 			QueueData: &VoiceCallQueueInput{
-// 				DequeuedAt:          notf.Input.QueueData.DequeuedAt.AsTime(),
-// 				DequeuedToNumber:    notf.Input.QueueData.DequeuedToNumber.Value,
-// 				EnqueuedAt:          notf.Input.QueueData.EnqueuedAt.AsTime(),
-// 				QueueDuration:       notf.Input.QueueData.QueueDuration.AsDuration(),
-// 				DequeuedToSessionID: notf.Input.QueueData.DequeuedToSessionId.Value,
-// 			},
-// 		},
-// 	}
-// }
+func (s *service) voiceCallNotification(notf *hera.InboundMessageBody_Voice) *Voice {
+	return &Voice{
+		Direction:    CustomerEventDirection(notf.Voice.Direction),
+		Status:       VoiceCallStatus(notf.Voice.Status),
+		StartedAt:    notf.Voice.StartedAt.AsTime(),
+		HangupCase:   VoiceCallHangupCause(notf.Voice.HangupCause),
+		DtmfDigits:   notf.Voice.DtmfDigits.Value,
+		RecordingURL: notf.Voice.RecordingUrl.Value,
+		DailData: &VoiceCallDailInput{
+			DestinationNumber: notf.Voice.DialData.DestinationNumber,
+			StartedAt:         notf.Voice.DialData.StartedAt.AsTime(),
+			Duration:          notf.Voice.DialData.Duration.AsDuration(),
+		},
+		QueueData: &VoiceCallQueueInput{
+			EnqueuedAt:          notf.Voice.QueueData.EnqueuedAt.AsTime(),
+			DequeuedAt:          notf.Voice.QueueData.DequeuedAt.AsTime(),
+			DequeuedToNumber:    notf.Voice.QueueData.DequeuedToNumber.Value,
+			DequeuedToSessionID: notf.Voice.QueueData.DequeuedToSessionId.Value,
+			QueueDuration:       notf.Voice.QueueData.QueueDuration.AsDuration(),
+		},
+	}
+}

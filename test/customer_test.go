@@ -180,10 +180,8 @@ func Test_Customers(t *testing.T) {
 	t.Run("It should update a customer's app data", func(t *testing.T) {
 		response, err := service.UpdateCustomerAppData(
 			&elarian.Customer{ID: customerID},
-			map[string]string{
-				"key":        "some-key",
-				"sessionId":  "fake-session-id",
-				"properties": `{ "ok": 1, "val": "false" }`,
+			&elarian.Appdata{
+				Value: `{"sessionId": "fake-session-id", "properties": { "ok": 1, "val": "false" } }`,
 			},
 		)
 		if err != nil {

@@ -17,6 +17,9 @@ type (
 	// VoiceCallHangupCause int
 	VoiceCallHangupCause int32
 
+	// TextToSpeechVoice int
+	TextToSpeechVoice int32
+
 	// VoiceChannelNumber struct
 	VoiceChannelNumber struct {
 		Channel VoiceChannel `json:"channel,omitempty"`
@@ -71,9 +74,9 @@ type (
 
 	// VoiceCallActionSay struct
 	VoiceCallActionSay struct {
-		PlayBeep bool   `json:"playBeep,omitempty"`
-		Text     string `json:"text,omitempty"`
-		Voice    int    `json:"voice,omitempty"`
+		PlayBeep          bool              `json:"playBeep,omitempty"`
+		Text              string            `json:"text,omitempty"`
+		TextToSpeechVoice TextToSpeechVoice `json:"textToSpeechVoice,omitempty"`
 	}
 
 	// VoiceCallActionRedirect struct
@@ -90,6 +93,18 @@ type (
 	// VoiceAction interface
 	VoiceAction interface {
 		voice()
+	}
+
+	// Voice struct
+	Voice struct {
+		Direction    CustomerEventDirection `json:"direction,omitempty"`
+		Status       VoiceCallStatus        `json:"status,omitempty"`
+		StartedAt    time.Time              `json:"startedAt,omitempty"`
+		HangupCase   VoiceCallHangupCause   `json:"hangupCase,omitempty"`
+		DtmfDigits   string                 `json:"dtmfDigits,omitempty"`
+		RecordingURL string                 `json:"recordingUrl,omitempty"`
+		DailData     *VoiceCallDailInput    `json:"dailData,omitempty"`
+		QueueData    *VoiceCallQueueInput   `json:"queueData,omitempty"`
 	}
 
 	// Prompt struct
@@ -113,25 +128,17 @@ type (
 		EnqueuedAt          time.Time     `json:"enqueuedAt,omitempty"`
 		QueueDuration       time.Duration `json:"queueDuration,omitempty"`
 	}
-	// VoiceCallHopInput struct
-	VoiceCallHopInput struct {
-		DtmfDigits   string               `json:"dtmfDigits,omitempty"`
-		RecordingURL string               `json:"recordingUrl,omitempty"`
-		StartedAt    time.Time            `json:"startedAt,omitempty"`
-		Status       VoiceCallStatus      `json:"status,omitempty"`
-		HangupCase   VoiceCallHangupCause `json:"hangupCase,omitempty"`
-		DailData     *VoiceCallDailInput  `json:"dailData,omitempty"`
-		QueueData    *VoiceCallQueueInput `json:"queueData,omitempty"`
-	}
 
 	// VoiceCallNotification struct
 	VoiceCallNotification struct {
-		SessionID     string                 `json:"sessionId,omitempty"`
-		Cost          *Cash                  `json:"cost,omitempty"`
-		Duration      time.Duration          `json:"duration,omitempty"`
-		Input         *VoiceCallHopInput     `json:"input,omitempty"`
-		Direction     CustomerEventDirection `json:"direction,omitempty"`
-		ChannelNumber *VoiceChannelNumber    `json:"channelNumber,omitempty"`
+		Direction    CustomerEventDirection `json:"direction,omitempty"`
+		Status       VoiceCallStatus        `json:"status,omitempty"`
+		StartedAt    time.Time              `json:"startedAt,omitempty"`
+		HangupCase   VoiceCallHangupCause   `json:"hangupCase,omitempty"`
+		DtmfDigits   string                 `json:"dtmfDigits,omitempty"`
+		RecordingURL string                 `json:"recordingUrl,omitempty"`
+		DailData     *VoiceCallDailInput    `json:"dailData,omitempty"`
+		QueueData    *VoiceCallQueueInput   `json:"queueData,omitempty"`
 	}
 )
 
@@ -139,6 +146,13 @@ type (
 const (
 	VoiceChannelUnspecified VoiceChannel = iota
 	VoiceChannelTelco
+)
+
+// TextToSpeechVoice
+const (
+	TextToSpeechVoiceUnspecified TextToSpeechVoice = 0
+	TextToSpeechVoiceMale        TextToSpeechVoice = 1
+	TextToSpeechVoiceFemale      TextToSpeechVoice = 2
 )
 
 // CustomerEventDirect constants

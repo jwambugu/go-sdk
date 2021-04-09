@@ -1,6 +1,8 @@
 package elarian
 
 import (
+	"reflect"
+
 	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -84,85 +86,176 @@ func (s *service) email(email *Email) *hera.OutboundMessageBody {
 	}
 }
 
-// func (s *service) messageStatusNotf(notf *hera.MessageStatusNotification) *MessageStatusNotification {
-// 	return &MessageStatusNotification{
-// 		CustomerID: notf.CustomerId,
-// 		MessageID:  notf.MessageId,
-// 		Status:     MessageDeliveryStatus(notf.Status),
-// 	}
-// }
+func (s *service) messageStatusNotf(notf *hera.MessageStatusNotification) *MessageStatusNotification {
+	return &MessageStatusNotification{
+		MessageID: notf.MessageId,
+		Status:    MessageDeliveryStatus(notf.Status),
+	}
+}
 
-// func (s *service) messageSessionStatusNotf(notf *hera.MessagingSessionStatusNotification) *MessageSessionStatusNotification {
-// 	return &MessageSessionStatusNotification{
-// 		CustomerID: notf.CustomerId,
-// 		ChannelNumber: &MessagingChannelNumber{
-// 			Number:  notf.ChannelNumber.Number,
-// 			Channel: MessagingChannel(notf.ChannelNumber.Channel),
-// 		},
-// 		CustomerNumber: &CustomerNumber{
-// 			Number:    notf.CustomerNumber.Number,
-// 			Partition: notf.CustomerNumber.Partition.Value,
-// 			Provider:  NumberProvider(notf.CustomerNumber.Provider),
-// 		},
-// 		Expiration: notf.Expiration.Seconds,
-// 		Status:     MessagingSessionStatus(notf.Status),
-// 	}
-// }
+func (s *service) messageSessionStartedNotf(notf *hera.MessagingSessionStartedNotification) *MessageSessionStartedNotification {
+	return &MessageSessionStartedNotification{
+		ChannelNumber: &MessagingChannelNumber{
+			Number:  notf.ChannelNumber.Number,
+			Channel: MessagingChannel(notf.ChannelNumber.Channel),
+		},
+		CustomerNumber: &CustomerNumber{
+			Number:    notf.CustomerNumber.Number,
+			Partition: notf.CustomerNumber.Partition.Value,
+			Provider:  NumberProvider(notf.CustomerNumber.Provider),
+		},
+		Expiration: notf.ExpiresAt.Seconds,
+		SessionID:  notf.SessionId,
+	}
+}
 
-// func (s *service) messagingConsentStatusNotf(notf *hera.MessagingConsentStatusNotification) *MessagingConsentStatusNotification {
-// 	return &MessagingConsentStatusNotification{
-// 		CustomerID: notf.CustomerId,
-// 		CustomerNumber: &CustomerNumber{
-// 			Number:    notf.CustomerNumber.Number,
-// 			Partition: notf.CustomerNumber.Partition.Value,
-// 			Provider:  NumberProvider(notf.CustomerNumber.Provider),
-// 		},
-// 		ChannelNumber: &MessagingChannelNumber{
-// 			Number:  notf.ChannelNumber.Number,
-// 			Channel: MessagingChannel(notf.ChannelNumber.Channel),
-// 		},
-// 		Status: MessagingConsentStatus(notf.Status),
-// 	}
-// }
+func (s *service) messageSessionRenewedNotf(notf *hera.MessagingSessionRenewedNotification) *MessageSessionRenewedNotification {
+	return &MessageSessionRenewedNotification{
+		ChannelNumber: &MessagingChannelNumber{
+			Number:  notf.ChannelNumber.Number,
+			Channel: MessagingChannel(notf.ChannelNumber.Channel),
+		},
+		CustomerNumber: &CustomerNumber{
+			Number:    notf.CustomerNumber.Number,
+			Partition: notf.CustomerNumber.Partition.Value,
+			Provider:  NumberProvider(notf.CustomerNumber.Provider),
+		},
+		Expiration: notf.ExpiresAt.Seconds,
+		SessionID:  notf.SessionId,
+	}
+}
 
-// func (s *service) recievedMessageNotification(notf *hera.ReceivedMessageNotification) *RecievedMessageNotification {
-// 	var notification *RecievedMessageNotification
+func (s *service) MessageSessionEndedNotf(notf *hera.MessagingSessionEndedNotification) *MessageSessionEndedNotification {
+	return &MessageSessionEndedNotification{
+		ChannelNumber: &MessagingChannelNumber{
+			Number:  notf.ChannelNumber.Number,
+			Channel: MessagingChannel(notf.ChannelNumber.Channel),
+		},
+		CustomerNumber: &CustomerNumber{
+			Number:    notf.CustomerNumber.Number,
+			Partition: notf.CustomerNumber.Partition.Value,
+			Provider:  NumberProvider(notf.CustomerNumber.Provider),
+		},
+		Duration:  notf.Duration.AsDuration(),
+		SessionID: notf.SessionId,
+		Reason:    MessagingSessionEndReason(notf.Reason),
+	}
+}
 
-// 	notification.CustomerID = notf.CustomerId
-// 	notification.MessageID = notf.MessageId
+func (s *service) messagingConsentUpdateNotf(notf *hera.MessagingConsentUpdateNotification) *MessagingConsentUpdateNotification {
+	return &MessagingConsentUpdateNotification{
+		CustomerNumber: &CustomerNumber{
+			Number:    notf.CustomerNumber.Number,
+			Partition: notf.CustomerNumber.Partition.Value,
+			Provider:  NumberProvider(notf.CustomerNumber.Provider),
+		},
+		ChannelNumber: &MessagingChannelNumber{
+			Number:  notf.ChannelNumber.Number,
+			Channel: MessagingChannel(notf.ChannelNumber.Channel),
+		},
+		Status: MessagingConsentUpdateStatus(notf.Status),
+	}
+}
 
-// 	if !reflect.ValueOf(notf.CustomerNumber).IsZero() {
-// 		notification.CustomerNumber = &CustomerNumber{
-// 			Number:    notf.CustomerNumber.Number,
-// 			Partition: notf.CustomerNumber.Partition.Value,
-// 			Provider:  NumberProvider(notf.CustomerNumber.Provider),
-// 		}
-// 	}
+func (s *service) sentMessageReaction(notf *hera.SentMessageReactionNotification) *SentMessageReaction {
+	return &SentMessageReaction{
+		CustomerNumber: &CustomerNumber{
+			Number:    notf.CustomerNumber.Number,
+			Partition: notf.CustomerNumber.Partition.Value,
+			Provider:  NumberProvider(notf.CustomerNumber.Provider),
+		},
+		ChannelNumber: &MessagingChannelNumber{
+			Number:  notf.ChannelNumber.Number,
+			Channel: MessagingChannel(notf.ChannelNumber.Channel),
+		},
+		MessageID: notf.MessageId,
+		Reaction:  MessageReaction(notf.Reaction),
+	}
+}
 
-// 	if !reflect.ValueOf(notf.ChannelNumber).IsZero() {
-// 		notification.ChannelNumber = &MessagingChannelNumber{
-// 			Number:  notf.ChannelNumber.Number,
-// 			Channel: MessagingChannel(notf.ChannelNumber.Channel),
-// 		}
-// 	}
+func (s *service) recievedMessageNotification(notf *hera.ReceivedMessageNotification) *RecievedMessageNotification {
+	var notification *RecievedMessageNotification
 
-// 	if !reflect.ValueOf(notf.Location).IsZero() {
-// 		notification.Location = &Location{
-// 			Latitude:  notf.Location.Latitude,
-// 			Longitude: notf.Location.Longitude,
-// 		}
-// 	}
+	notification.MessageID = notf.MessageId
 
-// 	var notificationMedia []*Media
+	if !reflect.ValueOf(notf.CustomerNumber).IsZero() {
+		notification.CustomerNumber = &CustomerNumber{
+			Number:    notf.CustomerNumber.Number,
+			Partition: notf.CustomerNumber.Partition.Value,
+			Provider:  NumberProvider(notf.CustomerNumber.Provider),
+		}
+	}
 
-// 	for _, notfMedia := range notf.Media {
-// 		notificationMedia = append(notificationMedia, &Media{
-// 			URL: notfMedia.Url,
-// 		})
-// 	}
+	if !reflect.ValueOf(notf.ChannelNumber).IsZero() {
+		notification.ChannelNumber = &MessagingChannelNumber{
+			Number:  notf.ChannelNumber.Number,
+			Channel: MessagingChannel(notf.ChannelNumber.Channel),
+		}
+	}
+	notification.MessageID = notf.MessageId
+	notification.SessionID = notf.SessionId.Value
+	notification.InReplyTo = notf.InReplyTo.Value
+	notification.Parts = []*InBoundMessageBody{}
 
-// 	notification.Text = notf.Text.Value
-// 	notification.MessageID = notf.MessageId
-// 	notification.Media = notificationMedia
-// 	return notification
-// }
+	for _, part := range notf.Parts {
+		if email, ok := part.Entry.(*hera.InboundMessageBody_Email); ok {
+			notification.Parts = append(
+				notification.Parts,
+				&InBoundMessageBody{
+					Email: &Email{
+						Subject:     email.Email.Subject,
+						Body:        email.Email.BodyPlain,
+						HTML:        email.Email.BodyHtml,
+						CcList:      email.Email.CcList,
+						BccList:     email.Email.BccList,
+						Attachments: email.Email.Attachments,
+					},
+				},
+			)
+			continue
+		}
+
+		if media, ok := part.Entry.(*hera.InboundMessageBody_Media); ok {
+			notification.Parts = append(notification.Parts, &InBoundMessageBody{
+				Media: &Media{
+					URL:  media.Media.Url,
+					Type: MediaType(media.Media.Media),
+				},
+			})
+			continue
+		}
+
+		if location, ok := part.Entry.(*hera.InboundMessageBody_Location); ok {
+			notification.Parts = append(notification.Parts, &InBoundMessageBody{
+				Location: &Location{
+					Latitude:  location.Location.Latitude,
+					Longitude: location.Location.Longitude,
+					Address:   location.Location.Address.Value,
+					Label:     location.Location.Label.Value,
+				},
+			})
+			continue
+		}
+		if text, ok := part.Entry.(*hera.InboundMessageBody_Text); ok {
+			notification.Parts = append(notification.Parts, &InBoundMessageBody{Text: text.Text})
+			continue
+
+		}
+		if ussd, ok := part.Entry.(*hera.InboundMessageBody_Ussd); ok {
+			notification.Parts = append(notification.Parts,
+				&InBoundMessageBody{
+					Ussd: &UssdSessionNotification{
+						SessionID: notf.SessionId.Value,
+						Input:     ussd.Ussd.Value,
+					},
+				})
+
+		}
+		if voice, ok := part.Entry.(*hera.InboundMessageBody_Voice); ok {
+			notification.Parts = append(notification.Parts, &InBoundMessageBody{
+				Voice: s.voiceCallNotification(voice),
+			})
+		}
+	}
+	return notification
+}

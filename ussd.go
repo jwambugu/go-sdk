@@ -24,10 +24,7 @@ type (
 
 	// UssdSessionNotification struct
 	UssdSessionNotification struct {
-		SessionID      string            `json:"sessionId,omitempty"`
-		CustomerID     string            `json:"customerId,omitempty"`
-		Input          string            `json:"input,omitempty"`
-		CustomerNumber *CustomerNumber   `json:"customerNumber,omitempty"`
-		ChannelNumber  UssdChannelNumber `json:"channelNumber,omitempty"`
+		SessionID string `json:"sessionId,omitempty"`
+		Input     string `json:"input,omitempty"`
 	}
 )
