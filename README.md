@@ -1,87 +1,80 @@
 # Elarian
 
-[![NPM](https://nodei.co/npm/elarian.png?downloads=true&downloadRank=true&stars=true)](https://www.npmjs.org/package/elarian)
-
-> A convenient way to interact with the Elarian APIs.
+A convenient way to interact with the Elarian APIs.
 
 ## Install
 
-You can install the package from [npm](https://www.npmjs.com/package/elarian) by running:
+You can install the package from [github](https://www.github.com/elarianltd/go-sdk) by running:
 
 ```bash
 go get github.com/elarianltd/go-sdk
-
 ```
 
 ## Usage
 
 ```go
+package main
 
-// on node
-const { Elarian }  = require('elarian');
-/*
-or in the browser
-<script src="dist/elarian.min.js"></script>
-const { Elarian } = ElarianSDK;
-*/
+import (
+ "log"
+ "os"
+ "os/signal"
+ "syscall"
 
-// ...
+ elarian "github.com/elarianltd/go-sdk"
+)
 
-const elarian = new Elarian({
-    apiKey: 'YOUR_API_KEY', // or authToken: 'YOUR_AUTH_TOKEN'
-    orgId: 'YOUR_ORG_ID',
-    appId: 'YOUR_APP_ID',
-});
+const (
+ AppID  string = "zordTest"
+ OrgID  string = "og-hv3yFs"
+ APIKey string = "el_api_key_6b3ff181a2d5cf91f62d2133a67a25b3070d2d7305eba70288417b3ab9ebd145"
+)
 
-elarian.on('ussdSession', async (notification, customer, appData, callback) => {
-    const {
-        input,
-        sessionId,
-    } = notification;
+func main() {
+ var (
+  custNumber  *elarian.CustomerNumber
+  channel     *elarian.MessagingChannelNumber
+  messageBody *elarian.OutBoundMessageBody
+  opts        *elarian.Options
+  customer    *elarian.Customer
+ )
 
-    let {
-        name,
-        state = 'newbie',
-    } = appData;
+ opts = &elarian.Options{
+  APIKey:             APIKey,
+  OrgID:              OrgID,
+  AppID:              AppID,
+  AllowNotifications: true,
+  Log:                true,
+ }
 
-    const menu = {
-        text: null,
-        isTerminal: true,
-    };
+ service, err := elarian.Connect(opts, nil)
+ if err != nil {
+  log.Fatalf("Error Initializing Elarian: %v \n", err)
+ }
+ defer service.Disconnect()
 
-    switch (state) {
-    case 'veteran':
-        if (name) {
-            menu.text = `Welcome back ${name}! What is your new name?`;
-            menu.isTerminal = false;
-        } else {
-            name = input.value;
-            menu.text = `Thank you for trying Elarian, ${name}!`;
-            menu.isTerminal = true;
-            await customer.sendMessage(
-                { number: 'Elarian', provider: 'telco' },
-                { body: { text: `Hey ${name}! Thank you for trying out Elarian` } },
-            );
-        }
-        break;
-    case 'newbie':
-    default:
-        menu.text = 'Hey there, welcome to Elarian! What\'s your name?';
-        menu.isTerminal = false;
-        state = 'veteran';
-        break;
-    }
-    callback(menu, { state, name });
-});
+ sigs := make(chan os.Signal, 1)
+ signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+ go func() {
+  <-sigs
+  log.Println("Disconnecting From Elarian")
+  service.Disconnect()
+  os.Exit(0)
+ }()
 
-elarian
-    .on('connected', () => {
-        console.log('App is running!')
-    })
-    .on('error', (error) => {
-        console.error(error);
-    })
-    .connect();
+ custNumber = &elarian.CustomerNumber{Number: "+254708752502", Provider: elarian.CustomerNumberProviderCellular}
+ customer = service.NewCustomer(&elarian.CreateCustomer{CustomerNumber: custNumber})
+ channel = &elarian.MessagingChannelNumber{Number: "21356", Channel: elarian.MessagingChannelSms}
+ messageBody = &elarian.OutBoundMessageBody{Text: "Hello world from the go sdk"}
+
+ response, err := service.SendMessage(customer, channel, messageBody)
+ if err != nil {
+  log.Fatalf("Message not send %v \n", err.Error())
+ }
+ log.Printf("Status %d Description %s \n customerID %s \n", response.Status, response.Description, response.CustomerId)
+}
+
+
 ```
 
 See [example](example/) for a full sample app.
@@ -95,12 +88,11 @@ Take a look at the [API docs here](http://docs.elarian.com). For detailed info o
 Run all tests:
 
 ```bash
-npm install
-npm test
+make test
 ```
 
 See [SDK Spec](https://github.com/ElarianLtd/sdk-spec) for reference.
 
 ## Issues
 
-If you find a bug, please file an issue on [our issue tracker on GitHub](https://github.com/ElarianLtd/javascript-sdk/issues).
+If you find a bug, please file an issue on [our issue tracker on GitHub](https://github.com/ElarianLtd/go-sdk/issues).
