@@ -20,6 +20,19 @@ type (
 	// ActivityChannel is an enum that defines a type of activity  channel. it could be a web and mobile
 	ActivityChannel int32
 
+	// DataValue interface is implemented by metadata and appdata as with both you can store data as either a string or an array of bytes
+	DataValue interface {
+		isDataValue()
+		String() string
+		Bytes() []byte
+	}
+
+	// StringDataValue implements the DataValue interface represents a string
+	StringDataValue string
+
+	// BinaryDataValue implements the DataValue Interface and represents an array of bytes
+	BinaryDataValue []byte
+
 	// CustomerNumber struct
 	CustomerNumber struct {
 		Number    string         `json:"number,omitempty"`
@@ -65,15 +78,13 @@ type (
 
 	// Metadata defines a customer's metadata oneOf value of bytes value should be provided
 	Metadata struct {
-		Key        string `json:"key,omitempty"`
-		Value      string `json:"value,omitempty"`
-		BytesValue []byte `json:"bytesValue,omitempty"`
+		Key   string    `json:"key,omitempty"`
+		Value DataValue `json:"value,omitempty"`
 	}
 
 	// Appdata defines a customer's metadata oneOf value of bytes value should be provided
 	Appdata struct {
-		Value      string `json:"value,omitempty"`
-		BytesValue []byte `json:"bytesValue,omitempty"`
+		Value DataValue `json:"value,omitempty"`
 	}
 
 	// ActivityChannelNumber defines an activity channel
@@ -112,6 +123,27 @@ const (
 	MessagingConsentUpdateBlock
 )
 
+func (StringDataValue) isDataValue() {}
+
+func (s StringDataValue) String() string {
+	return string(s)
+}
+
+// Bytes method returns a string an array of bytes
+func (s StringDataValue) Bytes() []byte {
+	return []byte(s)
+}
+
+func (BinaryDataValue) isDataValue() {}
+func (b BinaryDataValue) String() string {
+	return string(b)
+}
+
+// Bytes method returns a BinaryDataValue as an array of bytes
+func (b BinaryDataValue) Bytes() []byte {
+	return b
+}
+
 func (s *service) GetCustomerState(customer *Customer) (*hera.GetCustomerStateReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_GetCustomerState)
@@ -127,7 +159,7 @@ func (s *service) GetCustomerState(customer *Customer) (*hera.GetCustomerStateRe
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		command.GetCustomerState.Customer = &hera.GetCustomerStateCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer),
+			CustomerNumber: s.customerNumber(customer.CustomerNumber),
 		}
 	}
 	if customer.ID != "" {
@@ -149,6 +181,7 @@ func (s *service) GetCustomerState(customer *Customer) (*hera.GetCustomerStateRe
 		return &hera.GetCustomerStateReply{}, err
 	}
 	err = proto.Unmarshal(payload.Data(), reply)
+
 	return reply.GetGetCustomerState(), err
 }
 
@@ -242,7 +275,7 @@ func (s *service) AdoptCustomerState(customerID string, otherCustomer *Customer)
 	}
 	if !reflect.ValueOf(otherCustomer.CustomerNumber).IsZero() {
 		command.AdoptCustomerState.OtherCustomer = &hera.AdoptCustomerStateCommand_OtherCustomerNumber{
-			OtherCustomerNumber: s.customerNumber(otherCustomer),
+			OtherCustomerNumber: s.customerNumber(otherCustomer.CustomerNumber),
 		}
 	}
 	if otherCustomer.ID != "" {
@@ -280,7 +313,7 @@ func (s *service) AddCustomerReminder(customer *Customer, reminder *Reminder) (*
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		command.AddCustomerReminder.Customer = &hera.AddCustomerReminderCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer),
+			CustomerNumber: s.customerNumber(customer.CustomerNumber),
 		}
 	}
 	if customer.ID != "" {
@@ -360,7 +393,7 @@ func (s *service) CancelCustomerReminder(customer *Customer, key string) (*hera.
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		command.CancelCustomerReminder.Customer = &hera.CancelCustomerReminderCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer),
+			CustomerNumber: s.customerNumber(customer.CustomerNumber),
 		}
 	}
 	if customer.ID != "" {
@@ -426,7 +459,7 @@ func (s *service) UpdateCustomerTag(customer *Customer, tags ...*Tag) (*hera.Upd
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		command.UpdateCustomerTag.Customer = &hera.UpdateCustomerTagCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer),
+			CustomerNumber: s.customerNumber(customer.CustomerNumber),
 		}
 	}
 	if customer.ID != "" {
@@ -477,7 +510,7 @@ func (s *service) DeleteCustomerTag(customer *Customer, keys ...string) (*hera.U
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		command.DeleteCustomerTag.Customer = &hera.DeleteCustomerTagCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer),
+			CustomerNumber: s.customerNumber(customer.CustomerNumber),
 		}
 	}
 	if customer.ID != "" {
@@ -517,7 +550,7 @@ func (s *service) UpdateCustomerSecondaryID(customer *Customer, secondaryIDs ...
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		command.UpdateCustomerSecondaryId.Customer = &hera.UpdateCustomerSecondaryIdCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer),
+			CustomerNumber: s.customerNumber(customer.CustomerNumber),
 		}
 	}
 	if customer.ID != "" {
@@ -565,7 +598,7 @@ func (s *service) DeleteCustomerSecondaryID(customer *Customer, secondaryIDs ...
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		command.DeleteCustomerSecondaryId.Customer = &hera.
 			DeleteCustomerSecondaryIdCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer),
+			CustomerNumber: s.customerNumber(customer.CustomerNumber),
 		}
 	}
 
@@ -613,7 +646,7 @@ func (s *service) LeaseCustomerAppData(customer *Customer) (*hera.LeaseCustomerA
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		command.LeaseCustomerAppData.Customer = &hera.LeaseCustomerAppDataCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer),
+			CustomerNumber: s.customerNumber(customer.CustomerNumber),
 		}
 	}
 	if customer.ID != "" {
@@ -651,7 +684,7 @@ func (s *service) UpdateCustomerAppData(customer *Customer, appdata *Appdata) (*
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		command.UpdateCustomerAppData.Customer = &hera.UpdateCustomerAppDataCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer),
+			CustomerNumber: s.customerNumber(customer.CustomerNumber),
 		}
 	}
 	if customer.ID != "" {
@@ -661,14 +694,15 @@ func (s *service) UpdateCustomerAppData(customer *Customer, appdata *Appdata) (*
 	}
 
 	command.UpdateCustomerAppData.Update = &hera.DataMapValue{}
-	if appdata.Value != "" {
+
+	if stringValue, ok := appdata.Value.(StringDataValue); ok {
 		command.UpdateCustomerAppData.Update.Value = &hera.DataMapValue_StringVal{
-			StringVal: string(appdata.Value),
+			StringVal: string(stringValue),
 		}
 	}
-	if len(appdata.BytesValue) > 0 {
+	if binaryValue, ok := appdata.Value.(BinaryDataValue); ok {
 		command.UpdateCustomerAppData.Update.Value = &hera.DataMapValue_BytesVal{
-			BytesVal: appdata.BytesValue,
+			BytesVal: binaryValue,
 		}
 	}
 
@@ -702,7 +736,7 @@ func (s *service) DeleteCustomerAppData(customer *Customer) (*hera.UpdateCustome
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		command.DeleteCustomerAppData.Customer = &hera.DeleteCustomerAppDataCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer),
+			CustomerNumber: s.customerNumber(customer.CustomerNumber),
 		}
 	}
 	if customer.ID != "" {
@@ -740,7 +774,7 @@ func (s *service) UpdateCustomerMetaData(customer *Customer, metadata ...*Metada
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		command.UpdateCustomerMetadata.Customer = &hera.UpdateCustomerMetadataCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer),
+			CustomerNumber: s.customerNumber(customer.CustomerNumber),
 		}
 	}
 	if customer.ID != "" {
@@ -752,14 +786,14 @@ func (s *service) UpdateCustomerMetaData(customer *Customer, metadata ...*Metada
 
 	for _, val := range metadata {
 		mapValue := new(hera.DataMapValue)
-		if len(val.BytesValue) > 0 {
+		if binaryValue, ok := val.Value.(BinaryDataValue); ok {
 			mapValue.Value = &hera.DataMapValue_BytesVal{
-				BytesVal: val.BytesValue,
+				BytesVal: binaryValue,
 			}
 		}
-		if val.Value != "" {
+		if stringValue, ok := val.Value.(StringDataValue); ok {
 			mapValue.Value = &hera.DataMapValue_StringVal{
-				StringVal: val.Value,
+				StringVal: string(stringValue),
 			}
 		}
 		meta[val.Key] = mapValue
@@ -795,7 +829,7 @@ func (s *service) DeleteCustomerMetaData(customer *Customer, keys ...string) (*h
 	}
 	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
 		command.DeleteCustomerMetadata.Customer = &hera.DeleteCustomerMetadataCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer),
+			CustomerNumber: s.customerNumber(customer.CustomerNumber),
 		}
 	}
 	if customer.ID != "" {

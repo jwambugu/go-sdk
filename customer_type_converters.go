@@ -7,11 +7,11 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-func (s *service) customerNumber(customer *Customer) *hera.CustomerNumber {
+func (s *service) customerNumber(number *CustomerNumber) *hera.CustomerNumber {
 	return &hera.CustomerNumber{
-		Number:    customer.CustomerNumber.Number,
-		Provider:  hera.CustomerNumberProvider(customer.CustomerNumber.Provider),
-		Partition: wrapperspb.String(customer.CustomerNumber.Partition),
+		Number:    number.Number,
+		Provider:  hera.CustomerNumberProvider(number.Provider),
+		Partition: wrapperspb.String(number.Partition),
 	}
 }
 

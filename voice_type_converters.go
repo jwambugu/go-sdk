@@ -57,7 +57,7 @@ func (s *service) transformVoiceCallActions(actions []VoiceAction) []*hera.Voice
 		}
 
 		if action, ok := voiceAction.(VoiceCallActionGetDigits); ok && !reflect.ValueOf(action).IsZero() {
-			var getDigits *hera.GetDigitsCallAction
+			getDigits := new(hera.GetDigitsCallAction)
 			getDigits.FinishOnKey = wrapperspb.String(action.FinishOnKey)
 			getDigits.NumDigits = wrapperspb.Int32(action.NumDigits)
 			getDigits.Timeout = durationpb.New(action.Timeout)
@@ -89,13 +89,12 @@ func (s *service) transformVoiceCallActions(actions []VoiceAction) []*hera.Voice
 		}
 
 		if action, ok := voiceAction.(VoiceCallActionGetRecording); ok && !reflect.ValueOf(action).IsZero() {
-			var getRecording *hera.GetRecordingCallAction
+			getRecording := new(hera.GetRecordingCallAction)
 			getRecording.FinishOnKey = wrapperspb.String(action.FinishOnKey)
 			getRecording.MaxLength = durationpb.New(action.MaxLength)
 			getRecording.PlayBeep = action.PlayBeep
 			getRecording.TrimSilence = action.TrimSilence
 			getRecording.Timeout = durationpb.New(action.Timeout)
-			getRecording.Prompt = &hera.GetRecordingCallAction_Say{}
 
 			if !reflect.ValueOf(action.Prompt.Play).IsZero() {
 				getRecording.Prompt = &hera.GetRecordingCallAction_Play{
@@ -175,6 +174,141 @@ func (s *service) transformVoiceCallActions(actions []VoiceAction) []*hera.Voice
 			})
 			continue
 		}
+	}
+	return voiceActions
+}
+
+func (s *service) heraVoiceCallActions(actions []*hera.VoiceCallAction) VoiceCallActions {
+	var voiceActions = []VoiceAction{}
+	for _, voiceCallAction := range actions {
+		if entry, ok := voiceCallAction.Entry.(*hera.VoiceCallAction_Dequeue); ok {
+			voiceActions = append(voiceActions, &VoiceCallActionDequeue{
+				Channel: VoiceChannelNumber{
+					Channel: VoiceChannel(entry.Dequeue.ChannelNumber.Channel),
+					Number:  entry.Dequeue.ChannelNumber.Number,
+				},
+				QueueName: entry.Dequeue.QueueName.Value,
+				Record:    entry.Dequeue.Record,
+			})
+			continue
+		}
+
+		if entry, ok := voiceCallAction.Entry.(*hera.VoiceCallAction_Enqueue); ok {
+			voiceActions = append(voiceActions, VoiceCallActionEnqueue{
+				HoldMusic: entry.Enqueue.HoldMusic.Value,
+				QueueName: entry.Enqueue.QueueName.Value,
+			})
+			continue
+		}
+
+		if entry, ok := voiceCallAction.Entry.(*hera.VoiceCallAction_Dial); ok {
+			action := &VoiceCallActionDail{
+				Record:          entry.Dial.Record,
+				Sequential:      entry.Dial.Sequential,
+				MaxDuration:     entry.Dial.MaxDuration.Value,
+				CallerID:        entry.Dial.CallerId.Value,
+				RingBackTone:    entry.Dial.RingbackTone.Value,
+				CustomerNumbers: []*CustomerNumber{},
+			}
+			for _, number := range entry.Dial.CustomerNumbers {
+				action.CustomerNumbers = append(action.CustomerNumbers, &CustomerNumber{
+					Number:    number.Number,
+					Provider:  NumberProvider(number.Provider),
+					Partition: number.Partition.Value,
+				})
+			}
+			voiceActions = append(voiceActions, action)
+			continue
+		}
+
+		if entry, ok := voiceCallAction.Entry.(*hera.VoiceCallAction_GetDigits); ok {
+			getDigits := new(VoiceCallActionGetDigits)
+			getDigits.FinishOnKey = entry.GetDigits.FinishOnKey.Value
+			getDigits.NumDigits = entry.GetDigits.NumDigits.Value
+			getDigits.Timeout = entry.GetDigits.Timeout.AsDuration()
+
+			if prompt, ok := entry.GetDigits.Prompt.(*hera.GetDigitsCallAction_Play); ok {
+				getDigits.Prompt = &Prompt{
+					Play: &VoiceCallActionPlay{
+						URL: prompt.Play.Url,
+					},
+				}
+			}
+			if prompt, ok := entry.GetDigits.Prompt.(*hera.GetDigitsCallAction_Say); ok {
+				getDigits.Prompt = &Prompt{
+					Say: &VoiceCallActionSay{
+						PlayBeep:          prompt.Say.PlayBeep,
+						Text:              prompt.Say.Text,
+						TextToSpeechVoice: TextToSpeechVoice(prompt.Say.Voice),
+					},
+				}
+			}
+			voiceActions = append(voiceActions, getDigits)
+			continue
+		}
+
+		if entry, ok := voiceCallAction.Entry.(*hera.VoiceCallAction_GetRecording); ok {
+			recording := new(VoiceCallActionGetRecording)
+			recording.FinishOnKey = entry.GetRecording.FinishOnKey.Value
+			recording.MaxLength = entry.GetRecording.MaxLength.AsDuration()
+			recording.PlayBeep = entry.GetRecording.PlayBeep
+			recording.TrimSilence = entry.GetRecording.TrimSilence
+			recording.Timeout = entry.GetRecording.Timeout.AsDuration()
+
+			if entry, ok := entry.GetRecording.Prompt.(*hera.GetRecordingCallAction_Say); ok {
+				recording.Prompt = &Prompt{
+					Say: &VoiceCallActionSay{
+						PlayBeep:          entry.Say.PlayBeep,
+						Text:              entry.Say.Text,
+						TextToSpeechVoice: TextToSpeechVoice(entry.Say.Voice),
+					},
+				}
+			}
+			if entry, ok := entry.GetRecording.Prompt.(*hera.GetRecordingCallAction_Play); ok {
+				recording.Prompt = &Prompt{
+					Play: &VoiceCallActionPlay{
+						URL: entry.Play.Url,
+					},
+				}
+			}
+
+			voiceActions = append(voiceActions, recording)
+			continue
+		}
+
+		if entry, ok := voiceCallAction.Entry.(*hera.VoiceCallAction_Play); ok {
+			voiceActions = append(voiceActions, &VoiceCallActionPlay{
+				URL: entry.Play.Url,
+			})
+			continue
+		}
+
+		if entry, ok := voiceCallAction.Entry.(*hera.VoiceCallAction_Say); ok {
+			voiceActions = append(voiceActions, &VoiceCallActionSay{
+				PlayBeep:          entry.Say.PlayBeep,
+				Text:              entry.Say.Text,
+				TextToSpeechVoice: TextToSpeechVoice(entry.Say.Voice),
+			})
+			continue
+		}
+
+		if entry, ok := voiceCallAction.Entry.(*hera.VoiceCallAction_Redirect); ok {
+			voiceActions = append(voiceActions, &VoiceCallActionRedirect{
+				URL: entry.Redirect.Url,
+			})
+			continue
+		}
+
+		if _, ok := voiceCallAction.Entry.(*hera.VoiceCallAction_Reject); ok {
+			voiceActions = append(voiceActions, &VoiceCallActionReject{})
+			continue
+		}
+
+		if _, ok := voiceCallAction.Entry.(*hera.VoiceCallAction_RecordSession); ok {
+			voiceActions = append(voiceActions, &VoiceCallActionRecordSession{})
+			continue
+		}
+
 	}
 	return voiceActions
 }

@@ -42,7 +42,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	service.On(elarian.ElarianReminderNotification, func(notf elarian.Notification, appData *elarian.Appdata, customer *elarian.Customer, cb elarian.NotificationCallBack) {
+	service.On(elarian.ElarianReminderNotification, func(notf elarian.IsNotification, appData *elarian.Appdata, customer *elarian.Customer, cb elarian.NotificationCallBack) {
 		if notification, ok := notf.(*elarian.ReminderNotification); ok {
 			log.Println("NOTIFICATION _KEY", notification.Reminder.Key)
 		}

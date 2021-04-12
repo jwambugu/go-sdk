@@ -39,6 +39,20 @@ type (
 	// MediaType int
 	MediaType int32
 
+	// IsOutBoundMessageBody interface
+	IsOutBoundMessageBody interface {
+		isOutBoundMessageBody()
+	}
+
+	// TextMessage implements the IsOutBoundMessageBody interface
+	TextMessage string
+
+	// URLMessage implements the IsOutBoundMessageBody interface
+	URLMessage string
+
+	// VoiceCallActions implements the IsOutBoundMessageBody interface
+	VoiceCallActions []VoiceAction
+
 	// MessagingChannelNumber struct
 	MessagingChannelNumber struct {
 		Number  string           `json:"number,omitempty"`
@@ -77,13 +91,31 @@ type (
 
 	// OutBoundMessageBody defines how the message body should look like Note all the options are optional and the construction of this struct depends on your needs.
 	OutBoundMessageBody struct {
-		Text         string        `json:"text,omitempty"`
-		Media        *Media        `json:"media,omitempty"`
-		Location     *Location     `json:"location,omitempty"`
-		Template     *Template     `json:"template,omitempty"`
-		Ussd         *UssdMenu     `json:"ussd,omitempty"`
-		Email        *Email        `json:"email,omitempty"`
-		VoiceActions []VoiceAction `json:"voiceActions,omitempty"`
+		Entry IsOutBoundMessageBody `json:"entry,omitempty"`
+	}
+
+	// PromptMessageReplyAction enum
+	PromptMessageReplyAction int32
+
+	// PromptMessageMenuItemBody struct
+	PromptMessageMenuItemBody struct {
+		Text  string `json:"text,omitempty"`
+		Media *Media `json:"media,omitempty"`
+	}
+
+	// OutboundMessageReplyPrompt struct
+	OutboundMessageReplyPrompt struct {
+		Action PromptMessageReplyAction
+		Menu   []*PromptMessageMenuItemBody
+	}
+
+	// OutBoundMessage struct
+	OutBoundMessage struct {
+		Body        *OutBoundMessageBody
+		Labels      []string
+		ProviderTag string
+		ReplyToken  string
+		ReplyPrompt *OutboundMessageReplyPrompt
 	}
 
 	// InBoundMessageBody defines how the message body should look like Note all the options are optional and the construction of this struct depends on your needs.
@@ -184,14 +216,33 @@ const (
 	MessageReactionComplained   MessageReaction = 201
 )
 
-func (s *service) SendMessage(customer *Customer, channelNumber *MessagingChannelNumber, body *OutBoundMessageBody) (*hera.SendMessageReply, error) {
+// PromptMessageReply constants
+const (
+	PromptMessageReplyActionUnspecified PromptMessageReplyAction = iota
+	PromptMessageReplyActionText
+	PromptMessageReplyActionPhoneNumber
+	PromptMessageReplyActionEmail
+	PromptMessageReplyActionLocation
+	PromptMessageReplyActionURL
+)
+
+func (TextMessage) isOutBoundMessageBody()      {}
+func (*Media) isOutBoundMessageBody()           {}
+func (*Location) isOutBoundMessageBody()        {}
+func (*Template) isOutBoundMessageBody()        {}
+func (*UssdMenu) isOutBoundMessageBody()        {}
+func (*Email) isOutBoundMessageBody()           {}
+func (URLMessage) isOutBoundMessageBody()       {}
+func (VoiceCallActions) isOutBoundMessageBody() {}
+
+func (s *service) SendMessage(number *CustomerNumber, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*hera.SendMessageReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_SendMessage)
 	command.SendMessage = &hera.SendMessageCommand{}
 	req.Entry = command
 
-	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		command.SendMessage.CustomerNumber = s.customerNumber(customer)
+	if !reflect.ValueOf(number).IsZero() {
+		command.SendMessage.CustomerNumber = s.customerNumber(number)
 	}
 
 	if !reflect.ValueOf(channelNumber).IsZero() {
@@ -204,26 +255,26 @@ func (s *service) SendMessage(customer *Customer, channelNumber *MessagingChanne
 	message := new(hera.OutboundMessage)
 	command.SendMessage.Message = message
 
-	if body.Text != "" {
-		message.Body = s.textMessage(body.Text)
+	if entry, ok := body.(TextMessage); ok {
+		message.Body = s.textMessage(string(entry))
 	}
-	if !reflect.ValueOf(body.Template).IsZero() {
-		message.Body = s.templateMesage(body.Template)
+	if entry, ok := body.(*Template); ok {
+		message.Body = s.templateMesage(entry)
 	}
-	if !reflect.ValueOf(body.Location).IsZero() {
-		message.Body = s.locationMessage(body.Location)
+	if entry, ok := body.(*Location); ok {
+		message.Body = s.locationMessage(entry)
 	}
-	if !reflect.ValueOf(body.Media).IsZero() {
-		message.Body = s.mediaMessage(body.Media)
+	if entry, ok := body.(*Media); ok {
+		message.Body = s.mediaMessage(entry)
 	}
-	if !reflect.ValueOf(body.Ussd).IsZero() {
-		message.Body = s.ussdMessage(body.Ussd)
+	if entry, ok := body.(*UssdMenu); ok {
+		message.Body = s.ussdMessage(entry)
 	}
-	if !reflect.ValueOf(body.VoiceActions).IsZero() {
-		message.Body = s.voiceMessage(body.VoiceActions)
+	if entry, ok := body.(*Email); ok {
+		message.Body = s.email(entry)
 	}
-	if !reflect.ValueOf(body.Email).IsZero() {
-		message.Body = s.email(body.Email)
+	if entry, ok := body.(VoiceCallActions); ok {
+		message.Body = s.voiceMessage(entry)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -243,7 +294,7 @@ func (s *service) SendMessage(customer *Customer, channelNumber *MessagingChanne
 	return reply.GetSendMessage(), err
 }
 
-func (s *service) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumber, body *OutBoundMessageBody) (*hera.TagCommandReply, error) {
+func (s *service) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*hera.TagCommandReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_SendMessageTag)
 	req.Entry = command
@@ -264,26 +315,26 @@ func (s *service) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumb
 	var message = new(hera.OutboundMessage)
 	command.SendMessageTag.Message = message
 
-	if body.Text != "" {
-		message.Body = s.textMessage(body.Text)
+	if entry, ok := body.(TextMessage); ok {
+		message.Body = s.textMessage(string(entry))
 	}
-	if !reflect.ValueOf(body.Template).IsZero() {
-		message.Body = s.templateMesage(body.Template)
+	if entry, ok := body.(*Template); ok {
+		message.Body = s.templateMesage(entry)
 	}
-	if !reflect.ValueOf(body.Location).IsZero() {
-		message.Body = s.locationMessage(body.Location)
+	if entry, ok := body.(*Location); ok {
+		message.Body = s.locationMessage(entry)
 	}
-	if !reflect.ValueOf(body.Media).IsZero() {
-		message.Body = s.mediaMessage(body.Media)
+	if entry, ok := body.(*Media); ok {
+		message.Body = s.mediaMessage(entry)
 	}
-	if !reflect.ValueOf(body.Ussd).IsZero() {
-		message.Body = s.ussdMessage(body.Ussd)
+	if entry, ok := body.(*UssdMenu); ok {
+		message.Body = s.ussdMessage(entry)
 	}
-	if !reflect.ValueOf(body.VoiceActions).IsZero() {
-		message.Body = s.voiceMessage(body.VoiceActions)
+	if entry, ok := body.(*Email); ok {
+		message.Body = s.email(entry)
 	}
-	if !reflect.ValueOf(body.Email).IsZero() {
-		message.Body = s.email(body.Email)
+	if entry, ok := body.(VoiceCallActions); ok {
+		message.Body = s.voiceMessage(entry)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -302,40 +353,38 @@ func (s *service) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumb
 	return reply.GetTagCommand(), err
 }
 
-func (s *service) ReplyToMessage(customer *Customer, messageID string, body *OutBoundMessageBody) (*hera.SendMessageReply, error) {
+func (s *service) ReplyToMessage(customerID, messageID string, body IsOutBoundMessageBody) (*hera.SendMessageReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_ReplyToMessage)
 	command.ReplyToMessage = &hera.ReplyToMessageCommand{}
 	req.Entry = command
 
-	if customer.ID != "" {
-		command.ReplyToMessage.CustomerId = customer.ID
-	}
+	command.ReplyToMessage.CustomerId = customerID
 	command.ReplyToMessage.MessageId = messageID
 
 	var message = new(hera.OutboundMessage)
 	command.ReplyToMessage.Message = message
 
-	if body.Text != "" {
-		message.Body = s.textMessage(body.Text)
+	if entry, ok := body.(TextMessage); ok {
+		message.Body = s.textMessage(string(entry))
 	}
-	if !reflect.ValueOf(body.Template).IsZero() {
-		message.Body = s.templateMesage(body.Template)
+	if entry, ok := body.(*Template); ok {
+		message.Body = s.templateMesage(entry)
 	}
-	if !reflect.ValueOf(body.Location).IsZero() {
-		message.Body = s.locationMessage(body.Location)
+	if entry, ok := body.(*Location); ok {
+		message.Body = s.locationMessage(entry)
 	}
-	if !reflect.ValueOf(body.Media).IsZero() {
-		message.Body = s.mediaMessage(body.Media)
+	if entry, ok := body.(*Media); ok {
+		message.Body = s.mediaMessage(entry)
 	}
-	if !reflect.ValueOf(body.Ussd).IsZero() {
-		message.Body = s.ussdMessage(body.Ussd)
+	if entry, ok := body.(*UssdMenu); ok {
+		message.Body = s.ussdMessage(entry)
 	}
-	if !reflect.ValueOf(body.VoiceActions).IsZero() {
-		message.Body = s.voiceMessage(body.VoiceActions)
+	if entry, ok := body.(*Email); ok {
+		message.Body = s.email(entry)
 	}
-	if !reflect.ValueOf(body.Email).IsZero() {
-		message.Body = s.email(body.Email)
+	if entry, ok := body.(VoiceCallActions); ok {
+		message.Body = s.voiceMessage(entry)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)

@@ -17,11 +17,12 @@ import (
 
 type (
 	rSocketService struct {
-		host         string
-		port         int
-		errChannel   chan error
-		msgChannel   chan *hera.ServerToAppNotification
-		replyChannel chan *hera.ServerToAppNotificationReply
+		host                         string
+		port                         int
+		errorChannel                 chan error
+		replyChannel                 chan *hera.ServerToAppNotificationReply
+		notificationChannel          chan *hera.ServerToAppNotification
+		simulatorNotificationChannel chan *hera.ServerToSimulatorNotification
 	}
 
 	// Options Elarain initialization options
@@ -82,37 +83,44 @@ func (s *rSocketService) connect(options *Options, connectionOptions *Connection
 		}
 	}
 
+	notificationHandler := func(req *hera.ServerToAppNotification) mono.Mono {
+		s.notificationChannel <- req
+		select {
+		case <-time.After(time.Second * 15):
+			reply := new(hera.ServerToAppNotificationReply)
+			data, _ := proto.Marshal(reply)
+			return mono.Just(payload.New(data, []byte{}))
+		case reply := <-s.replyChannel:
+			data, err := proto.Marshal(reply)
+			if err != nil {
+				log.Fatalf("Marshaling Error: %v \n", err)
+				s.errorChannel <- err
+			}
+			return mono.Just(payload.New(data, []byte{}))
+		}
+	}
+
+	simulatorNotificationHandler := func(req *hera.ServerToSimulatorNotification) mono.Mono {
+		s.simulatorNotificationChannel <- req
+		reply := new(hera.ServerToSimulatorNotificationReply)
+		data, _ := proto.Marshal(reply)
+		return mono.Just(payload.New(data, []byte{}))
+	}
+
 	acceptor := func(ctx context.Context, socket rsocket.RSocket) rsocket.RSocket {
 		return rsocket.NewAbstractSocket(
 			rsocket.RequestResponse(func(msg payload.Payload) (response mono.Mono) {
 				req := new(hera.ServerToAppNotification)
-				if err := proto.Unmarshal(msg.Data(), req); err != nil {
-					s.msgChannel <- nil
-					s.errChannel <- err
-					log.Fatalf("UnMarshaling Error: %v \n", err)
+				if err := proto.Unmarshal(msg.Data(), req); err == nil {
+					return notificationHandler(req)
 				}
-				s.msgChannel <- req
-				s.errChannel <- nil
-
-				select {
-				case <-time.After(time.Second * 15):
-					reply := new(hera.ServerToAppNotificationReply)
-					data, err := proto.Marshal(reply)
-					if err != nil {
-						s.msgChannel <- nil
-						s.errChannel <- err
-						log.Fatalf("Marshaling Error: %v \n", err)
-					}
-					return mono.Just(payload.New(data, []byte{}))
-				case reply := <-s.replyChannel:
-					data, err := proto.Marshal(reply)
-					if err != nil {
-						s.msgChannel <- nil
-						s.errChannel <- err
-						log.Fatalf("Marshaling Error: %v \n", err)
-					}
-					return mono.Just(payload.New(data, []byte{}))
+				simReq := new(hera.ServerToSimulatorNotification)
+				if err := proto.Unmarshal(msg.Data(), simReq); err == nil {
+					return simulatorNotificationHandler(simReq)
 				}
+				reply := new(hera.ServerToSimulatorNotificationReply)
+				data, _ := proto.Marshal(reply)
+				return mono.Just(payload.New(data, []byte{}))
 			}))
 	}
 

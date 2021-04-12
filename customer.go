@@ -25,13 +25,13 @@ func (c *Customer) AdoptState(otherCustomer *Customer) (*hera.UpdateCustomerStat
 }
 
 // SendMessage sends a messsage to a customer
-func (c *Customer) SendMessage(channelNumber *MessagingChannelNumber, body *OutBoundMessageBody) (*hera.SendMessageReply, error) {
-	return c.service.SendMessage(c, channelNumber, body)
+func (c *Customer) SendMessage(channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*hera.SendMessageReply, error) {
+	return c.service.SendMessage(c.CustomerNumber, channelNumber, body)
 }
 
 // ReplyToMessage replys to a message sent by the customer
-func (c *Customer) ReplyToMessage(messageID string, body *OutBoundMessageBody) (*hera.SendMessageReply, error) {
-	return c.service.ReplyToMessage(c, messageID, body)
+func (c *Customer) ReplyToMessage(messageID string, body IsOutBoundMessageBody) (*hera.SendMessageReply, error) {
+	return c.service.ReplyToMessage(c.ID, messageID, body)
 }
 
 // UpdateActivity func
@@ -117,11 +117,18 @@ func (c *Customer) GetMetadata() (map[string]*Metadata, error) {
 	}
 	metadata := state.Data.IdentityState.Metadata
 	for key, value := range metadata {
-		metaMap[key] = &Metadata{
-			Key:        key,
-			Value:      value.GetStringVal(),
-			BytesValue: value.GetBytesVal(),
+		meta := &Metadata{Key: key}
+		if value, ok := value.Value.(*hera.DataMapValue_StringVal); ok {
+			meta.Value = StringDataValue(value.StringVal)
 		}
+		if value, ok := value.Value.(*hera.DataMapValue_BytesVal); ok {
+			bytesArr := make(BinaryDataValue, len(value.BytesVal))
+			for _, byteval := range value.BytesVal {
+				bytesArr = append(bytesArr, byteval)
+			}
+			meta.Value = bytesArr
+		}
+		metaMap[key] = meta
 	}
 	return metaMap, nil
 }

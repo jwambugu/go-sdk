@@ -11,19 +11,19 @@ import (
 )
 
 type (
-	// Event enums
-	Event int32
+	// Notification enum
+	Notification int32
 
-	// Notification interface every notification should implement this interface
-	Notification interface {
+	// IsNotification interface every notification should implement this interface
+	IsNotification interface {
 		notification()
 	}
 
 	// NotificationCallBack func
-	NotificationCallBack func(message *OutBoundMessageBody, appData *Appdata)
+	NotificationCallBack func(message IsOutBoundMessageBody, appData *Appdata)
 
 	// NotificationHandler func
-	NotificationHandler func(notf Notification, appData *Appdata, customer *Customer, cb NotificationCallBack)
+	NotificationHandler func(notification IsNotification, appData *Appdata, customer *Customer, cb NotificationCallBack)
 
 	// NotificationPaymentStatus struct
 	NotificationPaymentStatus struct {
@@ -136,11 +136,57 @@ type (
 		WorkID   string    `json:"workId,omitempty"`
 		Tag      *Tag      `json:"tag,omitempty"`
 	}
+
+	// SendChannelPaymentSimulatorNotification struct
+	SendChannelPaymentSimulatorNotification struct {
+		OrgID         string                `json:"orgId,omitempty"`
+		AppID         string                `json:"appId,omitempty"`
+		TransactionID string                `json:"transactionId,omitempty"`
+		Account       string                `json:"account,omitempty"`
+		DebitParty    *PaymentParty         `json:"debitPart,omitempty"`
+		ChannelNumber *PaymentChannelNumber `json:"channelNumber,omitempty"`
+		Value         *Cash                 `json:"value,omitempty"`
+	}
+
+	// CheckoutPaymentSimulatorNotification struct
+	CheckoutPaymentSimulatorNotification struct {
+		OrgID         string                `json:"orgId,omitempty"`
+		AppID         string                `json:"appId,omitempty"`
+		TransactionID string                `json:"transactionId,omitempty"`
+		CreditParty   *PaymentParty         `json:"creditParty,omitempty"`
+		ChannelNumber *PaymentChannelNumber `json:"channelNumber,omitempty"`
+		Value         *Cash                 `json:"value,omitempty"`
+	}
+
+	// SendCustomerPaymentSimulatorNotification struct
+	SendCustomerPaymentSimulatorNotification struct {
+		OrgID         string                `json:"orgId,omitempty"`
+		AppID         string                `json:"appId,omitempty"`
+		TransactionID string                `json:"transactionId,omitempty"`
+		DebitParty    *PaymentParty         `json:"creditParty,omitempty"`
+		ChannelNumber *PaymentChannelNumber `json:"channelNumber,omitempty"`
+		Value         *Cash                 `json:"value,omitempty"`
+	}
+
+	// MakeVoiceCallSimulatorNotification struct
+	MakeVoiceCallSimulatorNotification struct {
+		OrgID         string                  `json:"orgId,omitempty"`
+		SessionID     string                  `json:"sessionID,omitempty"`
+		ChannelNumber *MessagingChannelNumber `json:"channelNumber,omitempty"`
+	}
+
+	// SendMessageSimulatorNotification struct
+	SendMessageSimulatorNotification struct {
+		OrgID         string                  `json:"orgId,omitempty"`
+		MessageID     string                  `json:"messageId,omitempty"`
+		Message       *OutBoundMessage        `json:"message,omitempty"`
+		ChannelNumber *MessagingChannelNumber `json:"channelNumber,omitempty"`
+	}
 )
 
 // Notification constants
 const (
-	ElarianReminderNotification Event = iota
+	ElarianReminderNotification Notification = iota
 	ElarianMessageStatusNotification
 	ElarianMessagingSessionStartedNotification
 	ElarianMessagingSessionRenewedNotification
@@ -159,77 +205,102 @@ const (
 	ElarianWalletPaymentStatusNotification
 	ElarianCustomerActivityNotification
 	ElarianPaymentPurseNotifiication
+	ElarianSendChannelPaymentSimulatorNotification
+	ElarianCheckoutPaymentSimulatorNotification
+	ElarianSendCustomerPaymentSimulatorNotification
+	ElarianMakeVoiceCallSimulatorNotification
+	ElarianSendMessageSimulatorNotification
 )
 
-func (*ReminderNotification) notification()               {}
-func (*MessageStatusNotification) notification()          {}
-func (*MessageSessionStartedNotification) notification()  {}
-func (*MessageSessionRenewedNotification) notification()  {}
-func (*MessageSessionEndedNotification) notification()    {}
-func (*MessagingConsentUpdateNotification) notification() {}
-func (*RecievedMessageNotification) notification()        {}
-func (*SentMessageReaction) notification()                {}
-func (*ReceivedPaymentNotification) notification()        {}
-func (*PaymentStatusNotification) notification()          {}
-func (*WalletPaymentStatusNotification) notification()    {}
-func (*CustomerActivityNotification) notification()       {}
-func (*PurseNotification) notification()                  {}
-func (*UssdSessionNotification) notification()            {}
-func (*Email) notification()                              {}
-func (*Voice) notification()                              {}
-func (*InBoundMessageBody) notification()                 {}
+func (*ReminderNotification) notification()                     {}
+func (*MessageStatusNotification) notification()                {}
+func (*MessageSessionStartedNotification) notification()        {}
+func (*MessageSessionRenewedNotification) notification()        {}
+func (*MessageSessionEndedNotification) notification()          {}
+func (*MessagingConsentUpdateNotification) notification()       {}
+func (*RecievedMessageNotification) notification()              {}
+func (*SentMessageReaction) notification()                      {}
+func (*ReceivedPaymentNotification) notification()              {}
+func (*PaymentStatusNotification) notification()                {}
+func (*WalletPaymentStatusNotification) notification()          {}
+func (*CustomerActivityNotification) notification()             {}
+func (*PurseNotification) notification()                        {}
+func (*UssdSessionNotification) notification()                  {}
+func (*Email) notification()                                    {}
+func (*Voice) notification()                                    {}
+func (*InBoundMessageBody) notification()                       {}
+func (*SendChannelPaymentSimulatorNotification) notification()  {}
+func (*CheckoutPaymentSimulatorNotification) notification()     {}
+func (*SendCustomerPaymentSimulatorNotification) notification() {}
+func (*MakeVoiceCallSimulatorNotification) notification()       {}
+func (*SendMessageSimulatorNotification) notification()         {}
 
-func (s *service) notificationCallBack(body *OutBoundMessageBody, appData *Appdata) {
+func (s *service) notificationCallBack(body IsOutBoundMessageBody, appData *Appdata) {
 	reply := new(hera.ServerToAppNotificationReply)
 	if !reflect.ValueOf(appData).IsZero() {
 		reply.DataUpdate = &hera.AppDataUpdate{
 			Data: &hera.DataMapValue{},
 		}
-		if !reflect.ValueOf(appData.BytesValue).IsZero() {
+
+		if stringVal, ok := appData.Value.(StringDataValue); ok {
 			reply.DataUpdate.Data = &hera.DataMapValue{
-				Value: &hera.DataMapValue_BytesVal{
-					BytesVal: appData.BytesValue,
+				Value: &hera.DataMapValue_StringVal{
+					StringVal: string(stringVal),
 				},
 			}
 		}
-		if !reflect.ValueOf(appData.Value).IsZero() {
+		if bytesVal, ok := appData.Value.(StringDataValue); ok {
 			reply.DataUpdate.Data = &hera.DataMapValue{
-				Value: &hera.DataMapValue_StringVal{
-					StringVal: appData.Value,
+				Value: &hera.DataMapValue_BytesVal{
+					BytesVal: []byte(bytesVal),
 				},
 			}
 		}
 	}
+
 	if !reflect.ValueOf(body).IsZero() {
 		message := new(hera.OutboundMessage)
 		reply.Message = message
-		if body.Text != "" {
-			message.Body = s.textMessage(body.Text)
+
+		if entry, ok := body.(TextMessage); ok {
+			message.Body = s.textMessage(string(entry))
 		}
-		if !reflect.ValueOf(body.Template).IsZero() {
-			message.Body = s.templateMesage(body.Template)
+		if entry, ok := body.(*Template); ok {
+			message.Body = s.templateMesage(entry)
 		}
-		if !reflect.ValueOf(body.Location).IsZero() {
-			message.Body = s.locationMessage(body.Location)
+		if entry, ok := body.(*Location); ok {
+			message.Body = s.locationMessage(entry)
 		}
-		if !reflect.ValueOf(body.Media).IsZero() {
-			message.Body = s.mediaMessage(body.Media)
+		if entry, ok := body.(*Media); ok {
+			message.Body = s.mediaMessage(entry)
 		}
-		if !reflect.ValueOf(body.Ussd).IsZero() {
-			message.Body = s.ussdMessage(body.Ussd)
+		if entry, ok := body.(*UssdMenu); ok {
+			message.Body = s.ussdMessage(entry)
 		}
-		if !reflect.ValueOf(body.VoiceActions).IsZero() {
-			message.Body = s.voiceMessage(body.VoiceActions)
+		if entry, ok := body.(*Email); ok {
+			message.Body = s.email(entry)
 		}
-		if !reflect.ValueOf(body.Email).IsZero() {
-			message.Body = s.email(body.Email)
+		if entry, ok := body.(VoiceCallActions); ok {
+			message.Body = s.voiceMessage(entry)
 		}
+
 	}
 	s.replyChannel <- reply
 }
 
-func (s *service) On(event Event, handler NotificationHandler) {
-	s.bus.SubscribeAsync(string(event), handler, false)
+func (s *service) On(notification Notification, handler NotificationHandler) {
+	s.bus.SubscribeAsync(string(notification), handler, false)
+}
+
+func (s *service) handleSimulatorNotification(notf *hera.ServerToSimulatorNotification) {
+	if reflect.ValueOf(notf).IsZero() || reflect.ValueOf(notf.Entry).IsZero() {
+		return
+	}
+	s.SendChannelPaymentSimulatorNotificationHandler(notf)
+	s.CheckoutPaymentSimulatorNotificationHandler(notf)
+	s.SendCustomerPaymentSimulatorNotificationHandler(notf)
+	s.MakeVoiceCallSimulatorNotificationHandler(notf)
+	s.SendMessageSimulatorNotificationHandler(notf)
 }
 
 func (s *service) handleNotifications(notf *hera.ServerToAppNotification) {
@@ -263,13 +334,19 @@ func (s *service) handleNotifications(notf *hera.ServerToAppNotification) {
 
 func (s *service) InitializeNotificationStream() {
 	for {
-		msg, err := <-s.msgChannel, <-s.errChannel
-		if errors.Is(err, io.EOF) {
-			close(s.errChannel)
+		select {
+		case notification := <-s.notificationChannel:
+			s.handleNotifications(notification)
+		case simulatorNotification := <-s.simulatorNotificationChannel:
+			s.handleSimulatorNotification(simulatorNotification)
+		case err := <-s.errorChannel:
+			if errors.Is(err, io.EOF) {
+				close(s.errorChannel)
+				return
+			}
+			if err != nil {
+				log.Println(err)
+			}
 		}
-		if err != nil {
-			log.Println(err)
-		}
-		s.handleNotifications(msg)
 	}
 }

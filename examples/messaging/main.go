@@ -17,11 +17,9 @@ const (
 
 func main() {
 	var (
-		custNumber  *elarian.CustomerNumber
-		channel     *elarian.MessagingChannelNumber
-		messageBody *elarian.OutBoundMessageBody
-		opts        *elarian.Options
-		customer    *elarian.Customer
+		custNumber *elarian.CustomerNumber
+		channel    *elarian.MessagingChannelNumber
+		opts       *elarian.Options
 	)
 
 	opts = &elarian.Options{
@@ -48,11 +46,9 @@ func main() {
 	}()
 
 	custNumber = &elarian.CustomerNumber{Number: "+254708752502", Provider: elarian.CustomerNumberProviderCellular}
-	customer = service.NewCustomer(&elarian.CreateCustomer{CustomerNumber: custNumber})
 	channel = &elarian.MessagingChannelNumber{Number: "21356", Channel: elarian.MessagingChannelSms}
-	messageBody = &elarian.OutBoundMessageBody{Text: "Hello world from the go sdk"}
 
-	response, err := service.SendMessage(customer, channel, messageBody)
+	response, err := service.SendMessage(custNumber, channel, elarian.TextMessage("Hello world from the go sdk"))
 	if err != nil {
 		log.Fatalf("Message not send %v \n", err.Error())
 	}

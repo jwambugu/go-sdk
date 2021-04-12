@@ -42,9 +42,9 @@ type (
 
 	// PaymentParty struct
 	PaymentParty struct {
-		Customer Customer
-		Wallet   Wallet
-		Purse    Purse
+		Customer *Customer
+		Wallet   *Wallet
+		Purse    *Purse
 	}
 
 	// Paymentrequest defines arguments required to make a payment request
@@ -105,12 +105,12 @@ func (s *service) InitiatePayment(customer *Customer, params *Paymentrequest) (*
 	}
 	if !reflect.ValueOf(params.CreditParty.Purse).IsZero() {
 		command.InitiatePayment.CreditParty = &hera.PaymentCounterParty{
-			Party: s.paymentCounterPartyAsPurse(&params.CreditParty.Purse),
+			Party: s.paymentCounterPartyAsPurse(params.CreditParty.Purse),
 		}
 	}
 	if !reflect.ValueOf(params.CreditParty.Wallet).IsZero() {
 		command.InitiatePayment.CreditParty = &hera.PaymentCounterParty{
-			Party: s.paymentCounterPartyAsWallet(&params.CreditParty.Wallet),
+			Party: s.paymentCounterPartyAsWallet(params.CreditParty.Wallet),
 		}
 	}
 
@@ -121,12 +121,12 @@ func (s *service) InitiatePayment(customer *Customer, params *Paymentrequest) (*
 	}
 	if !reflect.ValueOf(params.DebitParty.Purse).IsZero() {
 		command.InitiatePayment.DebitParty = &hera.PaymentCounterParty{
-			Party: s.paymentCounterPartyAsPurse(&params.DebitParty.Purse),
+			Party: s.paymentCounterPartyAsPurse(params.DebitParty.Purse),
 		}
 	}
 	if !reflect.ValueOf(params.DebitParty.Wallet).IsZero() {
 		command.InitiatePayment.DebitParty = &hera.PaymentCounterParty{
-			Party: s.paymentCounterPartyAsWallet(&params.DebitParty.Wallet),
+			Party: s.paymentCounterPartyAsWallet(params.DebitParty.Wallet),
 		}
 	}
 

@@ -51,7 +51,7 @@ func (s *service) paymentCounterPartyAsPurse(purse *Purse) *hera.PaymentCounterP
 func (s *service) paymentCounterPartyAsCustomer(customer *Customer, channel *PaymentChannelNumber) *hera.PaymentCounterParty_Customer {
 	return &hera.PaymentCounterParty_Customer{
 		Customer: &hera.PaymentCustomerCounterParty{
-			CustomerNumber: s.customerNumber(customer),
+			CustomerNumber: s.customerNumber(customer.CustomerNumber),
 			ChannelNumber: &hera.PaymentChannelNumber{
 				Channel: hera.PaymentChannel(channel.Channel),
 				Number:  channel.Number,

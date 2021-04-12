@@ -50,7 +50,7 @@ func main() {
 		}
 		name, ok := metaData["name"]
 		if !ok {
-			metaData["name"] = &elarian.Metadata{Key: "balance", Value: ""}
+			metaData["name"] = &elarian.Metadata{Key: "balance", Value: elarian.StringDataValue("")}
 		}
 		repaymentDate := time.Now().Add(time.Second * 6)
 
@@ -61,22 +61,16 @@ func main() {
 				CurrencyCode: "KES",
 			},
 			DebitParty: elarian.PaymentParty{
-				Purse: elarian.Purse{
-					PurseID: "",
-				},
+				Purse: &elarian.Purse{PurseID: ""},
 			},
 		})
 		if err != nil {
 			log.Fatalln("Error Initiating payment: ", err)
 		}
 		log.Println(res)
-		customer.UpdateMetaData(name, &elarian.Metadata{Key: "balance", Value: strconv.FormatFloat(balance, 'f', 2, 64)})
+		customer.UpdateMetaData(name, &elarian.Metadata{Key: "balance", Value: elarian.StringDataValue(strconv.FormatFloat(balance, 'f', 2, 64))})
 		messagingChannel := &elarian.MessagingChannelNumber{Number: "21356", Channel: elarian.MessagingChannelSms}
-		customer.SendMessage(
-			messagingChannel,
-			&elarian.OutBoundMessageBody{
-				Text: fmt.Sprintf("Congratulations %s, Your loan of KES %f has been approved. You are expexted to pay it back by %v", name.Value, balance, repaymentDate),
-			})
+		customer.SendMessage(messagingChannel, elarian.TextMessage(fmt.Sprintf("Congratulations %s, Your loan of KES %f has been approved. You are expexted to pay it back by %v", name.Value, balance, repaymentDate)))
 		customer.AddReminder(
 			&elarian.Reminder{
 				Key:      "moni",
@@ -93,21 +87,20 @@ func main() {
 		}
 		name, ok := metaData["name"]
 		if !ok {
-			metaData["name"] = &elarian.Metadata{Key: "balance", Value: ""}
+			metaData["name"] = &elarian.Metadata{Key: "balance", Value: elarian.StringDataValue("")}
 		}
-		balanceVal, ok := metaData["balance"]
+		balanceMeta, ok := metaData["balance"]
 		if !ok {
-			metaData["balance"] = &elarian.Metadata{Key: "balance", Value: "0"}
+			metaData["balance"] = &elarian.Metadata{Key: "balance", Value: elarian.StringDataValue("0")}
 		}
-
-		balance, err := strconv.ParseFloat(balanceVal.Value, 64)
+		balance, err := strconv.ParseFloat(string(balanceMeta.Value.String()), 64)
 		if err != nil {
 			log.Fatalln("Error converting balance", err)
 		}
 		newBalance := balance - notification.Value.Amount
 		customer.UpdateMetaData(
 			name,
-			&elarian.Metadata{Key: "balance", Value: strconv.FormatFloat(newBalance, 'f', 2, 64)},
+			&elarian.Metadata{Key: "balance", Value: elarian.StringDataValue(strconv.FormatFloat(newBalance, 'f', 2, 64))},
 		)
 
 		messagingChannel := &elarian.MessagingChannelNumber{Number: "21356", Channel: elarian.MessagingChannelSms}
@@ -115,14 +108,14 @@ func main() {
 			customer.CancelReminder("moni")
 			customer.SendMessage(
 				messagingChannel,
-				&elarian.OutBoundMessageBody{Text: fmt.Sprintf("Thank you for your payment %s, your loan has been fully repaid!!", name)},
+				elarian.TextMessage(fmt.Sprintf("Thank you for your payment %s, your loan has been fully repaid!!", name)),
 			)
 			customer.DeleteMetaData("name", "strike", "balance", "screen")
 			return
 		}
 		customer.SendMessage(
 			messagingChannel,
-			&elarian.OutBoundMessageBody{Text: fmt.Sprintf("Hey %s! \n Thank you for your payment, but you still owe me KES ${newBalance}", name)},
+			elarian.TextMessage(fmt.Sprintf("Hey %s! \n Thank you for your payment, but you still owe me KES ${newBalance}", name)),
 		)
 	}
 
@@ -133,41 +126,43 @@ func main() {
 		}
 		strike, ok := metaData["strike"]
 		if !ok {
-			metaData["strike"] = &elarian.Metadata{Key: "strike", Value: "1"}
+			metaData["strike"] = &elarian.Metadata{Key: "strike", Value: elarian.StringDataValue("1")}
 		}
 		name, ok := metaData["name"]
 		if !ok {
-			metaData["name"] = &elarian.Metadata{Key: "balance", Value: ""}
+			metaData["name"] = &elarian.Metadata{Key: "balance", Value: elarian.StringDataValue("")}
 		}
 		balance, ok := metaData["balance"]
 		if !ok {
-			metaData["balance"] = &elarian.Metadata{Key: "balance", Value: "0"}
+			metaData["balance"] = &elarian.Metadata{Key: "balance", Value: elarian.StringDataValue(0)}
 		}
 
-		strikeValue, err := strconv.Atoi(strike.Value)
+		strikeValue, err := strconv.Atoi(strike.Value.String())
 		if err != nil {
 			log.Fatalln("Error parsing strike value")
 		}
 
 		messagingChannel := &elarian.MessagingChannelNumber{Number: "21356", Channel: elarian.MessagingChannelSms}
 		if strikeValue == 1 {
-			customer.SendMessage(messagingChannel, &elarian.OutBoundMessageBody{
-				Text: fmt.Sprintf("Hey %s, this is a friendly reminder to pay back my KES %s", name, balance),
-			})
+			customer.SendMessage(
+				messagingChannel,
+				elarian.TextMessage(fmt.Sprintf("Hey %s, this is a friendly reminder to pay back my KES %s", name, balance)),
+			)
 		}
 		if strikeValue == 2 {
-			customer.SendMessage(messagingChannel, &elarian.OutBoundMessageBody{
-				Text: fmt.Sprintf("Hey %s,you still need to pay back my KES %s", name, balance),
-			})
+			customer.SendMessage(
+				messagingChannel,
+				elarian.TextMessage(fmt.Sprintf("Hey %s,you still need to pay back my KES %s", name, balance)))
 		}
 		if strikeValue > 2 {
-			customer.SendMessage(messagingChannel, &elarian.OutBoundMessageBody{
-				Text: fmt.Sprintf("Yo %s, !!! you need to pay back my KES %s", name, balance),
-			})
+			customer.SendMessage(
+				messagingChannel,
+				elarian.TextMessage(fmt.Sprintf("Yo %s, !!! you need to pay back my KES %s", name, balance)),
+			)
 		}
 
 		strikeValue++
-		customer.UpdateMetaData(balance, name, &elarian.Metadata{Key: "strike", Value: strconv.Itoa(strikeValue)})
+		customer.UpdateMetaData(balance, name, &elarian.Metadata{Key: "strike", Value: elarian.StringDataValue(strconv.Itoa(strikeValue))})
 		customer.AddReminder(&elarian.Reminder{Key: "moni", RemindAt: time.Now().Add(time.Minute * 1), Payload: ""})
 	}
 
@@ -179,8 +174,8 @@ func main() {
 			Screen string `json:"screen,omitempty"`
 		}{Screen: "home"}
 
-		if appdata.Value != "" {
-			err := json.Unmarshal([]byte(appdata.Value), &appData)
+		if appdata.Value.String() != "" {
+			err := json.Unmarshal([]byte(appdata.Value.String()), &appData)
 			if err != nil {
 				log.Fatalln("Error unmarshalling app data", err)
 			}
@@ -193,15 +188,15 @@ func main() {
 		}
 		nameVal, ok := customerData["name"]
 		if !ok {
-			customerData["name"] = &elarian.Metadata{Key: "balance", Value: ""}
+			customerData["name"] = &elarian.Metadata{Key: "balance", Value: elarian.StringDataValue("")}
 		}
 		balanceVal, ok := customerData["balance"]
 		if !ok {
-			customerData["balance"] = &elarian.Metadata{Key: "balance", Value: "0"}
+			customerData["balance"] = &elarian.Metadata{Key: "balance", Value: elarian.StringDataValue("0")}
 		}
 
 		name := nameVal.Value
-		balance, err := strconv.ParseFloat(balanceVal.Value, 64)
+		balance, err := strconv.ParseFloat(balanceVal.Value.String(), 64)
 		if err != nil {
 			log.Fatalln("Error converting balance", err)
 		}
@@ -215,7 +210,7 @@ func main() {
 			if notification.Input == "2" {
 				nextScreen = "quit"
 			}
-			if name != "" {
+			if name.String() != "" {
 				nextScreen = "info"
 			}
 		}
@@ -227,7 +222,7 @@ func main() {
 			nextScreen = "home"
 			appData.Screen = nextScreen
 			val, _ := json.Marshal(appData)
-			cb(&elarian.OutBoundMessageBody{Ussd: menu}, &elarian.Appdata{Value: string(val)})
+			cb(menu, &elarian.Appdata{Value: elarian.StringDataValue(string(val))})
 
 		case "info":
 			menu.Text = fmt.Sprintf("Hey %s, ", name)
@@ -240,14 +235,14 @@ func main() {
 			nextScreen = "home"
 			appData.Screen = nextScreen
 			val, _ := json.Marshal(appData)
-			cb(&elarian.OutBoundMessageBody{Ussd: menu}, &elarian.Appdata{Value: string(val)})
+			cb(menu, &elarian.Appdata{Value: elarian.StringDataValue(string(val))})
 
 		case "request-name":
 			menu.Text = "Alright, what is your name?"
 			nextScreen = "request-amount"
 			appData.Screen = nextScreen
 			val, _ := json.Marshal(appData)
-			cb(&elarian.OutBoundMessageBody{Ussd: menu}, &elarian.Appdata{Value: string(val)})
+			cb(menu, &elarian.Appdata{Value: elarian.StringDataValue(string(val))})
 		case "approve-amount":
 			balance, err := strconv.ParseFloat(notification.Input, 64)
 			if err != nil {
@@ -258,41 +253,40 @@ func main() {
 			nextScreen = "home"
 			appData.Screen = nextScreen
 			val, _ := json.Marshal(appData)
-			cb(&elarian.OutBoundMessageBody{Ussd: menu}, &elarian.Appdata{Value: string(val)})
+			cb(menu, &elarian.Appdata{Value: elarian.StringDataValue(string(val))})
 			approveLoan(customer, balance)
 		case "home":
 			menu.Text = "Welcome to MoniMoni!\n1. Apply for loan\n2. Quit"
 			menu.IsTerminal = false
 			appData.Screen = nextScreen
 			val, _ := json.Marshal(appData)
-			cb(&elarian.OutBoundMessageBody{Ussd: menu}, &elarian.Appdata{Value: string(val)})
+			cb(menu, &elarian.Appdata{Value: elarian.StringDataValue(string(val))})
 		default:
 			menu.Text = "Welcome to MoniMoni!\n1. Apply for loan\n2. Quit"
 			menu.IsTerminal = false
 			appData.Screen = nextScreen
 			val, _ := json.Marshal(appData)
-			cb(&elarian.OutBoundMessageBody{Ussd: menu}, &elarian.Appdata{Value: string(val)})
+			cb(menu, &elarian.Appdata{Value: elarian.StringDataValue(string(val))})
 		}
 		customer.UpdateMetaData(nameVal,
-			&elarian.Metadata{Key: "balance", Value: strconv.FormatFloat(balance, 'f', 2, 64)})
+			&elarian.Metadata{Key: "balance", Value: elarian.StringDataValue(strconv.FormatFloat(balance, 'f', 2, 64))})
 	}
 
-	service.On(elarian.ElarianReminderNotification, func(notf elarian.Notification, appData *elarian.Appdata, customer *elarian.Customer, cb elarian.NotificationCallBack) {
+	service.On(elarian.ElarianReminderNotification, func(notf elarian.IsNotification, appData *elarian.Appdata, customer *elarian.Customer, cb elarian.NotificationCallBack) {
 		if reminderNotification, ok := notf.(*elarian.ReminderNotification); ok {
 			processReminder(customer, reminderNotification)
 		}
 	})
 
-	service.On(elarian.ElarianReceivedUssdSessionNotification, func(notf elarian.Notification, appData *elarian.Appdata, customer *elarian.Customer, cb elarian.NotificationCallBack) {
+	service.On(elarian.ElarianReceivedUssdSessionNotification, func(notf elarian.IsNotification, appData *elarian.Appdata, customer *elarian.Customer, cb elarian.NotificationCallBack) {
 		if messageNotification, ok := notf.(*elarian.UssdSessionNotification); ok {
 			processUssd(customer, messageNotification, appData, cb)
 		}
 	})
-	service.On(elarian.ElarianReceivedPaymentNotification, func(notf elarian.Notification, appData *elarian.Appdata, customer *elarian.Customer, cb elarian.NotificationCallBack) {
+	service.On(elarian.ElarianReceivedPaymentNotification, func(notf elarian.IsNotification, appData *elarian.Appdata, customer *elarian.Customer, cb elarian.NotificationCallBack) {
 		if paymentNotification, ok := notf.(*elarian.ReceivedPaymentNotification); ok {
 			processPayment(customer, paymentNotification)
 		}
-
 	})
 
 	wg := &sync.WaitGroup{}

@@ -86,6 +86,102 @@ func (s *service) email(email *Email) *hera.OutboundMessageBody {
 	}
 }
 
+func (s *service) OutboundMessage(message *hera.OutboundMessage) *OutBoundMessage {
+	outboundMessage := &OutBoundMessage{}
+	outboundMessage.Labels = message.Labels
+	outboundMessage.ProviderTag = message.ProviderTag.Value
+	outboundMessage.ReplyToken = message.ReplyToken.Value
+	outboundMessage.ReplyPrompt = &OutboundMessageReplyPrompt{
+		Action: PromptMessageReplyAction(message.ReplyPrompt.Action),
+		Menu:   []*PromptMessageMenuItemBody{},
+	}
+	for _, menuItem := range message.ReplyPrompt.Menu {
+		item := &PromptMessageMenuItemBody{}
+		if entry, ok := menuItem.Entry.(*hera.PromptMessageMenuItemBody_Text); ok {
+			item.Text = entry.Text
+		}
+		if entry, ok := menuItem.Entry.(*hera.PromptMessageMenuItemBody_Media); ok {
+			item.Media = &Media{
+				URL:  entry.Media.Url,
+				Type: MediaType(entry.Media.Media),
+			}
+		}
+		outboundMessage.ReplyPrompt.Menu = append(outboundMessage.ReplyPrompt.Menu, item)
+	}
+
+	if entry, ok := message.Body.Entry.(*hera.OutboundMessageBody_Text); ok {
+		outboundMessage.Body = &OutBoundMessageBody{
+			Entry: TextMessage(entry.Text),
+		}
+		return outboundMessage
+	}
+	if entry, ok := message.Body.Entry.(*hera.OutboundMessageBody_Email); ok {
+		outboundMessage.Body = &OutBoundMessageBody{
+			Entry: &Email{
+				Subject:     entry.Email.Subject,
+				Body:        entry.Email.BodyPlain,
+				HTML:        entry.Email.BodyHtml,
+				CcList:      entry.Email.CcList,
+				BccList:     entry.Email.BccList,
+				Attachments: entry.Email.Attachments,
+			},
+		}
+		return outboundMessage
+	}
+	if entry, ok := message.Body.Entry.(*hera.OutboundMessageBody_Location); ok {
+		outboundMessage.Body = &OutBoundMessageBody{
+			Entry: &Location{
+				Latitude:  entry.Location.Latitude,
+				Longitude: entry.Location.Longitude,
+				Label:     entry.Location.Label.Value,
+				Address:   entry.Location.Address.Value,
+			},
+		}
+		return outboundMessage
+	}
+	if entry, ok := message.Body.Entry.(*hera.OutboundMessageBody_Media); ok {
+		outboundMessage.Body = &OutBoundMessageBody{
+			Entry: &Media{
+				URL:  entry.Media.Url,
+				Type: MediaType(entry.Media.Media),
+			},
+		}
+		return outboundMessage
+	}
+	if entry, ok := message.Body.Entry.(*hera.OutboundMessageBody_Template); ok {
+		outboundMessage.Body = &OutBoundMessageBody{
+			Entry: &Template{
+				ID:     entry.Template.Id,
+				Params: entry.Template.Params,
+			},
+		}
+		return outboundMessage
+	}
+	if entry, ok := message.Body.Entry.(*hera.OutboundMessageBody_Ussd); ok {
+		outboundMessage.Body = &OutBoundMessageBody{
+			Entry: &UssdMenu{
+				IsTerminal: entry.Ussd.IsTerminal,
+				Text:       entry.Ussd.Text,
+			},
+		}
+		return outboundMessage
+	}
+	if value, ok := message.Body.Entry.(*hera.OutboundMessageBody_Url); ok {
+		outboundMessage.Body = &OutBoundMessageBody{
+			Entry: URLMessage(value.Url),
+		}
+		return outboundMessage
+
+	}
+	if value, ok := message.Body.Entry.(*hera.OutboundMessageBody_Voice); ok {
+		outboundMessage.Body = &OutBoundMessageBody{
+			Entry: s.heraVoiceCallActions(value.Voice.Actions),
+		}
+		return outboundMessage
+	}
+	return outboundMessage
+}
+
 func (s *service) messageStatusNotf(notf *hera.MessageStatusNotification) *MessageStatusNotification {
 	return &MessageStatusNotification{
 		MessageID: notf.MessageId,

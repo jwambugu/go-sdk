@@ -15,31 +15,29 @@ func Test_Messaging(t *testing.T) {
 		log.Fatal(err)
 	}
 	defer service.Disconnect()
-	customer := &elarian.Customer{}
-	customer.CustomerNumber = &elarian.CustomerNumber{
-		Number:   "+254712876967",
-		Provider: elarian.CustomerNumberProviderCellular,
+	customer := &elarian.Customer{
+		CustomerNumber: &elarian.CustomerNumber{
+			Number:   "+254712876967",
+			Provider: elarian.CustomerNumberProviderCellular,
+		},
 	}
 
 	t.Run("It should send a text message", func(t *testing.T) {
-		messageBody := &elarian.OutBoundMessageBody{}
-		messageBody.Text = "hello world"
-
-		channelNumber := &elarian.MessagingChannelNumber{}
-		channelNumber.Number = "21356"
-		channelNumber.Channel = elarian.MessagingChannelSms
-
+		channelNumber := &elarian.MessagingChannelNumber{
+			Number:  "21356",
+			Channel: elarian.MessagingChannelSms,
+		}
 		response, err := service.SendMessage(
-			customer,
+			customer.CustomerNumber,
 			channelNumber,
-			messageBody,
+			elarian.TextMessage("Hello World"),
 		)
+
 		if err != nil {
 			t.Fatalf("Error %v", err)
 		}
 		assert.NotNil(t, response)
 		assert.NotEqual(t, response.CustomerId, "")
-		// customerID messageId description status
 		t.Logf("CustomerId %v", response.CustomerId.Value)
 	})
 }

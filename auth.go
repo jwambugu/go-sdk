@@ -11,7 +11,7 @@ import (
 
 func (s *service) GenerateAuthToken() (*hera.GenerateAuthTokenReply, error) {
 	req := new(hera.AppToServerCommand)
-	req.Entry = &hera.AppToServerCommand_GenerateAuthToken{}
+	req.Entry = new(hera.AppToServerCommand_GenerateAuthToken)
 	reply := new(hera.AppToServerCommandReply)
 
 	data, err := proto.Marshal(req)

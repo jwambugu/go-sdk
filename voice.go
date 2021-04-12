@@ -54,7 +54,7 @@ type (
 		FinishOnKey string        `json:"finishOnKey,omitempty"`
 		NumDigits   int32         `json:"numDigits,omitempty"`
 		Timeout     time.Duration `json:"timeout,omitempty"`
-		Prompt      Prompt        `json:"prompt,omitempty"`
+		Prompt      *Prompt       `json:"prompt,omitempty"`
 	}
 
 	// VoiceCallActionGetRecording struct
@@ -64,7 +64,7 @@ type (
 		PlayBeep    bool          `json:"playBeep,omitempty"`
 		Timeout     time.Duration `json:"timeout,omitempty"`
 		TrimSilence bool          `json:"trimSilence,omitempty"`
-		Prompt      Prompt        `json:"prompt,omitempty"`
+		Prompt      *Prompt       `json:"prompt,omitempty"`
 	}
 
 	// VoiceCallActionPlay struct
@@ -109,8 +109,8 @@ type (
 
 	// Prompt struct
 	Prompt struct {
-		Play VoiceCallActionPlay `json:"voiceCallActionPlay,omitempty"`
-		Say  VoiceCallActionSay  `json:"voiceCallActionSay,omitempty"`
+		Play *VoiceCallActionPlay `json:"voiceCallActionPlay,omitempty"`
+		Say  *VoiceCallActionSay  `json:"voiceCallActionSay,omitempty"`
 	}
 
 	// VoiceCallDailInput struct

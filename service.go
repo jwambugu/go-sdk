@@ -6,40 +6,6 @@ import (
 	"github.com/rsocket/rsocket-go"
 )
 
-/*
-	commands
-
-	RecieveMessage
-	ReceivePayment
-	UpdatePaymentStatus
-
-
-
-	Notifications
-
-	Reminder
-	MessagingSessionStarted
-	MessagingSessionRenewed
-	MessagingSessionEnded
-	MessagingConsentUpdate
-	ReceivedMessage
-	MessageStatus
-	SendMessageReaction
-	ReceivedPayment
-	PaymentStatus
-	WalletPaymentStatus
-	CustomerActivity
-
-
-	SIM
-	SendMessage
-	MakeVoiceCall
-	SendCustomerPayment
-	SendChannelPayment
-	CheckoutPayment
-
-*/
-
 type (
 	// Service interface exposes high level consumable elarian functionality
 	Service interface {
@@ -97,13 +63,13 @@ type (
 		GetCustomerActivity(customerNumber *CustomerNumber, channelNumber *ActivityChannelNumber, sessionID string) (*hera.CustomerActivityReply, error)
 
 		// SendMessage transmits a message to a customer the message body can be of different types including text, location, media and template
-		SendMessage(customer *Customer, channelNumber *MessagingChannelNumber, body *OutBoundMessageBody) (*hera.SendMessageReply, error)
+		SendMessage(customer *CustomerNumber, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*hera.SendMessageReply, error)
 
 		// SendMessageByTag transmits a message to customers with the given tag. The message body can be of different types including text, location, media and template
-		SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumber, body *OutBoundMessageBody) (*hera.TagCommandReply, error)
+		SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*hera.TagCommandReply, error)
 
 		// ReplyToMessage transmits a message to a customer and creates a link of two way communication with a customer that can act as a conversation history. The message body can be of different types including text, location, media and template
-		ReplyToMessage(customer *Customer, messageID string, body *OutBoundMessageBody) (*hera.SendMessageReply, error)
+		ReplyToMessage(customerID, messageID string, body IsOutBoundMessageBody) (*hera.SendMessageReply, error)
 
 		// MessagingConsent func
 		UpdateMessagingConsent(customer *CustomerNumber, channelNumber *MessagingChannelNumber, action MessagingConsentUpdate) (*hera.UpdateMessagingConsentReply, error)
@@ -117,17 +83,29 @@ type (
 		// Disconnect closes the elarian connection
 		Disconnect() error
 
-		On(event Event, handler NotificationHandler)
-
+		// InitializeNotificationStream starts listening for notifications if notifications are enabled
 		InitializeNotificationStream()
+
+		// On registers an event to a notification handler
+		On(event Notification, handler NotificationHandler)
+
+		// ReceiveMessage is a simulator method that can be used to ReceiveMessage messages from a custom simulator
+		ReceiveMessage(customerNumber string, channel *MessagingChannelNumber, parts []*InBoundMessageBody) (*hera.SimulatorToServerCommandReply, error)
+
+		// ReceivePayment is a simulator method that can be used to ReceivePayment messages from a custom simulator
+		ReceivePayment(channel *PaymentChannelNumber, customerNumber, transactionID string) (*hera.SimulatorToServerCommandReply, error)
+
+		// UpdatePaymentStatus is a simulator method that can be used to update a payment's status from a custom simulator
+		UpdatePaymentStatus(transactionID string, paymentStatus PaymentStatus) (*hera.SimulatorToServerCommandReply, error)
 	}
 
 	service struct {
-		client       rsocket.Client
-		bus          EventBus.Bus
-		msgChannel   chan *hera.ServerToAppNotification
-		replyChannel chan *hera.ServerToAppNotificationReply
-		errChannel   chan error
+		client                       rsocket.Client
+		bus                          EventBus.Bus
+		errorChannel                 chan error
+		replyChannel                 chan *hera.ServerToAppNotificationReply
+		notificationChannel          chan *hera.ServerToAppNotification
+		simulatorNotificationChannel chan *hera.ServerToSimulatorNotification
 	}
 )
 
@@ -141,13 +119,15 @@ func NewService(options *Options, connectionOptions *ConnectionOptions) (Service
 	rservice.host = "tcp.elarian.dev"
 	rservice.port = 8082
 
-	msgChan := make(chan *hera.ServerToAppNotification)
+	errorChan := make(chan error)
 	replyChan := make(chan *hera.ServerToAppNotificationReply)
-	errChan := make(chan error)
+	notificationChannel := make(chan *hera.ServerToAppNotification)
+	simulatorNotificationChannel := make(chan *hera.ServerToSimulatorNotification)
 
-	rservice.msgChannel = msgChan
-	rservice.errChannel = errChan
+	rservice.errorChannel = errorChan
 	rservice.replyChannel = replyChan
+	rservice.notificationChannel = notificationChannel
+	rservice.simulatorNotificationChannel = simulatorNotificationChannel
 
 	client, err := rservice.connect(options, connectionOptions)
 
@@ -158,8 +138,11 @@ func NewService(options *Options, connectionOptions *ConnectionOptions) (Service
 	}
 	elarianService.client = client
 	elarianService.bus = bus
-	elarianService.msgChannel = msgChan
-	elarianService.errChannel = errChan
+
+	elarianService.errorChannel = errorChan
 	elarianService.replyChannel = replyChan
+	elarianService.notificationChannel = notificationChannel
+	elarianService.simulatorNotificationChannel = simulatorNotificationChannel
+
 	return elarianService, nil
 }
