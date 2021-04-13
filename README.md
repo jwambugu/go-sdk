@@ -1,91 +1,94 @@
-# Elarian go SDK
+# Elarian
 
-> The wrapper provides convenient access to the Elarian APIs.
-
-## Documentation
-
-Take a look at the [API docs here](http://docs.elarian.com).
+A convenient way to interact with the Elarian APIs.
 
 ## Install
 
+You can install the package from [github](https://www.github.com/elarianltd/go-sdk) by running:
+
 ```bash
-
-    go get github.com/elarianltd/go-sdk
-
+go get github.com/elarianltd/go-sdk
 ```
 
 ## Usage
 
 ```go
-import elarian github.com/elarianltd/go-sdk
+package main
 
-func main(){
-    client, err := elariango.Initialize("api_key", true);
-    if err != nil {
-        log.Fatal(err)
-    }
-    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-    defer cancel()
-    res, err := client.GetCustomerState(
-        ctx,
-        &elarian.GetCustomerStateRequest{
-            AppId: "app_id",
-            Customer: &elarian.GetCustomerStateRequest_CustomerId{
-            CustomerId: "customer_id",
-        },
-    })
-    if err != nil {
-        log.Fatalf("could not get customer state %v", err)
-    }
-    log.Printf("customer state %v", res.GetData())
+import (
+ "log"
+ "os"
+ "os/signal"
+ "syscall"
+
+ elarian "github.com/elarianltd/go-sdk"
+)
+
+const (
+ AppID  string = "appID"
+ OrgID  string = "orgID"
+ APIKey string = "apiKey"
+)
+
+func main() {
+ var (
+  custNumber *elarian.CustomerNumber
+  channel    *elarian.MessagingChannelNumber
+  opts       *elarian.Options
+ )
+
+ opts = &elarian.Options{
+  APIKey:             APIKey,
+  OrgID:              OrgID,
+  AppID:              AppID,
+  AllowNotifications: true,
+  Log:                true,
+ }
+
+ service, err := elarian.Connect(opts, nil)
+ if err != nil {
+  log.Fatalf("Error Initializing Elarian: %v \n", err)
+ }
+ defer service.Disconnect()
+
+ sigs := make(chan os.Signal, 1)
+ signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+ go func() {
+  <-sigs
+  log.Println("Disconnecting From Elarian")
+  service.Disconnect()
+  os.Exit(0)
+ }()
+
+ custNumber = &elarian.CustomerNumber{Number: "+254708752502", Provider: elarian.CustomerNumberProviderCellular}
+ channel = &elarian.MessagingChannelNumber{Number: "21356", Channel: elarian.MessagingChannelSms}
+
+ response, err := service.SendMessage(custNumber, channel, elarian.TextMessage("Hello world from the go sdk"))
+ if err != nil {
+  log.Fatalf("Message not send %v \n", err.Error())
+ }
+ log.Printf("Status %d Description %s \n customerID %s \n", response.Status, response.Description, response.CustomerID)
 }
+
 
 ```
 
-## Methods
+See [example](example/) for a full sample app.
 
-- `AuthToken()`: Generate auth token
+## Documentation
 
-- `GetCustomerState()`:
-- `AdoptCustomerState()`:
-
-- `AddCustomerReminder()`:
-- `AddCustomerReminderByTag()`:
-- `CancelCustomerReminder()`:
-- `CancelCustomerReminderByTag()`:
-
-- `UpdateCustomerTag()`:
-- `DeleteCustomerTag()`:
-
-- `UpdateCustomerSecondaryId()`:
-- `DeleteCustomerSecondaryId()`:
-
-- `UpdateCustomerMetadata()`:
-- `DeleteCustomerMetadata ()`:
-
-- `SendMessage()`: Sending a message to your customer
-- `SendMessageByTag()`: Sending a message to a group of customers using tags
-- `ReplyToMessage()`: Replying to a message from your customer
-- `MessagingConsent()`: Opting a customer in or out of receiving messages from your app
-
-- `SendPayment()`:
-- `CheckoutPayment()`:
-
-- `MakeVoiceCall()`:
-
-- `StreamNotifications()`:
-- `SendWebhookResponse()`:
+Take a look at the [API docs here](http://developers.elarian.com). For detailed info on this SDK, see the [reference](docs/).
 
 ## Development
 
+Run all tests:
+
 ```bash
-
-git clone --recurse-submodules https://github.com/ElarianLtd/go-sdk.git
-cd go-sdk
-make run
-
+make test
 ```
+
+See [SDK Spec](https://github.com/ElarianLtd/sdk-spec) for reference.
 
 ## Issues
 
-If you find a bug, please file an issue on [our issue tracker on GitHub](https://github.com/ElarianLtd/elariango/issues).
+If you find a bug, please file an issue on [our issue tracker on GitHub](https://github.com/ElarianLtd/go-sdk/issues).
