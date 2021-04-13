@@ -52,5 +52,5 @@ func main() {
 	if err != nil {
 		log.Fatalf("Message not send %v \n", err.Error())
 	}
-	log.Printf("Status %d Description %s \n customerID %s \n", response.Status, response.Description, response.CustomerId)
+	log.Printf("Status %d Description %s \n customerID %s \n", response.Status, response.Description, response.CustomerID)
 }

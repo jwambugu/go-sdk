@@ -67,7 +67,7 @@ func main() {
  if err != nil {
   log.Fatalf("Message not send %v \n", err.Error())
  }
- log.Printf("Status %d Description %s \n customerID %s \n", response.Status, response.Description, response.CustomerId)
+ log.Printf("Status %d Description %s \n customerID %s \n", response.Status, response.Description, response.CustomerID)
 }
 
 
@@ -77,7 +77,7 @@ See [example](example/) for a full sample app.
 
 ## Documentation
 
-Take a look at the [API docs here](http://docs.elarian.com). For detailed info on this SDK, see the [reference](docs/).
+Take a look at the [API docs here](http://developers.elarian.com). For detailed info on this SDK, see the [reference](docs/).
 
 ## Development
 

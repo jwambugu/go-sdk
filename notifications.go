@@ -27,17 +27,17 @@ type (
 
 	// NotificationPaymentStatus struct
 	NotificationPaymentStatus struct {
-		TransactionID string
-		Status        int // hera.PaymentStatus
+		TransactionID string        `json:"transactionId,omitempty"`
+		Status        PaymentStatus `json:"status,omitempty"`
 	}
 
 	// PurseNotification struct
 	PurseNotification struct {
-		OrgID         string    `json:"orgId"`
-		AppID         string    `json:"appId"`
-		CreatedAt     time.Time `json:"createdAt"`
-		PurseID       string
-		PaymentStatus *NotificationPaymentStatus
+		OrgID         string                     `json:"orgId,omitempty"`
+		AppID         string                     `json:"appId,omitempty"`
+		CreatedAt     time.Time                  `json:"createdAt,omitempty"`
+		PurseID       string                     `json:"purseId,omitempty"`
+		PaymentStatus *NotificationPaymentStatus `json:"paymentStatus,omitempty"`
 	}
 
 	// MessageStatusNotification struct
@@ -65,11 +65,11 @@ type (
 
 	// MessageSessionEndedNotification struct
 	MessageSessionEndedNotification struct {
-		Duration       time.Duration
-		Reason         MessagingSessionEndReason
-		CustomerNumber *CustomerNumber         `json:"customerNumber,omitempty"`
-		ChannelNumber  *MessagingChannelNumber `json:"channelNumber,omitempty"`
-		SessionID      string                  `json:"SessionID,omitempty"`
+		Duration       time.Duration             `json:"duration,omitempty"`
+		Reason         MessagingSessionEndReason `json:"reason,omitempty"`
+		CustomerNumber *CustomerNumber           `json:"customerNumber,omitempty"`
+		ChannelNumber  *MessagingChannelNumber   `json:"channelNumber,omitempty"`
+		SessionID      string                    `json:"SessionID,omitempty"`
 	}
 
 	// MessagingConsentUpdateNotification struct

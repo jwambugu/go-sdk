@@ -27,21 +27,21 @@ type (
 
 	// Options Elarain initialization options
 	Options struct {
-		OrgID              string
-		AppID              string
-		APIKey             string
-		AuthToken          string
-		IsSimulator        bool
-		AllowNotifications bool
-		Log                bool
+		OrgID              string `json:"orgId,omitempty"`
+		AppID              string `json:"appId,omitempty"`
+		APIKey             string `json:"apiKey,omitempty"`
+		AuthToken          string `json:"authToken,omitempty"`
+		IsSimulator        bool   `json:"isSimulator,omitempty"`
+		AllowNotifications bool   `json:"allowNotifications,omitempty"`
+		Log                bool   `json:"log,omitempty"`
 	}
 
 	// ConnectionOptions RSocket connection options
 	ConnectionOptions struct {
-		LifeTime   time.Duration
-		Keepalive  time.Duration
-		missedAcks int
-		Resumable  bool
+		LifeTime   time.Duration `json:"lifeTime,omitempty"`
+		Keepalive  time.Duration `json:"keepAlive,omitempty"`
+		MissedAcks int           `json:"missedAcks,omitempty"`
+		Resumable  bool          `json:"resumable,omitempty"`
 	}
 )
 
@@ -130,7 +130,7 @@ func (s *rSocketService) connect(options *Options, connectionOptions *Connection
 		Build()
 
 	connectionOpts := new(ConnectionOptions)
-	connectionOpts.missedAcks = 6
+	connectionOpts.MissedAcks = 6
 	connectionOpts.Resumable = true
 
 	if reflect.ValueOf(connectionOptions).IsZero() {
@@ -142,7 +142,7 @@ func (s *rSocketService) connect(options *Options, connectionOptions *Connection
 	}
 
 	client, err := rsocket.Connect().
-		KeepAlive(connectionOpts.Keepalive, connectionOpts.LifeTime, connectionOpts.missedAcks).
+		KeepAlive(connectionOpts.Keepalive, connectionOpts.LifeTime, connectionOpts.MissedAcks).
 		MetadataMimeType("application/octet-stream").
 		DataMimeType("application/octet-stream").
 		OnClose(onClose).

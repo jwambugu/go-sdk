@@ -19,32 +19,32 @@ type (
 
 	// Cash defines a cash object
 	Cash struct {
-		CurrencyCode string  `json:"currencyCode"`
-		Amount       float64 `json:"amount"`
+		CurrencyCode string  `json:"currencyCode,omitempty"`
+		Amount       float64 `json:"amount,omitempty"`
 	}
 
 	// PaymentChannelNumber defines a payment channel number
 	PaymentChannelNumber struct {
-		Number  string `json:"number"`
-		Channel PaymentChannel
+		Number  string         `json:"number,omitempty"`
+		Channel PaymentChannel `json:"channel,omitempty"`
 	}
 
 	// Wallet struct
 	Wallet struct {
-		CustomerID string
-		WalletID   string
+		CustomerID string `json:"customerId,omitempty"`
+		WalletID   string `json:"walletId,omitempty"`
 	}
 
 	// Purse struct
 	Purse struct {
-		PurseID string
+		PurseID string `json:"purseId,omitempty"`
 	}
 
 	// PaymentParty struct
 	PaymentParty struct {
-		Customer *Customer
-		Wallet   *Wallet
-		Purse    *Purse
+		Customer *Customer `json:"customer,omitempty"`
+		Wallet   *Wallet   `json:"wallet,omitempty"`
+		Purse    *Purse    `json:"purse,omitempty"`
 	}
 
 	// Paymentrequest defines arguments required to make a payment request
@@ -53,6 +53,14 @@ type (
 		Channel     PaymentChannelNumber `json:"channel"`
 		CreditParty PaymentParty         `json:"creditparty,omitempty"`
 		DebitParty  PaymentParty         `json:"debitparty,omitempty"`
+	}
+	// InitiatePaymentReply struct
+	InitiatePaymentReply struct {
+		CreditCustomerID string        `json:"creditCustomerID,omitempty"`
+		DebitCustomerID  string        `json:"debitCustomerID,omitempty"`
+		Description      string        `json:"description,omitempty"`
+		Status           PaymentStatus `json:"status,omitempty"`
+		TransactionID    string        `json:"transactionId,omitempty"`
 	}
 )
 
@@ -87,7 +95,35 @@ const (
 	PaymentStatusReversed                 PaymentStatus = 500
 )
 
-func (s *service) InitiatePayment(customer *Customer, params *Paymentrequest) (*hera.InitiatePaymentReply, error) {
+// func (s *service) reply() {
+// 	re := &hera.GetCustomerStateReply{}
+// 	re.Description = ""
+// 	re.Status = true
+// 	re.Data = &hera.CustomerStateReplyData{
+// 		CustomerId: "",
+// 		IdentityState: &hera.IdentityState{
+// 			Tags:         []*hera.CustomerIndex{},
+// 			Metadata:     map[string]*hera.DataMapValue{},
+// 			SecondaryIds: []*hera.CustomerIndex{},
+// 		},
+// 		MessagingState: &hera.MessagingState{
+// 			Channels: []*hera.MessagingChannelState{},
+// 		},
+// 		PaymentState: &hera.PaymentState{
+// 			CustomerNumbers:     []*hera.CustomerNumber{},
+// 			ChannelNumbers:      []*hera.PaymentChannelNumber{},
+// 			TransactionLog:      []*hera.PaymentTransaction{},
+// 			PendingTransactions: []*hera.PaymentTransaction{},
+// 			Wallets:             make(map[string]*hera.PaymentBalance),
+// 		},
+// 		ActivityState: &hera.ActivityState{
+// 			Sessions:        []*hera.ActivitySessionState{},
+// 			CustomerNumbers: []*hera.CustomerNumber{},
+// 		},
+// 	}
+// }
+
+func (s *service) InitiatePayment(customer *Customer, params *Paymentrequest) (*InitiatePaymentReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_InitiatePayment)
 	command.InitiatePayment = &hera.InitiatePaymentCommand{}
@@ -135,19 +171,27 @@ func (s *service) InitiatePayment(customer *Customer, params *Paymentrequest) (*
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.InitiatePaymentReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.InitiatePaymentReply{}, err
+		return nil, err
 	}
 
 	reply := new(hera.AppToServerCommandReply)
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetInitiatePayment(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &InitiatePaymentReply{
+		CreditCustomerID: reply.GetInitiatePayment().CreditCustomerId.Value,
+		DebitCustomerID:  reply.GetInitiatePayment().DebitCustomerId.Value,
+		Description:      reply.GetInitiatePayment().Description,
+		Status:           PaymentStatus(reply.GetInitiatePayment().Status),
+		TransactionID:    reply.GetInitiatePayment().TransactionId.Value,
+	}, nil
 }
 
-func (s *service) ReceivePayment(channel *PaymentChannelNumber, customerNumber, transactionID string) (*hera.SimulatorToServerCommandReply, error) {
+func (s *service) ReceivePayment(channel *PaymentChannelNumber, customerNumber, transactionID string) (*SimulatorToServerCommandReply, error) {
 	req := new(hera.SimulatorToServerCommand)
 	command := new(hera.SimulatorToServerCommand_ReceivePayment)
 	req.Entry = command
@@ -166,18 +210,24 @@ func (s *service) ReceivePayment(channel *PaymentChannelNumber, customerNumber, 
 	defer cancel()
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.SimulatorToServerCommandReply{}, err
+		return nil, err
 	}
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
-	reply := new(hera.SimulatorToServerCommandReply)
 	if err != nil {
-		return reply, err
+		return nil, err
 	}
-	err = proto.Unmarshal(payload.Data(), reply)
-	return reply, err
+	reply := new(hera.SimulatorToServerCommandReply)
+	if err = proto.Unmarshal(payload.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &SimulatorToServerCommandReply{
+		Status:      reply.Status,
+		Description: reply.Description,
+		Message:     s.OutboundMessage(reply.Message),
+	}, nil
 }
 
-func (s *service) UpdatePaymentStatus(transactionID string, paymentStatus PaymentStatus) (*hera.SimulatorToServerCommandReply, error) {
+func (s *service) UpdatePaymentStatus(transactionID string, paymentStatus PaymentStatus) (*SimulatorToServerCommandReply, error) {
 	req := new(hera.SimulatorToServerCommand)
 	command := new(hera.SimulatorToServerCommand_UpdatePaymentStatus)
 	req.Entry = command
@@ -189,13 +239,19 @@ func (s *service) UpdatePaymentStatus(transactionID string, paymentStatus Paymen
 	defer cancel()
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.SimulatorToServerCommandReply{}, err
+		return nil, err
 	}
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
-	reply := new(hera.SimulatorToServerCommandReply)
 	if err != nil {
-		return reply, err
+		return nil, err
 	}
-	err = proto.Unmarshal(payload.Data(), reply)
-	return reply, err
+	reply := new(hera.SimulatorToServerCommandReply)
+	if err = proto.Unmarshal(payload.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &SimulatorToServerCommandReply{
+		Status:      reply.Status,
+		Message:     s.OutboundMessage(reply.Message),
+		Description: reply.Description,
+	}, nil
 }

@@ -40,7 +40,7 @@ func Test_Customers(t *testing.T) {
 		}
 		assert.NotNil(t, response)
 		assert.True(t, response.Status)
-		assert.Equal(t, response.CustomerId.Value, customerID)
+		assert.Equal(t, response.CustomerID, customerID)
 	})
 
 	t.Run("It should add a customer reminder", func(t *testing.T) {
@@ -57,8 +57,8 @@ func Test_Customers(t *testing.T) {
 		}
 		assert.NotNil(t, response)
 		assert.True(t, response.Status)
-		assert.NotEmpty(t, response.CustomerId)
-		assert.Equal(t, response.CustomerId.Value, customerID)
+		assert.NotEmpty(t, response.CustomerID)
+		assert.Equal(t, response.CustomerID, customerID)
 		time.Sleep(time.Duration(time.Second * 5))
 	})
 
@@ -173,7 +173,7 @@ func Test_Customers(t *testing.T) {
 		}
 		assert.NotNil(t, response)
 		assert.True(t, response.Status)
-		assert.Equal(t, response.CustomerId.Value, customerID)
+		assert.Equal(t, response.CustomerID, customerID)
 	})
 
 	// update customer appData
@@ -189,7 +189,7 @@ func Test_Customers(t *testing.T) {
 		}
 		assert.NotNil(t, response)
 		assert.True(t, response.Status)
-		assert.Equal(t, response.CustomerId.Value, customerID)
+		assert.Equal(t, response.CustomerID, customerID)
 	})
 
 	// lease customer appData
@@ -200,8 +200,8 @@ func Test_Customers(t *testing.T) {
 		}
 		assert.NotNil(t, response)
 		assert.True(t, response.Status)
-		assert.Equal(t, response.CustomerId.Value, customerID)
-		assert.Contains(t, response.Value.GetStringVal(), "properties")
+		assert.Equal(t, response.CustomerID, customerID)
+		assert.Contains(t, response.Appdata.Value, "properties")
 	})
 
 	// delete customer appData
@@ -212,7 +212,7 @@ func Test_Customers(t *testing.T) {
 		}
 		assert.NotNil(t, response)
 		assert.True(t, response.Status)
-		assert.Equal(t, response.CustomerId.Value, customerID)
+		assert.Equal(t, response.CustomerID, customerID)
 	})
 
 	t.Run("It should update a customer's metadata", func(t *testing.T) {
@@ -226,10 +226,9 @@ func Test_Customers(t *testing.T) {
 		if err != nil {
 			t.Errorf("Error: %v \n", err)
 		}
-		t.Log(response)
 		assert.NotNil(t, response)
 		assert.True(t, response.Status)
-		assert.Equal(t, response.CustomerId.Value, customerID)
+		assert.Equal(t, response.CustomerID, customerID)
 	})
 
 	t.Run("It should delete a customer's metadata", func(t *testing.T) {
@@ -242,7 +241,7 @@ func Test_Customers(t *testing.T) {
 		}
 		assert.NotNil(t, response)
 		assert.True(t, response.Status)
-		assert.Equal(t, response.CustomerId.Value, customerID)
+		assert.Equal(t, response.CustomerID, customerID)
 	})
 
 	t.Run("It should update message consent", func(t *testing.T) {
@@ -260,9 +259,8 @@ func Test_Customers(t *testing.T) {
 		if err != nil {
 			t.Errorf("Error: %v \n", err)
 		}
-		t.Log("RESPONSE: ", response)
 		assert.NotNil(t, response)
-		assert.Equal(t, response.CustomerId.Value, customerID)
+		assert.Equal(t, response.CustomerID, customerID)
 	})
 
 	// get customer activity

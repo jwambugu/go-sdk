@@ -317,7 +317,7 @@ func (s *service) paymentPurseStatusNotificationHandler(notf *hera.ServerToAppNo
 	if entry, ok := notf.Purse.Entry.(*hera.ServerToAppPurseNotification_PaymentStatus); ok {
 		notification.PaymentStatus = &NotificationPaymentStatus{
 			TransactionID: entry.PaymentStatus.TransactionId,
-			Status:        int(entry.PaymentStatus.Status),
+			Status:        PaymentStatus(entry.PaymentStatus.Status),
 		}
 		s.bus.Publish(string(ElarianPaymentPurseNotifiication), notification, nil, nil, s.notificationCallBack)
 	}

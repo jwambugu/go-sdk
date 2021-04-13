@@ -99,6 +99,56 @@ type (
 		CreatedAt  time.Time         `json:"createdAt,omitempty"`
 		Properties map[string]string `json:"properties,omitempty"`
 	}
+
+	// CustomerActivityReply struct
+	CustomerActivityReply struct {
+		Status      bool   `json:"status,omitempty"`
+		Description string `json:"description,omitempty"`
+		CustomerID  string `json:"customerId,omitempty"`
+	}
+
+	// UpdateCustomerStateReply struct
+	UpdateCustomerStateReply struct {
+		Status      bool   `json:"status,omitempty"`
+		Description string `json:"description,omitempty"`
+		CustomerID  string `json:"customerId,omitempty"`
+	}
+
+	// UpdateCustomerAppDataReply struct
+	UpdateCustomerAppDataReply struct {
+		Status      bool   `json:"status,omitempty"`
+		Description string `json:"description,omitempty"`
+		CustomerID  string `json:"customerId,omitempty"`
+	}
+
+	// TagCommandReply struct
+	TagCommandReply struct {
+		Status      bool   `json:"status,omitempty"`
+		Description string `json:"description,omitempty"`
+		WorkID      string `json:"workId,omitempty"`
+	}
+
+	// LeaseCustomerAppDataReply struct
+	LeaseCustomerAppDataReply struct {
+		Status      bool     `json:"status,omitempty"`
+		Description string   `json:"description,omitempty"`
+		CustomerID  string   `json:"customerId,omitempty"`
+		Appdata     *Appdata `json:"appdata,omitempty"`
+	}
+
+	// UpdateMessagingConsentReply struct
+	UpdateMessagingConsentReply struct {
+		Status      MessagingConsentUpdateStatus `json:"status,omitempty"`
+		Description string                       `json:"description,omitempty"`
+		CustomerID  string                       `json:"customerId,omitempty"`
+	}
+
+	// SimulatorToServerCommandReply struct
+	SimulatorToServerCommandReply struct {
+		Status      bool             `json:"status,omitempty"`
+		Message     *OutBoundMessage `json:"message,omitempty"`
+		Description string           `json:"description,omitempty"`
+	}
 )
 
 // CustomerNumberProvider Enums
@@ -185,7 +235,7 @@ func (s *service) GetCustomerState(customer *Customer) (*hera.GetCustomerStateRe
 	return reply.GetGetCustomerState(), err
 }
 
-func (s *service) GetCustomerActivity(customerNumber *CustomerNumber, channelNumber *ActivityChannelNumber, sessionID string) (*hera.CustomerActivityReply, error) {
+func (s *service) GetCustomerActivity(customerNumber *CustomerNumber, channelNumber *ActivityChannelNumber, sessionID string) (*CustomerActivityReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_CustomerActivity)
 	command.CustomerActivity = &hera.CustomerActivityCommand{}
@@ -209,18 +259,25 @@ func (s *service) GetCustomerActivity(customerNumber *CustomerNumber, channelNum
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.CustomerActivityReply{}, err
+		return nil, err
 	}
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	reply := new(hera.AppToServerCommandReply)
 	if err != nil {
-		return &hera.CustomerActivityReply{}, err
+		return nil, err
 	}
-	err = proto.Unmarshal(payload.Data(), reply)
-	return reply.GetCustomerActivity(), err
+	if err = proto.Unmarshal(payload.Data(), reply); err != nil {
+		return nil, err
+	}
+
+	return &CustomerActivityReply{
+		Status:      reply.GetCustomerActivity().Status,
+		Description: reply.GetCustomerActivity().Description,
+		CustomerID:  reply.GetCustomerActivity().CustomerId.Value,
+	}, err
 }
 
-func (s *service) UpdateCustomerActivity(customerNumber *CustomerNumber, channel *ActivityChannelNumber, sessionID, key string, properties map[string]string) (*hera.CustomerActivityReply, error) {
+func (s *service) UpdateCustomerActivity(customerNumber *CustomerNumber, channel *ActivityChannelNumber, sessionID, key string, properties map[string]string) (*CustomerActivityReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.CustomerActivityCommand)
 	if !reflect.ValueOf(customerNumber).IsZero() {
@@ -248,18 +305,24 @@ func (s *service) UpdateCustomerActivity(customerNumber *CustomerNumber, channel
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.CustomerActivityReply{}, err
+		return nil, err
 	}
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
-	reply := new(hera.AppToServerCommandReply)
 	if err != nil {
-		return &hera.CustomerActivityReply{}, err
+		return nil, err
 	}
-	err = proto.Unmarshal(payload.Data(), reply)
-	return reply.GetCustomerActivity(), err
+	reply := new(hera.AppToServerCommandReply)
+	if err := proto.Unmarshal(payload.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &CustomerActivityReply{
+		Status:      reply.GetCustomerActivity().Status,
+		Description: reply.GetCustomerActivity().Description,
+		CustomerID:  reply.GetCustomerActivity().CustomerId.Value,
+	}, err
 }
 
-func (s *service) AdoptCustomerState(customerID string, otherCustomer *Customer) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) AdoptCustomerState(customerID string, otherCustomer *Customer) (*UpdateCustomerStateReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_AdoptCustomerState)
 	command.AdoptCustomerState = &hera.AdoptCustomerStateCommand{}
@@ -289,18 +352,24 @@ func (s *service) AdoptCustomerState(customerID string, otherCustomer *Customer)
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.UpdateCustomerStateReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.UpdateCustomerStateReply{}, err
+		return nil, err
 	}
 	reply := new(hera.AppToServerCommandReply)
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetUpdateCustomerState(), err
+	if err := proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &UpdateCustomerStateReply{
+		Status:      reply.GetUpdateCustomerState().Status,
+		Description: reply.GetUpdateCustomerState().Description,
+		CustomerID:  reply.GetUpdateCustomerState().CustomerId.Value,
+	}, nil
 }
 
-func (s *service) AddCustomerReminder(customer *Customer, reminder *Reminder) (*hera.UpdateCustomerAppDataReply, error) {
+func (s *service) AddCustomerReminder(customer *Customer, reminder *Reminder) (*UpdateCustomerAppDataReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_AddCustomerReminder)
 	command.AddCustomerReminder = new(hera.AddCustomerReminderCommand)
@@ -335,18 +404,25 @@ func (s *service) AddCustomerReminder(customer *Customer, reminder *Reminder) (*
 
 	d, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.UpdateCustomerAppDataReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(d, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.UpdateCustomerAppDataReply{}, err
+		return nil, err
 	}
 	reply := new(hera.AppToServerCommandReply)
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetUpdateCustomerAppData(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+
+	return &UpdateCustomerAppDataReply{
+		Status:      reply.GetUpdateCustomerAppData().Status,
+		Description: reply.GetUpdateCustomerAppData().Description,
+		CustomerID:  reply.GetUpdateCustomerAppData().CustomerId.Value,
+	}, nil
 }
 
-func (s *service) AddCustomerReminderByTag(tag *Tag, reminder *Reminder) (*hera.TagCommandReply, error) {
+func (s *service) AddCustomerReminderByTag(tag *Tag, reminder *Reminder) (*TagCommandReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_AddCustomerReminderTag)
 	command.AddCustomerReminderTag = new(hera.AddCustomerReminderTagCommand)
@@ -368,18 +444,24 @@ func (s *service) AddCustomerReminderByTag(tag *Tag, reminder *Reminder) (*hera.
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.TagCommandReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.TagCommandReply{}, err
+		return nil, err
 	}
 	reply := new(hera.AppToServerCommandReply)
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetTagCommand(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &TagCommandReply{
+		Status:      reply.GetTagCommand().Status,
+		Description: reply.GetTagCommand().Description,
+		WorkID:      reply.GetTagCommand().WorkId.Value,
+	}, nil
 }
 
-func (s *service) CancelCustomerReminder(customer *Customer, key string) (*hera.UpdateCustomerAppDataReply, error) {
+func (s *service) CancelCustomerReminder(customer *Customer, key string) (*UpdateCustomerAppDataReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_CancelCustomerReminder)
 	command.CancelCustomerReminder = new(hera.CancelCustomerReminderCommand)
@@ -406,19 +488,26 @@ func (s *service) CancelCustomerReminder(customer *Customer, key string) (*hera.
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.UpdateCustomerAppDataReply{}, err
+		return nil, err
 	}
 
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.UpdateCustomerAppDataReply{}, err
+		return nil, err
 	}
 	reply := new(hera.AppToServerCommandReply)
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetUpdateCustomerAppData(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+
+	}
+	return &UpdateCustomerAppDataReply{
+		Status:      reply.GetUpdateCustomerAppData().Status,
+		Description: reply.GetUpdateCustomerAppData().Description,
+		CustomerID:  reply.GetUpdateCustomerAppData().CustomerId.Value,
+	}, nil
 }
 
-func (s *service) CancelCustomerReminderByTag(tag *Tag, key string) (*hera.TagCommandReply, error) {
+func (s *service) CancelCustomerReminderByTag(tag *Tag, key string) (*TagCommandReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_CancelCustomerReminderTag)
 	command.CancelCustomerReminderTag = new(hera.CancelCustomerReminderTagCommand)
@@ -435,18 +524,23 @@ func (s *service) CancelCustomerReminderByTag(tag *Tag, key string) (*hera.TagCo
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.TagCommandReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
-	var reply = new(hera.AppToServerCommandReply)
 	if err != nil {
-		return &hera.TagCommandReply{}, err
+		return nil, err
 	}
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetTagCommand(), err
+	reply := new(hera.AppToServerCommandReply)
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &TagCommandReply{
+		Status:      reply.GetTagCommand().Status,
+		Description: reply.GetTagCommand().Description,
+	}, nil
 }
 
-func (s *service) UpdateCustomerTag(customer *Customer, tags ...*Tag) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) UpdateCustomerTag(customer *Customer, tags ...*Tag) (*UpdateCustomerStateReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_UpdateCustomerTag)
 	command.UpdateCustomerTag = new(hera.UpdateCustomerTagCommand)
@@ -485,19 +579,25 @@ func (s *service) UpdateCustomerTag(customer *Customer, tags ...*Tag) (*hera.Upd
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.UpdateCustomerStateReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.UpdateCustomerStateReply{}, err
+		return nil, err
 	}
 
 	reply := new(hera.AppToServerCommandReply)
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetUpdateCustomerState(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &UpdateCustomerStateReply{
+		Status:      reply.GetUpdateCustomerState().Status,
+		Description: reply.GetUpdateCustomerState().Description,
+		CustomerID:  reply.GetUpdateCustomerState().CustomerId.Value,
+	}, nil
 }
 
-func (s *service) DeleteCustomerTag(customer *Customer, keys ...string) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) DeleteCustomerTag(customer *Customer, keys ...string) (*UpdateCustomerStateReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_DeleteCustomerTag)
 	command.DeleteCustomerTag = new(hera.DeleteCustomerTagCommand)
@@ -525,18 +625,24 @@ func (s *service) DeleteCustomerTag(customer *Customer, keys ...string) (*hera.U
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.UpdateCustomerStateReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.UpdateCustomerStateReply{}, err
+		return nil, err
 	}
 	reply := new(hera.AppToServerCommandReply)
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetUpdateCustomerState(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &UpdateCustomerStateReply{
+		Status:      reply.GetUpdateCustomerState().Status,
+		Description: reply.GetUpdateCustomerState().Description,
+		CustomerID:  reply.GetUpdateCustomerState().CustomerId.Value,
+	}, err
 }
 
-func (s *service) UpdateCustomerSecondaryID(customer *Customer, secondaryIDs ...*SecondaryID) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) UpdateCustomerSecondaryID(customer *Customer, secondaryIDs ...*SecondaryID) (*UpdateCustomerStateReply, error) {
 	heraSecIDs := []*hera.CustomerIndex{}
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_UpdateCustomerSecondaryId)
@@ -573,18 +679,24 @@ func (s *service) UpdateCustomerSecondaryID(customer *Customer, secondaryIDs ...
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.UpdateCustomerStateReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.UpdateCustomerStateReply{}, err
+		return nil, err
 	}
 	reply := new(hera.AppToServerCommandReply)
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetUpdateCustomerState(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &UpdateCustomerStateReply{
+		Status:      reply.GetUpdateCustomerState().Status,
+		Description: reply.GetUpdateCustomerState().Description,
+		CustomerID:  reply.GetUpdateCustomerState().CustomerId.Value,
+	}, nil
 }
 
-func (s *service) DeleteCustomerSecondaryID(customer *Customer, secondaryIDs ...*SecondaryID) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) DeleteCustomerSecondaryID(customer *Customer, secondaryIDs ...*SecondaryID) (*UpdateCustomerStateReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_DeleteCustomerSecondaryId)
 	command.DeleteCustomerSecondaryId = new(hera.DeleteCustomerSecondaryIdCommand)
@@ -622,18 +734,25 @@ func (s *service) DeleteCustomerSecondaryID(customer *Customer, secondaryIDs ...
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.UpdateCustomerStateReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.UpdateCustomerStateReply{}, err
+		return nil, err
 	}
 	reply := new(hera.AppToServerCommandReply)
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetUpdateCustomerState(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+
+	return &UpdateCustomerStateReply{
+		Status:      reply.GetUpdateCustomerState().Status,
+		Description: reply.GetUpdateCustomerState().Description,
+		CustomerID:  reply.GetUpdateCustomerState().CustomerId.Value,
+	}, nil
 }
 
-func (s *service) LeaseCustomerAppData(customer *Customer) (*hera.LeaseCustomerAppDataReply, error) {
+func (s *service) LeaseCustomerAppData(customer *Customer) (*LeaseCustomerAppDataReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_LeaseCustomerAppData)
 	command.LeaseCustomerAppData = new(hera.LeaseCustomerAppDataCommand)
@@ -660,18 +779,37 @@ func (s *service) LeaseCustomerAppData(customer *Customer) (*hera.LeaseCustomerA
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.LeaseCustomerAppDataReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte(""))).Block(ctx)
 	if err != nil {
-		return &hera.LeaseCustomerAppDataReply{}, err
+		return nil, err
 	}
-	reply := new(hera.AppToServerCommandReply)
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetLeaseCustomerAppData(), err
+	commandReply := new(hera.AppToServerCommandReply)
+	if err = proto.Unmarshal(res.Data(), commandReply); err != nil {
+		return nil, err
+	}
+
+	reply := &LeaseCustomerAppDataReply{
+		Status:      commandReply.GetLeaseCustomerAppData().Status,
+		Description: commandReply.GetLeaseCustomerAppData().Description,
+		CustomerID:  commandReply.GetLeaseCustomerAppData().CustomerId.Value,
+		Appdata:     &Appdata{},
+	}
+	if val, ok := commandReply.GetLeaseCustomerAppData().Value.Value.(*hera.DataMapValue_StringVal); ok {
+		reply.Appdata.Value = StringDataValue(val.StringVal)
+	}
+	if val, ok := commandReply.GetLeaseCustomerAppData().Value.Value.(*hera.DataMapValue_BytesVal); ok {
+		byteArr := make(BinaryDataValue, len(val.BytesVal))
+		for _, byteVal := range val.BytesVal {
+			byteArr = append(byteArr, byteVal)
+		}
+		reply.Appdata.Value = byteArr
+	}
+	return reply, err
 }
 
-func (s *service) UpdateCustomerAppData(customer *Customer, appdata *Appdata) (*hera.UpdateCustomerAppDataReply, error) {
+func (s *service) UpdateCustomerAppData(customer *Customer, appdata *Appdata) (*UpdateCustomerAppDataReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_UpdateCustomerAppData)
 	command.UpdateCustomerAppData = new(hera.UpdateCustomerAppDataCommand)
@@ -711,19 +849,25 @@ func (s *service) UpdateCustomerAppData(customer *Customer, appdata *Appdata) (*
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.UpdateCustomerAppDataReply{}, err
+		return nil, err
 	}
 
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.UpdateCustomerAppDataReply{}, err
+		return nil, err
 	}
 	reply := new(hera.AppToServerCommandReply)
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetUpdateCustomerAppData(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &UpdateCustomerAppDataReply{
+		Status:      reply.GetUpdateCustomerAppData().Status,
+		Description: reply.GetUpdateCustomerAppData().Description,
+		CustomerID:  reply.GetUpdateCustomerAppData().CustomerId.Value,
+	}, nil
 }
 
-func (s *service) DeleteCustomerAppData(customer *Customer) (*hera.UpdateCustomerAppDataReply, error) {
+func (s *service) DeleteCustomerAppData(customer *Customer) (*UpdateCustomerAppDataReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_DeleteCustomerAppData)
 	command.DeleteCustomerAppData = new(hera.DeleteCustomerAppDataCommand)
@@ -750,18 +894,25 @@ func (s *service) DeleteCustomerAppData(customer *Customer) (*hera.UpdateCustome
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.UpdateCustomerAppDataReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.UpdateCustomerAppDataReply{}, err
+		return nil, err
 	}
 	reply := &hera.AppToServerCommandReply{}
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetUpdateCustomerAppData(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+
+	return &UpdateCustomerAppDataReply{
+		Status:      reply.GetUpdateCustomerAppData().Status,
+		Description: reply.GetUpdateCustomerAppData().Description,
+		CustomerID:  reply.GetUpdateCustomerAppData().CustomerId.Value,
+	}, nil
 }
 
-func (s *service) UpdateCustomerMetaData(customer *Customer, metadata ...*Metadata) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) UpdateCustomerMetaData(customer *Customer, metadata ...*Metadata) (*UpdateCustomerStateReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_UpdateCustomerMetadata)
 	command.UpdateCustomerMetadata = &hera.UpdateCustomerMetadataCommand{}
@@ -805,18 +956,25 @@ func (s *service) UpdateCustomerMetaData(customer *Customer, metadata ...*Metada
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.UpdateCustomerStateReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.UpdateCustomerStateReply{}, err
+		return nil, err
 	}
 	reply := &hera.AppToServerCommandReply{}
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetUpdateCustomerState(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+
+	return &UpdateCustomerStateReply{
+		Status:      reply.GetUpdateCustomerState().Status,
+		Description: reply.GetUpdateCustomerState().Description,
+		CustomerID:  reply.GetUpdateCustomerState().CustomerId.Value,
+	}, nil
 }
 
-func (s *service) DeleteCustomerMetaData(customer *Customer, keys ...string) (*hera.UpdateCustomerStateReply, error) {
+func (s *service) DeleteCustomerMetaData(customer *Customer, keys ...string) (*UpdateCustomerStateReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_DeleteCustomerMetadata)
 	command.DeleteCustomerMetadata = &hera.DeleteCustomerMetadataCommand{}
@@ -844,18 +1002,24 @@ func (s *service) DeleteCustomerMetaData(customer *Customer, keys ...string) (*h
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.UpdateCustomerStateReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.UpdateCustomerStateReply{}, err
+		return nil, err
 	}
 	reply := &hera.AppToServerCommandReply{}
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetUpdateCustomerState(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &UpdateCustomerStateReply{
+		Status:      reply.GetUpdateCustomerState().Status,
+		Description: reply.GetUpdateCustomerState().Description,
+		CustomerID:  reply.GetUpdateCustomerState().CustomerId.Value,
+	}, nil
 }
 
-func (s *service) UpdateMessagingConsent(customerNumber *CustomerNumber, channelNumber *MessagingChannelNumber, update MessagingConsentUpdate) (*hera.UpdateMessagingConsentReply, error) {
+func (s *service) UpdateMessagingConsent(customerNumber *CustomerNumber, channelNumber *MessagingChannelNumber, update MessagingConsentUpdate) (*UpdateMessagingConsentReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_UpdateMessagingConsent)
 	command.UpdateMessagingConsent = &hera.UpdateMessagingConsentCommand{}
@@ -882,13 +1046,19 @@ func (s *service) UpdateMessagingConsent(customerNumber *CustomerNumber, channel
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.UpdateMessagingConsentReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.UpdateMessagingConsentReply{}, err
+		return nil, err
 	}
 	reply := &hera.AppToServerCommandReply{}
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetUpdateMessagingConsent(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &UpdateMessagingConsentReply{
+		Status:      MessagingConsentUpdateStatus(reply.GetUpdateMessagingConsent().Status),
+		Description: reply.GetUpdateMessagingConsent().Description,
+		CustomerID:  reply.GetUpdateMessagingConsent().CustomerId.Value,
+	}, err
 }

@@ -37,7 +37,6 @@ func Test_Messaging(t *testing.T) {
 			t.Fatalf("Error %v", err)
 		}
 		assert.NotNil(t, response)
-		assert.NotEqual(t, response.CustomerId, "")
-		t.Logf("CustomerId %v", response.CustomerId.Value)
+		assert.NotEqual(t, response.CustomerID, "")
 	})
 }

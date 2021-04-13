@@ -9,22 +9,34 @@ import (
 	"github.com/rsocket/rsocket-go/payload"
 )
 
-func (s *service) GenerateAuthToken() (*hera.GenerateAuthTokenReply, error) {
+type (
+	// GenerateAuthTokenReply struct
+	GenerateAuthTokenReply struct {
+		LifeTime time.Duration `json:"lifeTime,omitempty"`
+		Token    string        `json:"token,omitempty"`
+	}
+)
+
+func (s *service) GenerateAuthToken() (*GenerateAuthTokenReply, error) {
 	req := new(hera.AppToServerCommand)
 	req.Entry = new(hera.AppToServerCommand_GenerateAuthToken)
 	reply := new(hera.AppToServerCommandReply)
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.GenerateAuthTokenReply{}, err
+		return nil, err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.GenerateAuthTokenReply{}, err
+		return nil, err
 	}
 	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetGenerateAuthToken(), err
+
+	return &GenerateAuthTokenReply{
+		LifeTime: reply.GetGenerateAuthToken().Lifetime.AsDuration(),
+		Token:    reply.GetGenerateAuthToken().Token,
+	}, err
 }

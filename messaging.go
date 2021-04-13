@@ -105,17 +105,17 @@ type (
 
 	// OutboundMessageReplyPrompt struct
 	OutboundMessageReplyPrompt struct {
-		Action PromptMessageReplyAction
-		Menu   []*PromptMessageMenuItemBody
+		Action PromptMessageReplyAction     `json:"action,omitempty"`
+		Menu   []*PromptMessageMenuItemBody `json:"menu,omitempty"`
 	}
 
 	// OutBoundMessage struct
 	OutBoundMessage struct {
-		Body        *OutBoundMessageBody
-		Labels      []string
-		ProviderTag string
-		ReplyToken  string
-		ReplyPrompt *OutboundMessageReplyPrompt
+		Body        *OutBoundMessageBody        `json:"body,omitempty"`
+		Labels      []string                    `json:"labels,omitempty"`
+		ProviderTag string                      `json:"providerTag,omitempty"`
+		ReplyToken  string                      `json:"replyToken,omitempty"`
+		ReplyPrompt *OutboundMessageReplyPrompt `json:"replyPrompt,omitempty"`
 	}
 
 	// InBoundMessageBody defines how the message body should look like Note all the options are optional and the construction of this struct depends on your needs.
@@ -127,6 +127,15 @@ type (
 		Ussd     *UssdSessionNotification `json:"ussd,omitempty"`
 		Email    *Email                   `json:"email,omitempty"`
 		Voice    *Voice                   `json:"voice,omitempty"`
+	}
+
+	// SendMessageReply struct
+	SendMessageReply struct {
+		CustomerID  string                `json:"customerId,omitempty"`
+		Description string                `json:"description,omitempty"`
+		MessageID   string                `json:"messageId,omitempty"`
+		SessionID   string                `json:"sessionId,omitempty"`
+		Status      MessageDeliveryStatus `json:"status,omitempty"`
 	}
 )
 
@@ -235,7 +244,7 @@ func (*Email) isOutBoundMessageBody()           {}
 func (URLMessage) isOutBoundMessageBody()       {}
 func (VoiceCallActions) isOutBoundMessageBody() {}
 
-func (s *service) SendMessage(number *CustomerNumber, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*hera.SendMessageReply, error) {
+func (s *service) SendMessage(number *CustomerNumber, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*SendMessageReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_SendMessage)
 	command.SendMessage = &hera.SendMessageCommand{}
@@ -282,19 +291,26 @@ func (s *service) SendMessage(number *CustomerNumber, channelNumber *MessagingCh
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.SendMessageReply{}, err
+		return nil, err
 	}
 
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.SendMessageReply{}, err
+		return nil, err
 	}
 	reply := new(hera.AppToServerCommandReply)
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetSendMessage(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &SendMessageReply{
+		CustomerID:  reply.GetSendMessage().CustomerId.Value,
+		Description: reply.GetSendMessage().Description,
+		MessageID:   reply.GetSendMessage().MessageId.Value,
+		Status:      MessageDeliveryStatus(reply.GetSendMessage().Status),
+	}, nil
 }
 
-func (s *service) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*hera.TagCommandReply, error) {
+func (s *service) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*TagCommandReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_SendMessageTag)
 	req.Entry = command
@@ -342,18 +358,24 @@ func (s *service) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumb
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.TagCommandReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.TagCommandReply{}, err
+		return nil, err
 	}
 	reply := new(hera.AppToServerCommandReply)
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetTagCommand(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &TagCommandReply{
+		Status:      reply.GetTagCommand().Status,
+		Description: reply.GetTagCommand().Description,
+		WorkID:      reply.GetTagCommand().WorkId.Value,
+	}, err
 }
 
-func (s *service) ReplyToMessage(customerID, messageID string, body IsOutBoundMessageBody) (*hera.SendMessageReply, error) {
+func (s *service) ReplyToMessage(customerID, messageID string, body IsOutBoundMessageBody) (*SendMessageReply, error) {
 	req := new(hera.AppToServerCommand)
 	command := new(hera.AppToServerCommand_ReplyToMessage)
 	command.ReplyToMessage = &hera.ReplyToMessageCommand{}
@@ -392,18 +414,25 @@ func (s *service) ReplyToMessage(customerID, messageID string, body IsOutBoundMe
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.SendMessageReply{}, err
+		return nil, err
 	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
-		return &hera.SendMessageReply{}, err
+		return nil, err
 	}
 	reply := &hera.AppToServerCommandReply{}
-	err = proto.Unmarshal(res.Data(), reply)
-	return reply.GetSendMessage(), err
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &SendMessageReply{
+		CustomerID:  reply.GetSendMessage().CustomerId.Value,
+		Description: reply.GetSendMessage().Description,
+		MessageID:   reply.GetSendMessage().MessageId.Value,
+		Status:      MessageDeliveryStatus(reply.GetSendMessage().Status),
+	}, err
 }
 
-func (s *service) ReceiveMessage(customerNumber string, channel *MessagingChannelNumber, parts []*InBoundMessageBody) (*hera.SimulatorToServerCommandReply, error) {
+func (s *service) ReceiveMessage(customerNumber string, channel *MessagingChannelNumber, parts []*InBoundMessageBody) (*SimulatorToServerCommandReply, error) {
 	req := new(hera.SimulatorToServerCommand)
 	command := new(hera.SimulatorToServerCommand_ReceiveMessage)
 	req.Entry = command
@@ -498,13 +527,19 @@ func (s *service) ReceiveMessage(customerNumber string, channel *MessagingChanne
 	defer cancel()
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return &hera.SimulatorToServerCommandReply{}, err
+		return nil, err
 	}
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
-	reply := new(hera.SimulatorToServerCommandReply)
 	if err != nil {
-		return reply, err
+		return nil, err
 	}
-	err = proto.Unmarshal(payload.Data(), reply)
-	return reply, err
+	reply := new(hera.SimulatorToServerCommandReply)
+	if err = proto.Unmarshal(payload.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &SimulatorToServerCommandReply{
+		Status:      reply.Status,
+		Message:     s.OutboundMessage(reply.Message),
+		Description: reply.Description,
+	}, nil
 }
