@@ -2,6 +2,7 @@ package elarian
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"time"
 
@@ -244,56 +245,56 @@ func (*Email) isOutBoundMessageBody()           {}
 func (URLMessage) isOutBoundMessageBody()       {}
 func (VoiceCallActions) isOutBoundMessageBody() {}
 
-func (s *service) SendMessage(number *CustomerNumber, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*SendMessageReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_SendMessage)
-	command.SendMessage = &hera.SendMessageCommand{}
-	req.Entry = command
-
-	if !reflect.ValueOf(number).IsZero() {
-		command.SendMessage.CustomerNumber = s.customerNumber(number)
+func (s *elarian) SendMessage(number *CustomerNumber, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*SendMessageReply, error) {
+	if number == nil || reflect.ValueOf(number).IsZero() {
+		return nil, errors.New("customerNumber required")
 	}
 
-	if !reflect.ValueOf(channelNumber).IsZero() {
-		command.SendMessage.ChannelNumber = &hera.MessagingChannelNumber{
-			Channel: hera.MessagingChannel(channelNumber.Channel),
-			Number:  channelNumber.Number,
-		}
+	if channelNumber == nil || reflect.ValueOf(channelNumber).IsZero() {
+		return nil, errors.New("channelNumber required")
 	}
 
-	message := new(hera.OutboundMessage)
-	command.SendMessage.Message = message
-
+	message := &hera.OutboundMessage{}
 	if entry, ok := body.(TextMessage); ok {
-		message.Body = s.textMessage(string(entry))
+		message.Body = s.heraOutBoundTextMessage(string(entry))
 	}
 	if entry, ok := body.(*Template); ok {
-		message.Body = s.templateMesage(entry)
+		message.Body = s.heraOutBoundTemplateMesage(entry)
 	}
 	if entry, ok := body.(*Location); ok {
-		message.Body = s.locationMessage(entry)
+		message.Body = s.heraOutBoundLocationMessage(entry)
 	}
 	if entry, ok := body.(*Media); ok {
-		message.Body = s.mediaMessage(entry)
+		message.Body = s.heraOutBoundMediaMessage(entry)
 	}
 	if entry, ok := body.(*UssdMenu); ok {
-		message.Body = s.ussdMessage(entry)
+		message.Body = s.heraOutBoundUssdMessage(entry)
 	}
 	if entry, ok := body.(*Email); ok {
-		message.Body = s.email(entry)
+		message.Body = s.heraOutBoundEmail(entry)
 	}
 	if entry, ok := body.(VoiceCallActions); ok {
-		message.Body = s.voiceMessage(entry)
+		message.Body = s.heraOutBoundVoiceMessage(entry)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
+	command := &hera.SendMessageCommand{
+		CustomerNumber: s.heraCustomerNumber(number),
+		ChannelNumber: &hera.MessagingChannelNumber{
+			Channel: hera.MessagingChannel(channelNumber.Channel),
+			Number:  channelNumber.Number,
+		},
+		Message: message,
+	}
 
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_SendMessage{SendMessage: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
-
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -310,56 +311,58 @@ func (s *service) SendMessage(number *CustomerNumber, channelNumber *MessagingCh
 	}, nil
 }
 
-func (s *service) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*TagCommandReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_SendMessageTag)
-	req.Entry = command
-
-	if !reflect.ValueOf(tag).IsZero() {
-		command.SendMessageTag.Tag = &hera.IndexMapping{
-			Key:   tag.Key,
-			Value: wrapperspb.String(tag.Value),
-		}
-	}
-	if !reflect.ValueOf(channelNumber).IsZero() {
-		command.SendMessageTag.ChannelNumber = &hera.MessagingChannelNumber{
-			Channel: hera.MessagingChannel(channelNumber.Channel),
-			Number:  channelNumber.Number,
-		}
+func (s *elarian) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*TagCommandReply, error) {
+	if tag == nil || reflect.ValueOf(tag).IsZero() {
+		return nil, errors.New("tag is required")
 	}
 
-	var message = new(hera.OutboundMessage)
-	command.SendMessageTag.Message = message
+	if channelNumber == nil || reflect.ValueOf(channelNumber).IsZero() {
+		return nil, errors.New("channelNumber is required")
+	}
 
+	var message = &hera.OutboundMessage{}
 	if entry, ok := body.(TextMessage); ok {
-		message.Body = s.textMessage(string(entry))
+		message.Body = s.heraOutBoundTextMessage(string(entry))
 	}
 	if entry, ok := body.(*Template); ok {
-		message.Body = s.templateMesage(entry)
+		message.Body = s.heraOutBoundTemplateMesage(entry)
 	}
 	if entry, ok := body.(*Location); ok {
-		message.Body = s.locationMessage(entry)
+		message.Body = s.heraOutBoundLocationMessage(entry)
 	}
 	if entry, ok := body.(*Media); ok {
-		message.Body = s.mediaMessage(entry)
+		message.Body = s.heraOutBoundMediaMessage(entry)
 	}
 	if entry, ok := body.(*UssdMenu); ok {
-		message.Body = s.ussdMessage(entry)
+		message.Body = s.heraOutBoundUssdMessage(entry)
 	}
 	if entry, ok := body.(*Email); ok {
-		message.Body = s.email(entry)
+		message.Body = s.heraOutBoundEmail(entry)
 	}
 	if entry, ok := body.(VoiceCallActions); ok {
-		message.Body = s.voiceMessage(entry)
+		message.Body = s.heraOutBoundVoiceMessage(entry)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
+	command := &hera.SendMessageTagCommand{
+		Tag: &hera.IndexMapping{
+			Key:   tag.Key,
+			Value: wrapperspb.String(tag.Value),
+		},
+		ChannelNumber: &hera.MessagingChannelNumber{
+			Channel: hera.MessagingChannel(channelNumber.Channel),
+			Number:  channelNumber.Number,
+		},
+		Message: message,
+	}
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_SendMessageTag{SendMessageTag: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -375,47 +378,44 @@ func (s *service) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumb
 	}, err
 }
 
-func (s *service) ReplyToMessage(customerID, messageID string, body IsOutBoundMessageBody) (*SendMessageReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_ReplyToMessage)
-	command.ReplyToMessage = &hera.ReplyToMessageCommand{}
-	req.Entry = command
-
-	command.ReplyToMessage.CustomerId = customerID
-	command.ReplyToMessage.MessageId = messageID
-
-	var message = new(hera.OutboundMessage)
-	command.ReplyToMessage.Message = message
-
+func (s *elarian) ReplyToMessage(customerID, messageID string, body IsOutBoundMessageBody) (*SendMessageReply, error) {
+	var message = &hera.OutboundMessage{}
 	if entry, ok := body.(TextMessage); ok {
-		message.Body = s.textMessage(string(entry))
+		message.Body = s.heraOutBoundTextMessage(string(entry))
 	}
 	if entry, ok := body.(*Template); ok {
-		message.Body = s.templateMesage(entry)
+		message.Body = s.heraOutBoundTemplateMesage(entry)
 	}
 	if entry, ok := body.(*Location); ok {
-		message.Body = s.locationMessage(entry)
+		message.Body = s.heraOutBoundLocationMessage(entry)
 	}
 	if entry, ok := body.(*Media); ok {
-		message.Body = s.mediaMessage(entry)
+		message.Body = s.heraOutBoundMediaMessage(entry)
 	}
 	if entry, ok := body.(*UssdMenu); ok {
-		message.Body = s.ussdMessage(entry)
+		message.Body = s.heraOutBoundUssdMessage(entry)
 	}
 	if entry, ok := body.(*Email); ok {
-		message.Body = s.email(entry)
+		message.Body = s.heraOutBoundEmail(entry)
 	}
 	if entry, ok := body.(VoiceCallActions); ok {
-		message.Body = s.voiceMessage(entry)
+		message.Body = s.heraOutBoundVoiceMessage(entry)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
+	command := &hera.ReplyToMessageCommand{
+		CustomerId: customerID,
+		MessageId:  messageID,
+		Message:    message,
+	}
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_ReplyToMessage{ReplyToMessage: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -432,25 +432,17 @@ func (s *service) ReplyToMessage(customerID, messageID string, body IsOutBoundMe
 	}, err
 }
 
-func (s *service) ReceiveMessage(customerNumber string, channel *MessagingChannelNumber, parts []*InBoundMessageBody) (*SimulatorToServerCommandReply, error) {
-	req := new(hera.SimulatorToServerCommand)
-	command := new(hera.SimulatorToServerCommand_ReceiveMessage)
-	req.Entry = command
-	command.ReceiveMessage.CustomerNumber = customerNumber
-	command.ReceiveMessage.ChannelNumber = &hera.MessagingChannelNumber{
-		Channel: hera.MessagingChannel(channel.Channel),
-		Number:  channel.Number,
-	}
-	command.ReceiveMessage.Parts = []*hera.InboundMessageBody{}
+func (s *elarian) ReceiveMessage(customerNumber string, channel *MessagingChannelNumber, sessionID string, parts []*InBoundMessageBody) (*SimulatorToServerCommandReply, error) {
+	messageparts := []*hera.InboundMessageBody{}
 	for _, part := range parts {
 		if !reflect.ValueOf(part.Text).IsZero() {
-			command.ReceiveMessage.Parts = append(command.ReceiveMessage.Parts, &hera.InboundMessageBody{
+			messageparts = append(messageparts, &hera.InboundMessageBody{
 				Entry: &hera.InboundMessageBody_Text{Text: part.Text},
 			})
 			continue
 		}
 		if !reflect.ValueOf(part.Ussd).IsZero() {
-			command.ReceiveMessage.Parts = append(command.ReceiveMessage.Parts, &hera.InboundMessageBody{
+			messageparts = append(messageparts, &hera.InboundMessageBody{
 				Entry: &hera.InboundMessageBody_Ussd{
 					Ussd: wrapperspb.String(part.Ussd.Input),
 				},
@@ -458,7 +450,7 @@ func (s *service) ReceiveMessage(customerNumber string, channel *MessagingChanne
 			continue
 		}
 		if !reflect.ValueOf(part.Email).IsZero() {
-			command.ReceiveMessage.Parts = append(command.ReceiveMessage.Parts, &hera.InboundMessageBody{
+			messageparts = append(messageparts, &hera.InboundMessageBody{
 				Entry: &hera.InboundMessageBody_Email{
 					Email: &hera.EmailMessageBody{
 						BodyPlain:   part.Email.Body,
@@ -473,7 +465,7 @@ func (s *service) ReceiveMessage(customerNumber string, channel *MessagingChanne
 			continue
 		}
 		if !reflect.ValueOf(part.Location).IsZero() {
-			command.ReceiveMessage.Parts = append(command.ReceiveMessage.Parts, &hera.InboundMessageBody{
+			messageparts = append(messageparts, &hera.InboundMessageBody{
 				Entry: &hera.InboundMessageBody_Location{
 					Location: &hera.LocationMessageBody{
 						Latitude:  part.Location.Latitude,
@@ -487,7 +479,7 @@ func (s *service) ReceiveMessage(customerNumber string, channel *MessagingChanne
 		}
 
 		if !reflect.ValueOf(part.Media).IsZero() {
-			command.ReceiveMessage.Parts = append(command.ReceiveMessage.Parts, &hera.InboundMessageBody{
+			messageparts = append(messageparts, &hera.InboundMessageBody{
 				Entry: &hera.InboundMessageBody_Media{
 					Media: &hera.MediaMessageBody{
 						Url:   part.Media.URL,
@@ -499,7 +491,7 @@ func (s *service) ReceiveMessage(customerNumber string, channel *MessagingChanne
 		}
 
 		if !reflect.ValueOf(part.Voice).IsZero() {
-			command.ReceiveMessage.Parts = append(command.ReceiveMessage.Parts, &hera.InboundMessageBody{
+			messageparts = append(messageparts, &hera.InboundMessageBody{
 				Entry: &hera.InboundMessageBody_Voice{Voice: &hera.VoiceCallInputMessageBody{
 					Direction:    hera.CustomerEventDirection(part.Voice.Direction),
 					Status:       hera.VoiceCallStatus(part.Voice.Status),
@@ -523,12 +515,25 @@ func (s *service) ReceiveMessage(customerNumber string, channel *MessagingChanne
 			})
 		}
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
+
+	command := &hera.ReceiveMessageSimulatorCommand{
+		CustomerNumber: customerNumber,
+		ChannelNumber: &hera.MessagingChannelNumber{
+			Channel: hera.MessagingChannel(channel.Channel),
+			Number:  channel.Number,
+		},
+		Parts:     messageparts,
+		SessionId: wrapperspb.String(sessionID),
+	}
+	req := &hera.SimulatorToServerCommand{
+		Entry: &hera.SimulatorToServerCommand_ReceiveMessage{ReceiveMessage: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err

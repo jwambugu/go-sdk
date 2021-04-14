@@ -7,7 +7,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-func (s *service) customerNumber(number *CustomerNumber) *hera.CustomerNumber {
+func (s *elarian) heraCustomerNumber(number *CustomerNumber) *hera.CustomerNumber {
 	return &hera.CustomerNumber{
 		Number:    number.Number,
 		Provider:  hera.CustomerNumberProvider(number.Provider),
@@ -15,7 +15,7 @@ func (s *service) customerNumber(number *CustomerNumber) *hera.CustomerNumber {
 	}
 }
 
-func (s *service) customerNumbers(customerNumbers []*CustomerNumber) []*hera.CustomerNumber {
+func (s *elarian) heraCustomerNumbers(customerNumbers []*CustomerNumber) []*hera.CustomerNumber {
 	var numbers []*hera.CustomerNumber
 	for _, number := range customerNumbers {
 		numbers = append(numbers, &hera.CustomerNumber{
@@ -27,7 +27,7 @@ func (s *service) customerNumbers(customerNumbers []*CustomerNumber) []*hera.Cus
 	return numbers
 }
 
-func (s *service) customerActivity(activity *hera.CustomerActivityNotification) *CustomerActivityNotification {
+func (s *elarian) customerActivity(activity *hera.CustomerActivityNotification) *CustomerActivityNotification {
 	return &CustomerActivityNotification{
 		SessionID: activity.SessionId,
 		Activity: &CustomerActivity{
@@ -47,15 +47,15 @@ func (s *service) customerActivity(activity *hera.CustomerActivityNotification) 
 	}
 }
 
-func (s *service) secondaryID(customer *Customer) *hera.IndexMapping {
+func (s *elarian) heraSecondaryID(secondaryID *SecondaryID) *hera.IndexMapping {
 	return &hera.IndexMapping{
-		Key:   customer.SecondaryID.Key,
-		Value: wrapperspb.String(customer.SecondaryID.Value),
+		Key:   secondaryID.Key,
+		Value: wrapperspb.String(secondaryID.Value),
 	}
 }
 
-func (s *service) reminderNotification(notf *hera.ReminderNotification) *ReminderNotification {
-	if reflect.ValueOf(notf).IsZero() {
+func (s *elarian) reminderNotification(notf *hera.ReminderNotification) *ReminderNotification {
+	if notf == nil || reflect.ValueOf(notf).IsZero() {
 		return &ReminderNotification{}
 	}
 	reminderNotf := &ReminderNotification{}

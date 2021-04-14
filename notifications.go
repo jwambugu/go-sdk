@@ -3,7 +3,6 @@ package elarian
 import (
 	"errors"
 	"io"
-	"log"
 	"reflect"
 	"time"
 
@@ -235,9 +234,9 @@ func (*SendCustomerPaymentSimulatorNotification) notification() {}
 func (*MakeVoiceCallSimulatorNotification) notification()       {}
 func (*SendMessageSimulatorNotification) notification()         {}
 
-func (s *service) notificationCallBack(body IsOutBoundMessageBody, appData *Appdata) {
+func (s *elarian) notificationCallBack(body IsOutBoundMessageBody, appData *Appdata) {
 	reply := new(hera.ServerToAppNotificationReply)
-	if !reflect.ValueOf(appData).IsZero() {
+	if appData != nil && !reflect.ValueOf(appData).IsZero() {
 		reply.DataUpdate = &hera.AppDataUpdate{
 			Data: &hera.DataMapValue{},
 		}
@@ -258,41 +257,40 @@ func (s *service) notificationCallBack(body IsOutBoundMessageBody, appData *Appd
 		}
 	}
 
-	if !reflect.ValueOf(body).IsZero() {
-		message := new(hera.OutboundMessage)
+	if body != nil && !reflect.ValueOf(body).IsZero() {
+		message := &hera.OutboundMessage{}
 		reply.Message = message
-
 		if entry, ok := body.(TextMessage); ok {
-			message.Body = s.textMessage(string(entry))
+			message.Body = s.heraOutBoundTextMessage(string(entry))
 		}
 		if entry, ok := body.(*Template); ok {
-			message.Body = s.templateMesage(entry)
+			message.Body = s.heraOutBoundTemplateMesage(entry)
 		}
 		if entry, ok := body.(*Location); ok {
-			message.Body = s.locationMessage(entry)
+			message.Body = s.heraOutBoundLocationMessage(entry)
 		}
 		if entry, ok := body.(*Media); ok {
-			message.Body = s.mediaMessage(entry)
+			message.Body = s.heraOutBoundMediaMessage(entry)
 		}
 		if entry, ok := body.(*UssdMenu); ok {
-			message.Body = s.ussdMessage(entry)
+			message.Body = s.heraOutBoundUssdMessage(entry)
 		}
 		if entry, ok := body.(*Email); ok {
-			message.Body = s.email(entry)
+			message.Body = s.heraOutBoundEmail(entry)
 		}
 		if entry, ok := body.(VoiceCallActions); ok {
-			message.Body = s.voiceMessage(entry)
+			message.Body = s.heraOutBoundVoiceMessage(entry)
 		}
 
 	}
 	s.replyChannel <- reply
 }
 
-func (s *service) On(notification Notification, handler NotificationHandler) {
+func (s *elarian) On(notification Notification, handler NotificationHandler) {
 	s.bus.SubscribeAsync(string(notification), handler, false)
 }
 
-func (s *service) handleSimulatorNotification(notf *hera.ServerToSimulatorNotification) {
+func (s *elarian) handleSimulatorNotification(notf *hera.ServerToSimulatorNotification) {
 	if reflect.ValueOf(notf).IsZero() || reflect.ValueOf(notf.Entry).IsZero() {
 		return
 	}
@@ -303,7 +301,7 @@ func (s *service) handleSimulatorNotification(notf *hera.ServerToSimulatorNotifi
 	s.SendMessageSimulatorNotificationHandler(notf)
 }
 
-func (s *service) handleNotifications(notf *hera.ServerToAppNotification) {
+func (s *elarian) handleNotifications(notf *hera.ServerToAppNotification) {
 	if reflect.ValueOf(notf).IsZero() || reflect.ValueOf(notf.Entry).IsZero() {
 		return
 	}
@@ -332,21 +330,24 @@ func (s *service) handleNotifications(notf *hera.ServerToAppNotification) {
 	}
 }
 
-func (s *service) InitializeNotificationStream() {
-	for {
-		select {
-		case notification := <-s.notificationChannel:
-			s.handleNotifications(notification)
-		case simulatorNotification := <-s.simulatorNotificationChannel:
-			s.handleSimulatorNotification(simulatorNotification)
-		case err := <-s.errorChannel:
-			if errors.Is(err, io.EOF) {
-				close(s.errorChannel)
-				return
-			}
-			if err != nil {
-				log.Println(err)
+func (s *elarian) InitializeNotificationStream() <-chan error {
+	errorChan := make(chan error)
+	go func() {
+		for {
+			select {
+			case notification := <-s.notificationChannel:
+				s.handleNotifications(notification)
+			case simulatorNotification := <-s.simulatorNotificationChannel:
+				s.handleSimulatorNotification(simulatorNotification)
+			case err := <-s.errorChannel:
+				if errors.Is(err, io.EOF) {
+					return
+				}
+				if err != nil {
+					errorChan <- err
+				}
 			}
 		}
-	}
+	}()
+	return errorChan
 }

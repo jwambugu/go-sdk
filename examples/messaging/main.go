@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	AppID  string = "zordTest"
-	OrgID  string = "og-hv3yFs"
-	APIKey string = "el_api_key_6b3ff181a2d5cf91f62d2133a67a25b3070d2d7305eba70288417b3ab9ebd145"
+	appID  string = "zordTest"
+	orgID  string = "og-hv3yFs"
+	aPIKey string = "el_api_key_6b3ff181a2d5cf91f62d2133a67a25b3070d2d7305eba70288417b3ab9ebd145"
 )
 
 func main() {
@@ -23,13 +23,12 @@ func main() {
 	)
 
 	opts = &elarian.Options{
-		APIKey:             APIKey,
-		OrgID:              OrgID,
-		AppID:              AppID,
+		APIKey:             aPIKey,
+		OrgID:              orgID,
+		AppID:              appID,
 		AllowNotifications: true,
 		Log:                true,
 	}
-
 	service, err := elarian.Connect(opts, nil)
 	if err != nil {
 		log.Fatalf("Error Initializing Elarian: %v \n", err)

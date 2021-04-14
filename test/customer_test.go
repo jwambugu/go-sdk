@@ -17,7 +17,7 @@ func Test_Customers(t *testing.T) {
 	defer service.Disconnect()
 
 	t.Run("It Should get customer state", func(t *testing.T) {
-		response, err := service.GetCustomerState(&elarian.Customer{ID: customerID})
+		response, err := service.GetCustomerState(elarian.CustomerID(customerID))
 		if err != nil {
 			t.Fatalf("Error: %v", err)
 		}
@@ -28,11 +28,10 @@ func Test_Customers(t *testing.T) {
 
 	t.Run("It should update a customer's tags", func(t *testing.T) {
 		response, err := service.UpdateCustomerTag(
-			&elarian.Customer{ID: customerID},
+			elarian.CustomerID(customerID),
 			&elarian.Tag{
-				Key:        "TestTag",
-				Value:      "Test Tag Value",
-				Expiration: time.Now().Add(time.Minute * 2),
+				Key:   "TestTag",
+				Value: "Test Tag Value",
 			},
 		)
 		if err != nil {
@@ -45,11 +44,11 @@ func Test_Customers(t *testing.T) {
 
 	t.Run("It should add a customer reminder", func(t *testing.T) {
 		response, err := service.AddCustomerReminder(
-			&elarian.Customer{ID: customerID},
-			&elarian.Reminder{Key: "KEY",
+			elarian.CustomerID(customerID),
+			&elarian.Reminder{
+				Key:      "KEY",
 				Payload:  "i am a reminder",
 				RemindAt: time.Now().Add(time.Second * 3),
-				Interval: time.Duration(time.Second * 60),
 			},
 		)
 		if err != nil {
@@ -65,10 +64,10 @@ func Test_Customers(t *testing.T) {
 	t.Run("It should add a customer reminder by tag", func(t *testing.T) {
 		response, err := service.AddCustomerReminderByTag(
 			&elarian.Tag{Key: "TestTag", Value: "Test Tag value"},
-			&elarian.Reminder{Key: "REMINDER_KEY",
+			&elarian.Reminder{
+				Key:      "REMINDER_KEY",
 				Payload:  "i am  a reminder",
 				RemindAt: time.Now().Add(time.Second * 2),
-				Interval: time.Duration(time.Hour * 2),
 			},
 		)
 		if err != nil {
@@ -81,8 +80,9 @@ func Test_Customers(t *testing.T) {
 	t.Run("It should cancel a customer reminder", func(t *testing.T) {
 		key := "REMINDER_KEY"
 		response, err := service.AddCustomerReminder(
-			&elarian.Customer{ID: customerID},
-			&elarian.Reminder{Key: key,
+			elarian.CustomerID(customerID),
+			&elarian.Reminder{
+				Key:      key,
 				Payload:  "i am a reminder",
 				RemindAt: time.Now().Add(time.Second * 2),
 				Interval: time.Duration(time.Hour * 2),
@@ -95,7 +95,7 @@ func Test_Customers(t *testing.T) {
 		assert.True(t, response.Status)
 
 		response, err = service.CancelCustomerReminder(
-			&elarian.Customer{ID: customerID},
+			elarian.CustomerID(customerID),
 			key,
 		)
 		if err != nil {
@@ -109,10 +109,10 @@ func Test_Customers(t *testing.T) {
 		key := "REMINDER_KEY"
 		response, err := service.AddCustomerReminderByTag(
 			&elarian.Tag{Key: "TestTag", Value: "Test Tag value"},
-			&elarian.Reminder{Key: key,
+			&elarian.Reminder{
+				Key:      key,
 				Payload:  "i am a reminder",
 				RemindAt: time.Now().Add(time.Second * 2),
-				Interval: time.Duration(time.Hour * 2),
 			},
 		)
 		if err != nil {
@@ -134,11 +134,10 @@ func Test_Customers(t *testing.T) {
 
 	t.Run("It should update a customer's secondary id", func(t *testing.T) {
 		response, err := service.UpdateCustomerSecondaryID(
-			&elarian.Customer{ID: customerID},
+			elarian.CustomerID(customerID),
 			&elarian.SecondaryID{
-				Key:        "email",
-				Value:      "fakeemail@test.com",
-				Expiration: time.Now().Add(time.Minute * 2),
+				Key:   "email",
+				Value: "fakeemail@test.com",
 			},
 		)
 		if err != nil {
@@ -150,7 +149,7 @@ func Test_Customers(t *testing.T) {
 
 	t.Run("It should delete a customer's Tag", func(t *testing.T) {
 		response, err := service.DeleteCustomerTag(
-			&elarian.Customer{ID: customerID},
+			elarian.CustomerID(customerID),
 			"TestTag",
 		)
 		if err != nil {
@@ -162,7 +161,7 @@ func Test_Customers(t *testing.T) {
 
 	t.Run("It should delete a customer's secondary id", func(t *testing.T) {
 		response, err := service.DeleteCustomerSecondaryID(
-			&elarian.Customer{ID: customerID},
+			elarian.CustomerID(customerID),
 			&elarian.SecondaryID{
 				Key:   "email",
 				Value: "fakeemail@test.com",
@@ -179,7 +178,7 @@ func Test_Customers(t *testing.T) {
 	// update customer appData
 	t.Run("It should update a customer's app data", func(t *testing.T) {
 		response, err := service.UpdateCustomerAppData(
-			&elarian.Customer{ID: customerID},
+			elarian.CustomerID(customerID),
 			&elarian.Appdata{
 				Value: elarian.StringDataValue(`{"sessionId": "fake-session-id", "properties": { "ok": 1, "val": "false" } }`),
 			},
@@ -194,7 +193,7 @@ func Test_Customers(t *testing.T) {
 
 	// lease customer appData
 	t.Run("It should lease a customer's app data", func(t *testing.T) {
-		response, err := service.LeaseCustomerAppData(&elarian.Customer{ID: customerID})
+		response, err := service.LeaseCustomerAppData(elarian.CustomerID(customerID))
 		if err != nil {
 			t.Errorf("Error: %v \n", err)
 		}
@@ -206,7 +205,7 @@ func Test_Customers(t *testing.T) {
 
 	// delete customer appData
 	t.Run("It should delete a customer's app data", func(t *testing.T) {
-		response, err := service.DeleteCustomerAppData(&elarian.Customer{ID: customerID})
+		response, err := service.DeleteCustomerAppData(elarian.CustomerID(customerID))
 		if err != nil {
 			t.Errorf("Error: %v \n", err)
 		}
@@ -217,7 +216,7 @@ func Test_Customers(t *testing.T) {
 
 	t.Run("It should update a customer's metadata", func(t *testing.T) {
 		response, err := service.UpdateCustomerMetaData(
-			&elarian.Customer{ID: customerID},
+			elarian.CustomerID(customerID),
 			&elarian.Metadata{
 				Key:   "DOB",
 				Value: elarian.StringDataValue(`{"year": 2020, "day": 13, "month": 10 }`),
@@ -233,7 +232,7 @@ func Test_Customers(t *testing.T) {
 
 	t.Run("It should delete a customer's metadata", func(t *testing.T) {
 		response, err := service.DeleteCustomerMetaData(
-			&elarian.Customer{ID: customerID},
+			elarian.CustomerID(customerID),
 			"DOB",
 		)
 		if err != nil {

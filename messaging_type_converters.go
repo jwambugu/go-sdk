@@ -7,7 +7,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-func (s *service) textMessage(text string) *hera.OutboundMessageBody {
+func (s *elarian) heraOutBoundTextMessage(text string) *hera.OutboundMessageBody {
 	return &hera.OutboundMessageBody{
 		Entry: &hera.OutboundMessageBody_Text{
 			Text: text,
@@ -15,7 +15,7 @@ func (s *service) textMessage(text string) *hera.OutboundMessageBody {
 	}
 }
 
-func (s *service) templateMesage(template *Template) *hera.OutboundMessageBody {
+func (s *elarian) heraOutBoundTemplateMesage(template *Template) *hera.OutboundMessageBody {
 	return &hera.OutboundMessageBody{
 		Entry: &hera.OutboundMessageBody_Template{
 			Template: &hera.TemplateMessageBody{
@@ -26,7 +26,7 @@ func (s *service) templateMesage(template *Template) *hera.OutboundMessageBody {
 	}
 }
 
-func (s *service) mediaMessage(media *Media) *hera.OutboundMessageBody {
+func (s *elarian) heraOutBoundMediaMessage(media *Media) *hera.OutboundMessageBody {
 	return &hera.OutboundMessageBody{
 		Entry: &hera.OutboundMessageBody_Media{
 			Media: &hera.MediaMessageBody{
@@ -37,7 +37,7 @@ func (s *service) mediaMessage(media *Media) *hera.OutboundMessageBody {
 	}
 }
 
-func (s *service) locationMessage(location *Location) *hera.OutboundMessageBody {
+func (s *elarian) heraOutBoundLocationMessage(location *Location) *hera.OutboundMessageBody {
 	return &hera.OutboundMessageBody{
 		Entry: &hera.OutboundMessageBody_Location{
 			Location: &hera.LocationMessageBody{
@@ -50,7 +50,7 @@ func (s *service) locationMessage(location *Location) *hera.OutboundMessageBody 
 	}
 }
 
-func (s *service) ussdMessage(ussdMenu *UssdMenu) *hera.OutboundMessageBody {
+func (s *elarian) heraOutBoundUssdMessage(ussdMenu *UssdMenu) *hera.OutboundMessageBody {
 	return &hera.OutboundMessageBody{
 		Entry: &hera.OutboundMessageBody_Ussd{
 			Ussd: &hera.UssdMenuMessageBody{
@@ -61,17 +61,17 @@ func (s *service) ussdMessage(ussdMenu *UssdMenu) *hera.OutboundMessageBody {
 	}
 }
 
-func (s *service) voiceMessage(actions []VoiceAction) *hera.OutboundMessageBody {
+func (s *elarian) heraOutBoundVoiceMessage(actions []VoiceAction) *hera.OutboundMessageBody {
 	return &hera.OutboundMessageBody{
 		Entry: &hera.OutboundMessageBody_Voice{
 			Voice: &hera.VoiceCallDialplanMessageBody{
-				Actions: s.transformVoiceCallActions(actions),
+				Actions: s.heraVoiceCallActions(actions),
 			},
 		},
 	}
 }
 
-func (s *service) email(email *Email) *hera.OutboundMessageBody {
+func (s *elarian) heraOutBoundEmail(email *Email) *hera.OutboundMessageBody {
 	return &hera.OutboundMessageBody{
 		Entry: &hera.OutboundMessageBody_Email{
 			Email: &hera.EmailMessageBody{
@@ -86,7 +86,7 @@ func (s *service) email(email *Email) *hera.OutboundMessageBody {
 	}
 }
 
-func (s *service) OutboundMessage(message *hera.OutboundMessage) *OutBoundMessage {
+func (s *elarian) OutboundMessage(message *hera.OutboundMessage) *OutBoundMessage {
 	outboundMessage := &OutBoundMessage{}
 	outboundMessage.Labels = message.Labels
 	outboundMessage.ProviderTag = message.ProviderTag.Value
@@ -175,21 +175,21 @@ func (s *service) OutboundMessage(message *hera.OutboundMessage) *OutBoundMessag
 	}
 	if value, ok := message.Body.Entry.(*hera.OutboundMessageBody_Voice); ok {
 		outboundMessage.Body = &OutBoundMessageBody{
-			Entry: s.heraVoiceCallActions(value.Voice.Actions),
+			Entry: s.voiceCallActions(value.Voice.Actions),
 		}
 		return outboundMessage
 	}
 	return outboundMessage
 }
 
-func (s *service) messageStatusNotf(notf *hera.MessageStatusNotification) *MessageStatusNotification {
+func (s *elarian) messageStatusNotf(notf *hera.MessageStatusNotification) *MessageStatusNotification {
 	return &MessageStatusNotification{
 		MessageID: notf.MessageId,
 		Status:    MessageDeliveryStatus(notf.Status),
 	}
 }
 
-func (s *service) messageSessionStartedNotf(notf *hera.MessagingSessionStartedNotification) *MessageSessionStartedNotification {
+func (s *elarian) messageSessionStartedNotf(notf *hera.MessagingSessionStartedNotification) *MessageSessionStartedNotification {
 	return &MessageSessionStartedNotification{
 		ChannelNumber: &MessagingChannelNumber{
 			Number:  notf.ChannelNumber.Number,
@@ -205,7 +205,7 @@ func (s *service) messageSessionStartedNotf(notf *hera.MessagingSessionStartedNo
 	}
 }
 
-func (s *service) messageSessionRenewedNotf(notf *hera.MessagingSessionRenewedNotification) *MessageSessionRenewedNotification {
+func (s *elarian) messageSessionRenewedNotf(notf *hera.MessagingSessionRenewedNotification) *MessageSessionRenewedNotification {
 	return &MessageSessionRenewedNotification{
 		ChannelNumber: &MessagingChannelNumber{
 			Number:  notf.ChannelNumber.Number,
@@ -221,7 +221,7 @@ func (s *service) messageSessionRenewedNotf(notf *hera.MessagingSessionRenewedNo
 	}
 }
 
-func (s *service) MessageSessionEndedNotf(notf *hera.MessagingSessionEndedNotification) *MessageSessionEndedNotification {
+func (s *elarian) MessageSessionEndedNotf(notf *hera.MessagingSessionEndedNotification) *MessageSessionEndedNotification {
 	return &MessageSessionEndedNotification{
 		ChannelNumber: &MessagingChannelNumber{
 			Number:  notf.ChannelNumber.Number,
@@ -238,7 +238,7 @@ func (s *service) MessageSessionEndedNotf(notf *hera.MessagingSessionEndedNotifi
 	}
 }
 
-func (s *service) messagingConsentUpdateNotf(notf *hera.MessagingConsentUpdateNotification) *MessagingConsentUpdateNotification {
+func (s *elarian) messagingConsentUpdateNotf(notf *hera.MessagingConsentUpdateNotification) *MessagingConsentUpdateNotification {
 	return &MessagingConsentUpdateNotification{
 		CustomerNumber: &CustomerNumber{
 			Number:    notf.CustomerNumber.Number,
@@ -253,7 +253,7 @@ func (s *service) messagingConsentUpdateNotf(notf *hera.MessagingConsentUpdateNo
 	}
 }
 
-func (s *service) sentMessageReaction(notf *hera.SentMessageReactionNotification) *SentMessageReaction {
+func (s *elarian) sentMessageReaction(notf *hera.SentMessageReactionNotification) *SentMessageReaction {
 	return &SentMessageReaction{
 		CustomerNumber: &CustomerNumber{
 			Number:    notf.CustomerNumber.Number,
@@ -269,7 +269,7 @@ func (s *service) sentMessageReaction(notf *hera.SentMessageReactionNotification
 	}
 }
 
-func (s *service) recievedMessageNotification(notf *hera.ReceivedMessageNotification) *RecievedMessageNotification {
+func (s *elarian) recievedMessageNotification(notf *hera.ReceivedMessageNotification) *RecievedMessageNotification {
 	var notification *RecievedMessageNotification
 
 	notification.MessageID = notf.MessageId

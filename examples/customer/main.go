@@ -47,8 +47,10 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigs
-		log.Println("Disconnecting from Elarian")
-		service.Disconnect()
+		err := service.Disconnect()
+		if err != nil {
+			os.Exit(1)
+		}
 		os.Exit(0)
 	}()
 

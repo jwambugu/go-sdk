@@ -8,7 +8,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-func (s *service) transformVoiceCallActions(actions []VoiceAction) []*hera.VoiceCallAction {
+func (s *elarian) heraVoiceCallActions(actions []VoiceAction) []*hera.VoiceCallAction {
 	var voiceActions = []*hera.VoiceCallAction{}
 
 	for _, voiceAction := range actions {
@@ -49,7 +49,7 @@ func (s *service) transformVoiceCallActions(actions []VoiceAction) []*hera.Voice
 						MaxDuration:     wrapperspb.Int32(action.MaxDuration),
 						CallerId:        wrapperspb.String(action.CallerID),
 						RingbackTone:    wrapperspb.String(action.RingBackTone),
-						CustomerNumbers: s.customerNumbers(action.CustomerNumbers),
+						CustomerNumbers: s.heraCustomerNumbers(action.CustomerNumbers),
 					},
 				},
 			})
@@ -178,7 +178,7 @@ func (s *service) transformVoiceCallActions(actions []VoiceAction) []*hera.Voice
 	return voiceActions
 }
 
-func (s *service) heraVoiceCallActions(actions []*hera.VoiceCallAction) VoiceCallActions {
+func (s *elarian) voiceCallActions(actions []*hera.VoiceCallAction) VoiceCallActions {
 	var voiceActions = []VoiceAction{}
 	for _, voiceCallAction := range actions {
 		if entry, ok := voiceCallAction.Entry.(*hera.VoiceCallAction_Dequeue); ok {
@@ -313,7 +313,7 @@ func (s *service) heraVoiceCallActions(actions []*hera.VoiceCallAction) VoiceCal
 	return voiceActions
 }
 
-func (s *service) voiceCallNotification(notf *hera.InboundMessageBody_Voice) *Voice {
+func (s *elarian) voiceCallNotification(notf *hera.InboundMessageBody_Voice) *Voice {
 	return &Voice{
 		Direction:    CustomerEventDirection(notf.Voice.Direction),
 		Status:       VoiceCallStatus(notf.Voice.Status),

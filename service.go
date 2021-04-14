@@ -7,54 +7,54 @@ import (
 )
 
 type (
-	// Service interface exposes high level consumable elarian functionality
-	Service interface {
+	// Elarian interface exposes high level consumable elarian functionality
+	Elarian interface {
 		GenerateAuthToken() (*GenerateAuthTokenReply, error)
 
 		// GetCustomerState returns a customers state on elarian, the state could me messaging state, metadata, secondaryIds, payments etc.
-		GetCustomerState(customer *Customer) (*hera.GetCustomerStateReply, error)
+		GetCustomerState(customer IsCustomer) (*hera.GetCustomerStateReply, error)
 
 		// AdoptCustomerState copies the state of the second customer to the first customer. note for the first customer a customer id is required
-		AdoptCustomerState(customerID string, otherCustomer *Customer) (*UpdateCustomerStateReply, error)
+		AdoptCustomerState(customerID string, otherCustomer IsCustomer) (*UpdateCustomerStateReply, error)
 
 		// AddCustomerReminder sets a reminder on elarian for a customer which is triggered on set time. The reminder is push through the notification stream.
-		AddCustomerReminder(customer *Customer, reminder *Reminder) (*UpdateCustomerAppDataReply, error)
+		AddCustomerReminder(customer IsCustomer, reminder *Reminder) (*UpdateCustomerAppDataReply, error)
 
 		// AddCustomerReminderByTag sets a reminder on elarian for a group of customers identified by the tag on trigger is pushed through the notification stream.
 		AddCustomerReminderByTag(tag *Tag, reminder *Reminder) (*TagCommandReply, error)
 
 		// CancelCustomerReminder cancels a set reminder
-		CancelCustomerReminder(customer *Customer, key string) (*UpdateCustomerAppDataReply, error)
+		CancelCustomerReminder(customer IsCustomer, key string) (*UpdateCustomerAppDataReply, error)
 
 		// CancelCustomerReminderByTag cancels a reminder set on a customer tag.
 		CancelCustomerReminderByTag(tag *Tag, key string) (*TagCommandReply, error)
 
 		// UpdateCustomerTag is used to add more tags to a customer
-		UpdateCustomerTag(customer *Customer, tags ...*Tag) (*UpdateCustomerStateReply, error)
+		UpdateCustomerTag(customer IsCustomer, tags ...*Tag) (*UpdateCustomerStateReply, error)
 
 		// DeleteCustomerTag disaccosiates a tag from a customer
-		DeleteCustomerTag(customer *Customer, keys ...string) (*UpdateCustomerStateReply, error)
+		DeleteCustomerTag(customer IsCustomer, keys ...string) (*UpdateCustomerStateReply, error)
 
 		// UpdateSecondaryId adds secondary ids to a customer, this could be the id you associate the customer with locally on your application.
-		UpdateCustomerSecondaryID(customer *Customer, secondaryIds ...*SecondaryID) (*UpdateCustomerStateReply, error)
+		UpdateCustomerSecondaryID(customer IsCustomer, secondaryIds ...*SecondaryID) (*UpdateCustomerStateReply, error)
 
 		// DeleteSecondaryId deletes an associated secondary id from a customer
-		DeleteCustomerSecondaryID(customer *Customer, secondaryIds ...*SecondaryID) (*UpdateCustomerStateReply, error)
+		DeleteCustomerSecondaryID(customer IsCustomer, secondaryIds ...*SecondaryID) (*UpdateCustomerStateReply, error)
 
 		// UpdateCustomerMetaData adds abitrary or application specific information that you may want to tie to a customer.
-		UpdateCustomerMetaData(customer *Customer, metadata ...*Metadata) (*UpdateCustomerStateReply, error)
+		UpdateCustomerMetaData(customer IsCustomer, metadata ...*Metadata) (*UpdateCustomerStateReply, error)
 
 		// DeleteCustomerMetaData removes a customers metadata.
-		DeleteCustomerMetaData(customer *Customer, keys ...string) (*UpdateCustomerStateReply, error)
+		DeleteCustomerMetaData(customer IsCustomer, keys ...string) (*UpdateCustomerStateReply, error)
 
 		// LeaseCustomerMetaData removes a customers metadata.
-		LeaseCustomerAppData(customer *Customer) (*LeaseCustomerAppDataReply, error)
+		LeaseCustomerAppData(customer IsCustomer) (*LeaseCustomerAppDataReply, error)
 
 		// UpdateCustomerAppData adds abitrary or application specific information that you may want to tie to a customer.
-		UpdateCustomerAppData(customer *Customer, appdata *Appdata) (*UpdateCustomerAppDataReply, error)
+		UpdateCustomerAppData(customer IsCustomer, appdata *Appdata) (*UpdateCustomerAppDataReply, error)
 
 		// DeleteCustomerAppData removes a customers metadata.
-		DeleteCustomerAppData(customer *Customer) (*UpdateCustomerAppDataReply, error)
+		DeleteCustomerAppData(customer IsCustomer) (*UpdateCustomerAppDataReply, error)
 
 		// UpdateCustomerActivity func
 		UpdateCustomerActivity(customerNumber *CustomerNumber, channel *ActivityChannelNumber, sessionID, key string, properties map[string]string) (*CustomerActivityReply, error)
@@ -84,65 +84,61 @@ type (
 		Disconnect() error
 
 		// InitializeNotificationStream starts listening for notifications if notifications are enabled
-		InitializeNotificationStream()
+		InitializeNotificationStream() <-chan error
 
 		// On registers an event to a notification handler
 		On(event Notification, handler NotificationHandler)
 
 		// ReceiveMessage is a simulator method that can be used to ReceiveMessage messages from a custom simulator
-		ReceiveMessage(customerNumber string, channel *MessagingChannelNumber, parts []*InBoundMessageBody) (*SimulatorToServerCommandReply, error)
+		ReceiveMessage(customerNumber string, channel *MessagingChannelNumber, sessionID string, parts []*InBoundMessageBody) (*SimulatorToServerCommandReply, error)
 
 		// ReceivePayment is a simulator method that can be used to ReceivePayment messages from a custom simulator
-		ReceivePayment(channel *PaymentChannelNumber, customerNumber, transactionID string) (*SimulatorToServerCommandReply, error)
+		ReceivePayment(customerNumber, transactionID string, channel *PaymentChannelNumber, cash *Cash, paymentStatus PaymentStatus) (*SimulatorToServerCommandReply, error)
 
 		// UpdatePaymentStatus is a simulator method that can be used to update a payment's status from a custom simulator
 		UpdatePaymentStatus(transactionID string, paymentStatus PaymentStatus) (*SimulatorToServerCommandReply, error)
 	}
 
-	service struct {
+	elarian struct {
 		client                       rsocket.Client
 		bus                          EventBus.Bus
-		errorChannel                 chan error
-		replyChannel                 chan *hera.ServerToAppNotificationReply
-		notificationChannel          chan *hera.ServerToAppNotification
-		simulatorNotificationChannel chan *hera.ServerToSimulatorNotification
+		errorChannel                 <-chan error
+		replyChannel                 chan<- *hera.ServerToAppNotificationReply
+		notificationChannel          <-chan *hera.ServerToAppNotification
+		simulatorNotificationChannel <-chan *hera.ServerToSimulatorNotification
 	}
 )
 
-func (s *service) Disconnect() error {
+func (s *elarian) Disconnect() error {
 	return s.client.Close()
 }
 
 // NewService Creates a new Elarian service
-func NewService(options *Options, connectionOptions *ConnectionOptions) (Service, error) {
-	rservice := new(rSocketService)
-	rservice.host = "tcp.elarian.dev"
-	rservice.port = 8082
-
+func NewService(options *Options, connectionOptions *ConnectionOptions) (Elarian, error) {
 	errorChan := make(chan error)
 	replyChan := make(chan *hera.ServerToAppNotificationReply)
 	notificationChannel := make(chan *hera.ServerToAppNotification)
 	simulatorNotificationChannel := make(chan *hera.ServerToSimulatorNotification)
 
-	rservice.errorChannel = errorChan
-	rservice.replyChannel = replyChan
-	rservice.notificationChannel = notificationChannel
-	rservice.simulatorNotificationChannel = simulatorNotificationChannel
-
-	client, err := rservice.connect(options, connectionOptions)
-
-	bus := EventBus.New()
-	elarianService := new(service)
-	if err != nil {
-		return &service{}, err
+	srvc := &service{
+		host:                         "tcp.elarian.dev",
+		port:                         8082,
+		errorChannel:                 errorChan,
+		replyChannel:                 replyChan,
+		notificationChannel:          notificationChannel,
+		simulatorNotificationChannel: simulatorNotificationChannel,
 	}
-	elarianService.client = client
-	elarianService.bus = bus
 
-	elarianService.errorChannel = errorChan
-	elarianService.replyChannel = replyChan
-	elarianService.notificationChannel = notificationChannel
-	elarianService.simulatorNotificationChannel = simulatorNotificationChannel
-
-	return elarianService, nil
+	client, err := srvc.connect(options, connectionOptions)
+	if err != nil {
+		return nil, err
+	}
+	return &elarian{
+		client:                       client,
+		bus:                          EventBus.New(),
+		errorChannel:                 errorChan,
+		replyChannel:                 replyChan,
+		notificationChannel:          notificationChannel,
+		simulatorNotificationChannel: simulatorNotificationChannel,
+	}, nil
 }

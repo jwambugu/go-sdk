@@ -4,14 +4,14 @@ import (
 	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
 )
 
-func (s *service) paymentStatusNotf(notf *hera.PaymentStatusNotification) *PaymentStatusNotification {
+func (s *elarian) paymentStatusNotf(notf *hera.PaymentStatusNotification) *PaymentStatusNotification {
 	return &PaymentStatusNotification{
 		TransactionID: notf.TransactionId,
 		Status:        PaymentStatus(notf.Status),
 	}
 }
 
-func (s *service) walletPaymentStatusNotf(notf *hera.WalletPaymentStatusNotification) *WalletPaymentStatusNotification {
+func (s *elarian) walletPaymentStatusNotf(notf *hera.WalletPaymentStatusNotification) *WalletPaymentStatusNotification {
 	return &WalletPaymentStatusNotification{
 		Status:        PaymentStatus(notf.Status),
 		TransactionID: notf.TransactionId,
@@ -19,7 +19,7 @@ func (s *service) walletPaymentStatusNotf(notf *hera.WalletPaymentStatusNotifica
 	}
 }
 
-func (s *service) recievedPaymentNotf(notf *hera.ReceivedPaymentNotification) *ReceivedPaymentNotification {
+func (s *elarian) recievedPaymentNotf(notf *hera.ReceivedPaymentNotification) *ReceivedPaymentNotification {
 	return &ReceivedPaymentNotification{
 		CustomerNumber: &CustomerNumber{
 			Number:    notf.CustomerNumber.Number,
@@ -40,7 +40,7 @@ func (s *service) recievedPaymentNotf(notf *hera.ReceivedPaymentNotification) *R
 	}
 }
 
-func (s *service) paymentCounterPartyAsPurse(purse *Purse) *hera.PaymentCounterParty_Purse {
+func (s *elarian) paymentCounterPartyAsPurse(purse *Purse) *hera.PaymentCounterParty_Purse {
 	return &hera.PaymentCounterParty_Purse{
 		Purse: &hera.PaymentPurseCounterParty{
 			PurseId: purse.PurseID,
@@ -48,10 +48,10 @@ func (s *service) paymentCounterPartyAsPurse(purse *Purse) *hera.PaymentCounterP
 	}
 }
 
-func (s *service) paymentCounterPartyAsCustomer(customer *Customer, channel *PaymentChannelNumber) *hera.PaymentCounterParty_Customer {
+func (s *elarian) paymentCounterPartyAsCustomer(customer *Customer, channel *PaymentChannelNumber) *hera.PaymentCounterParty_Customer {
 	return &hera.PaymentCounterParty_Customer{
 		Customer: &hera.PaymentCustomerCounterParty{
-			CustomerNumber: s.customerNumber(customer.CustomerNumber),
+			CustomerNumber: s.heraCustomerNumber(customer.CustomerNumber),
 			ChannelNumber: &hera.PaymentChannelNumber{
 				Channel: hera.PaymentChannel(channel.Channel),
 				Number:  channel.Number,
@@ -60,7 +60,7 @@ func (s *service) paymentCounterPartyAsCustomer(customer *Customer, channel *Pay
 	}
 }
 
-func (s *service) paymentCounterPartyAsWallet(wallet *Wallet) *hera.PaymentCounterParty_Wallet {
+func (s *elarian) paymentCounterPartyAsWallet(wallet *Wallet) *hera.PaymentCounterParty_Wallet {
 	return &hera.PaymentCounterParty_Wallet{
 		Wallet: &hera.PaymentWalletCounterParty{
 			CustomerId: wallet.CustomerID,

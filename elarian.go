@@ -2,6 +2,7 @@ package elarian
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"time"
 
@@ -27,11 +28,19 @@ type (
 		Bytes() []byte
 	}
 
+	// IsCustomer interface denotes a customer identifier which can be an id, secondaryID or a customerNumber
+	IsCustomer interface {
+		customer()
+	}
+
 	// StringDataValue implements the DataValue interface represents a string
 	StringDataValue string
 
 	// BinaryDataValue implements the DataValue Interface and represents an array of bytes
 	BinaryDataValue []byte
+
+	// CustomerID implements the IsCustomer interface
+	CustomerID string
 
 	// CustomerNumber struct
 	CustomerNumber struct {
@@ -52,7 +61,7 @@ type (
 		ID             string          `json:"id,omitempty"`
 		CustomerNumber *CustomerNumber `json:"customerNumber,omitempty"`
 		SecondaryID    *SecondaryID    `json:"secondaryId,omitempty"`
-		service        Service
+		service        Elarian
 	}
 
 	// CreateCustomer to create a customer
@@ -194,124 +203,131 @@ func (b BinaryDataValue) Bytes() []byte {
 	return b
 }
 
-func (s *service) GetCustomerState(customer *Customer) (*hera.GetCustomerStateReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_GetCustomerState)
-	command.GetCustomerState = &hera.GetCustomerStateCommand{}
-	req.Entry = command
+func (*SecondaryID) customer()    {}
+func (*CustomerNumber) customer() {}
+func (CustomerID) customer()      {}
 
-	if !reflect.ValueOf(customer.SecondaryID).IsZero() {
-		command.GetCustomerState.Customer = &hera.GetCustomerStateCommand_SecondaryId{
-			SecondaryId: &hera.IndexMapping{Value: &wrapperspb.StringValue{
-				Value: customer.SecondaryID.Key,
-			}},
+func (s *elarian) GetCustomerState(customer IsCustomer) (*hera.GetCustomerStateReply, error) {
+	command := &hera.GetCustomerStateCommand{}
+	if secondaryID, ok := customer.(*SecondaryID); ok {
+		command.Customer = &hera.GetCustomerStateCommand_SecondaryId{
+			SecondaryId: &hera.IndexMapping{Value: wrapperspb.String(secondaryID.Value), Key: secondaryID.Key},
 		}
 	}
-	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		command.GetCustomerState.Customer = &hera.GetCustomerStateCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer.CustomerNumber),
+	if customerNumber, ok := customer.(*CustomerNumber); ok {
+		command.Customer = &hera.GetCustomerStateCommand_CustomerNumber{
+			CustomerNumber: s.heraCustomerNumber(customerNumber),
 		}
 	}
-	if customer.ID != "" {
-		command.GetCustomerState.Customer = &hera.GetCustomerStateCommand_CustomerId{
-			CustomerId: customer.ID,
+	if id, ok := customer.(CustomerID); ok {
+		command.Customer = &hera.GetCustomerStateCommand_CustomerId{
+			CustomerId: string(id),
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	data, err := proto.Marshal(req)
-	if err != nil {
-		return &hera.GetCustomerStateReply{}, err
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_GetCustomerState{GetCustomerState: command},
 	}
-	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
-	reply := new(hera.AppToServerCommandReply)
-	if err != nil {
-		return &hera.GetCustomerStateReply{}, err
-	}
-	err = proto.Unmarshal(payload.Data(), reply)
-
-	return reply.GetGetCustomerState(), err
-}
-
-func (s *service) GetCustomerActivity(customerNumber *CustomerNumber, channelNumber *ActivityChannelNumber, sessionID string) (*CustomerActivityReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_CustomerActivity)
-	command.CustomerActivity = &hera.CustomerActivityCommand{}
-	req.Entry = command
-
-	if !reflect.ValueOf(customerNumber).IsZero() {
-		command.CustomerActivity.CustomerNumber = &hera.CustomerNumber{
-			Provider:  hera.CustomerNumberProvider(customerNumber.Provider),
-			Number:    customerNumber.Number,
-			Partition: wrapperspb.String(customerNumber.Partition),
-		}
-	}
-	command.CustomerActivity.ChannelNumber = &hera.ActivityChannelNumber{
-		Channel: hera.ActivityChannel(channelNumber.Channel),
-		Number:  channelNumber.Number,
-	}
-	command.CustomerActivity.SessionId = sessionID
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
-	reply := new(hera.AppToServerCommandReply)
 	if err != nil {
 		return nil, err
 	}
+	reply := new(hera.AppToServerCommandReply)
 	if err = proto.Unmarshal(payload.Data(), reply); err != nil {
 		return nil, err
 	}
+	return reply.GetGetCustomerState(), err
+}
 
+func (s *elarian) GetCustomerActivity(customerNumber *CustomerNumber, channelNumber *ActivityChannelNumber, sessionID string) (*CustomerActivityReply, error) {
+	if customerNumber == nil || reflect.ValueOf(customerNumber).IsZero() {
+		return nil, errors.New("customerNumber required")
+	}
+	if channelNumber == nil || reflect.ValueOf(channelNumber).IsZero() {
+		return nil, errors.New("channelNumber required")
+	}
+
+	command := &hera.CustomerActivityCommand{
+		SessionId: sessionID,
+		CustomerNumber: &hera.CustomerNumber{
+			Provider:  hera.CustomerNumberProvider(customerNumber.Provider),
+			Number:    customerNumber.Number,
+			Partition: wrapperspb.String(customerNumber.Partition),
+		},
+		ChannelNumber: &hera.ActivityChannelNumber{
+			Channel: hera.ActivityChannel(channelNumber.Channel),
+			Number:  channelNumber.Number,
+		},
+	}
+
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_CustomerActivity{CustomerActivity: command},
+	}
+	data, err := proto.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
+	if err != nil {
+		return nil, err
+	}
+	reply := new(hera.AppToServerCommandReply)
+	if err = proto.Unmarshal(payload.Data(), reply); err != nil {
+		return nil, err
+	}
 	return &CustomerActivityReply{
 		Status:      reply.GetCustomerActivity().Status,
 		Description: reply.GetCustomerActivity().Description,
 		CustomerID:  reply.GetCustomerActivity().CustomerId.Value,
-	}, err
+	}, nil
 }
 
-func (s *service) UpdateCustomerActivity(customerNumber *CustomerNumber, channel *ActivityChannelNumber, sessionID, key string, properties map[string]string) (*CustomerActivityReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.CustomerActivityCommand)
-	if !reflect.ValueOf(customerNumber).IsZero() {
-		command.CustomerNumber = &hera.CustomerNumber{
+func (s *elarian) UpdateCustomerActivity(customerNumber *CustomerNumber, channel *ActivityChannelNumber, sessionID, key string, properties map[string]string) (*CustomerActivityReply, error) {
+	if customerNumber == nil || reflect.ValueOf(customerNumber).IsZero() {
+		return nil, errors.New("CustomerNumber required")
+	}
+
+	if channel == nil || reflect.ValueOf(channel).IsZero() {
+		return nil, errors.New("ChannelNumber  required")
+	}
+
+	command := &hera.CustomerActivityCommand{
+		SessionId:  sessionID,
+		Key:        key,
+		Properties: properties,
+		CustomerNumber: &hera.CustomerNumber{
 			Provider:  hera.CustomerNumberProvider(customerNumber.Provider),
 			Number:    customerNumber.Number,
 			Partition: wrapperspb.String(customerNumber.Partition),
-		}
-	}
-	if !reflect.ValueOf(channel).IsZero() {
-		command.ChannelNumber = &hera.ActivityChannelNumber{
+		},
+		ChannelNumber: &hera.ActivityChannelNumber{
 			Channel: hera.ActivityChannel(channel.Channel),
 			Number:  channel.Number,
-		}
-	}
-	command.SessionId = sessionID
-	command.Key = key
-	command.Properties = properties
-	req.Entry = &hera.AppToServerCommand_CustomerActivity{
-		CustomerActivity: command,
+		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_CustomerActivity{CustomerActivity: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
 	}
-	reply := new(hera.AppToServerCommandReply)
+	reply := &hera.AppToServerCommandReply{}
 	if err := proto.Unmarshal(payload.Data(), reply); err != nil {
 		return nil, err
 	}
@@ -319,46 +335,48 @@ func (s *service) UpdateCustomerActivity(customerNumber *CustomerNumber, channel
 		Status:      reply.GetCustomerActivity().Status,
 		Description: reply.GetCustomerActivity().Description,
 		CustomerID:  reply.GetCustomerActivity().CustomerId.Value,
-	}, err
+	}, nil
 }
 
-func (s *service) AdoptCustomerState(customerID string, otherCustomer *Customer) (*UpdateCustomerStateReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_AdoptCustomerState)
-	command.AdoptCustomerState = &hera.AdoptCustomerStateCommand{}
-	req.Entry = command
+func (s *elarian) AdoptCustomerState(customerID string, otherCustomer IsCustomer) (*UpdateCustomerStateReply, error) {
+	command := &hera.AdoptCustomerStateCommand{
+		CustomerId: customerID,
+	}
+	if secondaryID, ok := otherCustomer.(*SecondaryID); ok {
+		command.OtherCustomer = &hera.AdoptCustomerStateCommand_OtherSecondaryId{
+			OtherSecondaryId: &hera.IndexMapping{
+				Key:   secondaryID.Key,
+				Value: wrapperspb.String(secondaryID.Value),
+			},
+		}
+	}
+	if customerNumber, ok := otherCustomer.(*CustomerNumber); ok {
+		command.OtherCustomer = &hera.AdoptCustomerStateCommand_OtherCustomerNumber{
+			OtherCustomerNumber: s.heraCustomerNumber(customerNumber),
+		}
+	}
 
-	command.AdoptCustomerState.CustomerId = customerID
-
-	if !reflect.ValueOf(otherCustomer.SecondaryID).IsZero() {
-		command.AdoptCustomerState.OtherCustomer = &hera.
-			AdoptCustomerStateCommand_OtherSecondaryId{
-			OtherSecondaryId: s.secondaryID(otherCustomer),
+	if id, ok := otherCustomer.(CustomerID); ok {
+		command.OtherCustomer = &hera.AdoptCustomerStateCommand_OtherCustomerId{
+			OtherCustomerId: string(id),
 		}
 	}
-	if !reflect.ValueOf(otherCustomer.CustomerNumber).IsZero() {
-		command.AdoptCustomerState.OtherCustomer = &hera.AdoptCustomerStateCommand_OtherCustomerNumber{
-			OtherCustomerNumber: s.customerNumber(otherCustomer.CustomerNumber),
-		}
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_AdoptCustomerState{AdoptCustomerState: command},
 	}
-	if otherCustomer.ID != "" {
-		command.AdoptCustomerState.OtherCustomer = &hera.
-			AdoptCustomerStateCommand_OtherCustomerId{
-			OtherCustomerId: otherCustomer.ID,
-		}
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
 	}
-	reply := new(hera.AppToServerCommandReply)
+	reply := &hera.AppToServerCommandReply{}
 	if err := proto.Unmarshal(res.Data(), reply); err != nil {
 		return nil, err
 	}
@@ -369,43 +387,45 @@ func (s *service) AdoptCustomerState(customerID string, otherCustomer *Customer)
 	}, nil
 }
 
-func (s *service) AddCustomerReminder(customer *Customer, reminder *Reminder) (*UpdateCustomerAppDataReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_AddCustomerReminder)
-	command.AddCustomerReminder = new(hera.AddCustomerReminderCommand)
-	req.Entry = command
+func (s *elarian) AddCustomerReminder(customer IsCustomer, reminder *Reminder) (*UpdateCustomerAppDataReply, error) {
+	if reminder == nil || reflect.ValueOf(reminder).IsZero() {
+		return nil, errors.New("Reminder Required")
+	}
 
-	if !reflect.ValueOf(customer.SecondaryID).IsZero() {
-		command.AddCustomerReminder.Customer = &hera.AddCustomerReminderCommand_SecondaryId{
-			SecondaryId: s.secondaryID(customer),
+	command := &hera.AddCustomerReminderCommand{}
+	if secondaryID, ok := customer.(*SecondaryID); ok {
+		command.Customer = &hera.AddCustomerReminderCommand_SecondaryId{
+			SecondaryId: &hera.IndexMapping{Value: wrapperspb.String(secondaryID.Value), Key: secondaryID.Key},
 		}
 	}
-	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		command.AddCustomerReminder.Customer = &hera.AddCustomerReminderCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer.CustomerNumber),
+	if customerNumber, ok := customer.(*CustomerNumber); ok {
+		command.Customer = &hera.AddCustomerReminderCommand_CustomerNumber{
+			CustomerNumber: s.heraCustomerNumber(customerNumber),
 		}
 	}
-	if customer.ID != "" {
-		command.AddCustomerReminder.Customer = &hera.AddCustomerReminderCommand_CustomerId{
-			CustomerId: customer.ID,
+	if id, ok := customer.(CustomerID); ok {
+		command.Customer = &hera.AddCustomerReminderCommand_CustomerId{
+			CustomerId: string(id),
 		}
 	}
-	command.AddCustomerReminder.Reminder = &hera.CustomerReminder{
+	command.Reminder = &hera.CustomerReminder{
 		Key:      reminder.Key,
 		Payload:  wrapperspb.String(reminder.Payload),
 		RemindAt: timestamppb.New(reminder.RemindAt),
 	}
 	if reminder.Interval != 0 {
-		command.AddCustomerReminder.Reminder.Interval = durationpb.New(reminder.Interval)
+		command.Reminder.Interval = durationpb.New(reminder.Interval)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_AddCustomerReminder{AddCustomerReminder: command},
+	}
 	d, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(d, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -414,7 +434,6 @@ func (s *service) AddCustomerReminder(customer *Customer, reminder *Reminder) (*
 	if err = proto.Unmarshal(res.Data(), reply); err != nil {
 		return nil, err
 	}
-
 	return &UpdateCustomerAppDataReply{
 		Status:      reply.GetUpdateCustomerAppData().Status,
 		Description: reply.GetUpdateCustomerAppData().Description,
@@ -422,30 +441,37 @@ func (s *service) AddCustomerReminder(customer *Customer, reminder *Reminder) (*
 	}, nil
 }
 
-func (s *service) AddCustomerReminderByTag(tag *Tag, reminder *Reminder) (*TagCommandReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_AddCustomerReminderTag)
-	command.AddCustomerReminderTag = new(hera.AddCustomerReminderTagCommand)
-	req.Entry = command
-
-	command.AddCustomerReminderTag.Tag = &hera.IndexMapping{
-		Key:   tag.Key,
-		Value: wrapperspb.String(tag.Value),
+func (s *elarian) AddCustomerReminderByTag(tag *Tag, reminder *Reminder) (*TagCommandReply, error) {
+	if tag == nil || reflect.ValueOf(tag).IsZero() {
+		return nil, errors.New("Tag is required")
 	}
-	command.AddCustomerReminderTag.Reminder = &hera.CustomerReminder{
+	if reminder == nil || reflect.ValueOf(reminder).IsZero() {
+		return nil, errors.New("Reminder is required")
+	}
+	command := &hera.AddCustomerReminderTagCommand{
+		Tag: &hera.IndexMapping{
+			Key:   tag.Key,
+			Value: wrapperspb.String(tag.Value),
+		},
+	}
+	command.Reminder = &hera.CustomerReminder{
 		Key:      reminder.Key,
-		Interval: durationpb.New(reminder.Interval),
 		Payload:  wrapperspb.String(reminder.Payload),
 		RemindAt: timestamppb.New(reminder.RemindAt),
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
+	if reminder.Interval != 0 {
+		command.Reminder.Interval = durationpb.New(reminder.Interval)
+	}
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_AddCustomerReminderTag{AddCustomerReminderTag: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -461,36 +487,35 @@ func (s *service) AddCustomerReminderByTag(tag *Tag, reminder *Reminder) (*TagCo
 	}, nil
 }
 
-func (s *service) CancelCustomerReminder(customer *Customer, key string) (*UpdateCustomerAppDataReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_CancelCustomerReminder)
-	command.CancelCustomerReminder = new(hera.CancelCustomerReminderCommand)
-	req.Entry = command
+func (s *elarian) CancelCustomerReminder(customer IsCustomer, key string) (*UpdateCustomerAppDataReply, error) {
+	command := &hera.CancelCustomerReminderCommand{
+		Key: key,
+	}
+	if secondaryID, ok := customer.(*SecondaryID); ok {
+		command.Customer = &hera.CancelCustomerReminderCommand_SecondaryId{
+			SecondaryId: &hera.IndexMapping{Value: wrapperspb.String(secondaryID.Value), Key: secondaryID.Key},
+		}
+	}
+	if customerNumber, ok := customer.(*CustomerNumber); ok {
+		command.Customer = &hera.CancelCustomerReminderCommand_CustomerNumber{
+			CustomerNumber: s.heraCustomerNumber(customerNumber),
+		}
+	}
+	if id, ok := customer.(CustomerID); ok {
+		command.Customer = &hera.CancelCustomerReminderCommand_CustomerId{
+			CustomerId: string(id),
+		}
+	}
 
-	command.CancelCustomerReminder.Key = key
-	if !reflect.ValueOf(customer.SecondaryID).IsZero() {
-		command.CancelCustomerReminder.Customer = &hera.CancelCustomerReminderCommand_SecondaryId{
-			SecondaryId: s.secondaryID(customer),
-		}
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_CancelCustomerReminder{CancelCustomerReminder: command},
 	}
-	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		command.CancelCustomerReminder.Customer = &hera.CancelCustomerReminderCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer.CustomerNumber),
-		}
-	}
-	if customer.ID != "" {
-		command.CancelCustomerReminder.Customer = &hera.CancelCustomerReminderCommand_CustomerId{
-			CustomerId: customer.ID,
-		}
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
-
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -498,7 +523,6 @@ func (s *service) CancelCustomerReminder(customer *Customer, key string) (*Updat
 	reply := new(hera.AppToServerCommandReply)
 	if err = proto.Unmarshal(res.Data(), reply); err != nil {
 		return nil, err
-
 	}
 	return &UpdateCustomerAppDataReply{
 		Status:      reply.GetUpdateCustomerAppData().Status,
@@ -507,25 +531,26 @@ func (s *service) CancelCustomerReminder(customer *Customer, key string) (*Updat
 	}, nil
 }
 
-func (s *service) CancelCustomerReminderByTag(tag *Tag, key string) (*TagCommandReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_CancelCustomerReminderTag)
-	command.CancelCustomerReminderTag = new(hera.CancelCustomerReminderTagCommand)
-	req.Entry = command
-
-	command.CancelCustomerReminderTag.Key = key
-	command.CancelCustomerReminderTag.Tag = &hera.IndexMapping{
-		Key:   tag.Key,
-		Value: wrapperspb.String(tag.Value),
+func (s *elarian) CancelCustomerReminderByTag(tag *Tag, key string) (*TagCommandReply, error) {
+	if tag == nil || reflect.ValueOf(tag).IsZero() {
+		return nil, errors.New("Tag is required")
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
+	command := &hera.CancelCustomerReminderTagCommand{
+		Key: key,
+		Tag: &hera.IndexMapping{
+			Key:   tag.Key,
+			Value: wrapperspb.String(tag.Value),
+		},
+	}
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_CancelCustomerReminderTag{CancelCustomerReminderTag: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -540,47 +565,47 @@ func (s *service) CancelCustomerReminderByTag(tag *Tag, key string) (*TagCommand
 	}, nil
 }
 
-func (s *service) UpdateCustomerTag(customer *Customer, tags ...*Tag) (*UpdateCustomerStateReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_UpdateCustomerTag)
-	command.UpdateCustomerTag = new(hera.UpdateCustomerTagCommand)
-	req.Entry = command
-
-	if !reflect.ValueOf(customer.SecondaryID).IsZero() {
-		command.UpdateCustomerTag.Customer = &hera.UpdateCustomerTagCommand_SecondaryId{
-			SecondaryId: s.secondaryID(customer),
+func (s *elarian) UpdateCustomerTag(customer IsCustomer, tags ...*Tag) (*UpdateCustomerStateReply, error) {
+	command := &hera.UpdateCustomerTagCommand{}
+	if secondaryID, ok := customer.(*SecondaryID); ok {
+		command.Customer = &hera.UpdateCustomerTagCommand_SecondaryId{
+			SecondaryId: &hera.IndexMapping{Value: wrapperspb.String(secondaryID.Value), Key: secondaryID.Key},
 		}
 	}
-	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		command.UpdateCustomerTag.Customer = &hera.UpdateCustomerTagCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer.CustomerNumber),
+	if customerNumber, ok := customer.(*CustomerNumber); ok {
+		command.Customer = &hera.UpdateCustomerTagCommand_CustomerNumber{
+			CustomerNumber: s.heraCustomerNumber(customerNumber),
 		}
 	}
-	if customer.ID != "" {
-		command.UpdateCustomerTag.Customer = &hera.UpdateCustomerTagCommand_CustomerId{
-			CustomerId: customer.ID,
+	if id, ok := customer.(CustomerID); ok {
+		command.Customer = &hera.UpdateCustomerTagCommand_CustomerId{
+			CustomerId: string(id),
 		}
 	}
 	heraTags := []*hera.CustomerIndex{}
-
 	for _, tag := range tags {
-		heraTags = append(heraTags, &hera.CustomerIndex{
-			ExpiresAt: timestamppb.New(tag.Expiration),
+		t := &hera.CustomerIndex{
 			Mapping: &hera.IndexMapping{
 				Key:   tag.Key,
 				Value: wrapperspb.String(tag.Value),
 			},
-		})
+		}
+		if !reflect.ValueOf(tag.Expiration).IsZero() {
+			t.ExpiresAt = timestamppb.New(tag.Expiration)
+		}
+		heraTags = append(heraTags, t)
 	}
-	command.UpdateCustomerTag.Updates = heraTags
+	command.Updates = heraTags
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_UpdateCustomerTag{UpdateCustomerTag: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -597,36 +622,34 @@ func (s *service) UpdateCustomerTag(customer *Customer, tags ...*Tag) (*UpdateCu
 	}, nil
 }
 
-func (s *service) DeleteCustomerTag(customer *Customer, keys ...string) (*UpdateCustomerStateReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_DeleteCustomerTag)
-	command.DeleteCustomerTag = new(hera.DeleteCustomerTagCommand)
-	req.Entry = command
-
-	if !reflect.ValueOf(customer.SecondaryID).IsZero() {
-		command.DeleteCustomerTag.Customer = &hera.DeleteCustomerTagCommand_SecondaryId{
-			SecondaryId: s.secondaryID(customer),
+func (s *elarian) DeleteCustomerTag(customer IsCustomer, keys ...string) (*UpdateCustomerStateReply, error) {
+	command := &hera.DeleteCustomerTagCommand{
+		Deletions: keys,
+	}
+	if secondaryID, ok := customer.(*SecondaryID); ok {
+		command.Customer = &hera.DeleteCustomerTagCommand_SecondaryId{
+			SecondaryId: &hera.IndexMapping{Value: wrapperspb.String(secondaryID.Value), Key: secondaryID.Key},
 		}
 	}
-	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		command.DeleteCustomerTag.Customer = &hera.DeleteCustomerTagCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer.CustomerNumber),
+	if customerNumber, ok := customer.(*CustomerNumber); ok {
+		command.Customer = &hera.DeleteCustomerTagCommand_CustomerNumber{
+			CustomerNumber: s.heraCustomerNumber(customerNumber),
 		}
 	}
-	if customer.ID != "" {
-		command.DeleteCustomerTag.Customer = &hera.DeleteCustomerTagCommand_CustomerId{
-			CustomerId: customer.ID,
+	if id, ok := customer.(CustomerID); ok {
+		command.Customer = &hera.DeleteCustomerTagCommand_CustomerId{
+			CustomerId: string(id),
 		}
 	}
-	command.DeleteCustomerTag.Deletions = keys
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_DeleteCustomerTag{DeleteCustomerTag: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -642,45 +665,47 @@ func (s *service) DeleteCustomerTag(customer *Customer, keys ...string) (*Update
 	}, err
 }
 
-func (s *service) UpdateCustomerSecondaryID(customer *Customer, secondaryIDs ...*SecondaryID) (*UpdateCustomerStateReply, error) {
+func (s *elarian) UpdateCustomerSecondaryID(customer IsCustomer, secondaryIDs ...*SecondaryID) (*UpdateCustomerStateReply, error) {
+	command := &hera.UpdateCustomerSecondaryIdCommand{}
+	if secondaryID, ok := customer.(*SecondaryID); ok {
+		command.Customer = &hera.UpdateCustomerSecondaryIdCommand_SecondaryId{
+			SecondaryId: &hera.IndexMapping{Value: wrapperspb.String(secondaryID.Value), Key: secondaryID.Key},
+		}
+	}
+	if customerNumber, ok := customer.(*CustomerNumber); ok {
+		command.Customer = &hera.UpdateCustomerSecondaryIdCommand_CustomerNumber{
+			CustomerNumber: s.heraCustomerNumber(customerNumber),
+		}
+	}
+	if id, ok := customer.(CustomerID); ok {
+		command.Customer = &hera.UpdateCustomerSecondaryIdCommand_CustomerId{
+			CustomerId: string(id),
+		}
+	}
 	heraSecIDs := []*hera.CustomerIndex{}
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_UpdateCustomerSecondaryId)
-	command.UpdateCustomerSecondaryId = new(hera.UpdateCustomerSecondaryIdCommand)
-	req.Entry = command
-
-	if !reflect.ValueOf(customer.SecondaryID).IsZero() {
-		command.UpdateCustomerSecondaryId.Customer = &hera.UpdateCustomerSecondaryIdCommand_SecondaryId{
-			SecondaryId: s.secondaryID(customer),
-		}
-	}
-	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		command.UpdateCustomerSecondaryId.Customer = &hera.UpdateCustomerSecondaryIdCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer.CustomerNumber),
-		}
-	}
-	if customer.ID != "" {
-		command.UpdateCustomerSecondaryId.Customer = &hera.UpdateCustomerSecondaryIdCommand_CustomerId{
-			CustomerId: customer.ID,
-		}
-	}
 	for _, secondaryID := range secondaryIDs {
-		heraSecIDs = append(heraSecIDs, &hera.CustomerIndex{
-			ExpiresAt: timestamppb.New(secondaryID.Expiration),
+		s := &hera.CustomerIndex{
 			Mapping: &hera.IndexMapping{
 				Key:   secondaryID.Key,
 				Value: wrapperspb.String(secondaryID.Value),
 			},
-		})
+		}
+		if !reflect.ValueOf(secondaryID.Expiration).IsZero() {
+			s.ExpiresAt = timestamppb.New(secondaryID.Expiration)
+		}
+		heraSecIDs = append(heraSecIDs, s)
 	}
-	command.UpdateCustomerSecondaryId.Updates = heraSecIDs
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
+	command.Updates = heraSecIDs
 
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_UpdateCustomerSecondaryId{UpdateCustomerSecondaryId: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -696,27 +721,21 @@ func (s *service) UpdateCustomerSecondaryID(customer *Customer, secondaryIDs ...
 	}, nil
 }
 
-func (s *service) DeleteCustomerSecondaryID(customer *Customer, secondaryIDs ...*SecondaryID) (*UpdateCustomerStateReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_DeleteCustomerSecondaryId)
-	command.DeleteCustomerSecondaryId = new(hera.DeleteCustomerSecondaryIdCommand)
-	req.Entry = command
-
-	if !reflect.ValueOf(customer.SecondaryID).IsZero() {
-		command.DeleteCustomerSecondaryId.Customer = &hera.DeleteCustomerSecondaryIdCommand_SecondaryId{
-			SecondaryId: s.secondaryID(customer),
+func (s *elarian) DeleteCustomerSecondaryID(customer IsCustomer, secondaryIDs ...*SecondaryID) (*UpdateCustomerStateReply, error) {
+	command := &hera.DeleteCustomerSecondaryIdCommand{}
+	if secondaryID, ok := customer.(*SecondaryID); ok {
+		command.Customer = &hera.DeleteCustomerSecondaryIdCommand_SecondaryId{
+			SecondaryId: &hera.IndexMapping{Value: wrapperspb.String(secondaryID.Value), Key: secondaryID.Key},
 		}
 	}
-	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		command.DeleteCustomerSecondaryId.Customer = &hera.
-			DeleteCustomerSecondaryIdCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer.CustomerNumber),
+	if customerNumber, ok := customer.(*CustomerNumber); ok {
+		command.Customer = &hera.DeleteCustomerSecondaryIdCommand_CustomerNumber{
+			CustomerNumber: s.heraCustomerNumber(customerNumber),
 		}
 	}
-
-	if customer.ID != "" {
-		command.DeleteCustomerSecondaryId.Customer = &hera.DeleteCustomerSecondaryIdCommand_CustomerId{
-			CustomerId: customer.ID,
+	if id, ok := customer.(CustomerID); ok {
+		command.Customer = &hera.DeleteCustomerSecondaryIdCommand_CustomerId{
+			CustomerId: string(id),
 		}
 	}
 
@@ -727,15 +746,17 @@ func (s *service) DeleteCustomerSecondaryID(customer *Customer, secondaryIDs ...
 			Value: wrapperspb.String(secondaryID.Value),
 		})
 	}
-	command.DeleteCustomerSecondaryId.Deletions = heraSecIDs
+	command.Deletions = heraSecIDs
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_DeleteCustomerSecondaryId{DeleteCustomerSecondaryId: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -744,7 +765,6 @@ func (s *service) DeleteCustomerSecondaryID(customer *Customer, secondaryIDs ...
 	if err = proto.Unmarshal(res.Data(), reply); err != nil {
 		return nil, err
 	}
-
 	return &UpdateCustomerStateReply{
 		Status:      reply.GetUpdateCustomerState().Status,
 		Description: reply.GetUpdateCustomerState().Description,
@@ -752,35 +772,32 @@ func (s *service) DeleteCustomerSecondaryID(customer *Customer, secondaryIDs ...
 	}, nil
 }
 
-func (s *service) LeaseCustomerAppData(customer *Customer) (*LeaseCustomerAppDataReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_LeaseCustomerAppData)
-	command.LeaseCustomerAppData = new(hera.LeaseCustomerAppDataCommand)
-	req.Entry = command
-
-	if !reflect.ValueOf(customer.SecondaryID).IsZero() {
-		command.LeaseCustomerAppData.Customer = &hera.LeaseCustomerAppDataCommand_SecondaryId{
-			SecondaryId: s.secondaryID(customer),
+func (s *elarian) LeaseCustomerAppData(customer IsCustomer) (*LeaseCustomerAppDataReply, error) {
+	command := &hera.LeaseCustomerAppDataCommand{}
+	if secondaryID, ok := customer.(*SecondaryID); ok {
+		command.Customer = &hera.LeaseCustomerAppDataCommand_SecondaryId{
+			SecondaryId: &hera.IndexMapping{Value: wrapperspb.String(secondaryID.Value), Key: secondaryID.Key},
 		}
 	}
-	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		command.LeaseCustomerAppData.Customer = &hera.LeaseCustomerAppDataCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer.CustomerNumber),
+	if customerNumber, ok := customer.(*CustomerNumber); ok {
+		command.Customer = &hera.LeaseCustomerAppDataCommand_CustomerNumber{
+			CustomerNumber: s.heraCustomerNumber(customerNumber),
 		}
 	}
-	if customer.ID != "" {
-		command.LeaseCustomerAppData.Customer = &hera.LeaseCustomerAppDataCommand_CustomerId{
-			CustomerId: customer.ID,
+	if id, ok := customer.(CustomerID); ok {
+		command.Customer = &hera.LeaseCustomerAppDataCommand_CustomerId{
+			CustomerId: string(id),
 		}
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_LeaseCustomerAppData{LeaseCustomerAppData: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte(""))).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -789,7 +806,6 @@ func (s *service) LeaseCustomerAppData(customer *Customer) (*LeaseCustomerAppDat
 	if err = proto.Unmarshal(res.Data(), commandReply); err != nil {
 		return nil, err
 	}
-
 	reply := &LeaseCustomerAppDataReply{
 		Status:      commandReply.GetLeaseCustomerAppData().Status,
 		Description: commandReply.GetLeaseCustomerAppData().Description,
@@ -809,49 +825,44 @@ func (s *service) LeaseCustomerAppData(customer *Customer) (*LeaseCustomerAppDat
 	return reply, err
 }
 
-func (s *service) UpdateCustomerAppData(customer *Customer, appdata *Appdata) (*UpdateCustomerAppDataReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_UpdateCustomerAppData)
-	command.UpdateCustomerAppData = new(hera.UpdateCustomerAppDataCommand)
-	req.Entry = command
-
-	if !reflect.ValueOf(customer.SecondaryID).IsZero() {
-		command.UpdateCustomerAppData.Customer = &hera.UpdateCustomerAppDataCommand_SecondaryId{
-			SecondaryId: s.secondaryID(customer),
+func (s *elarian) UpdateCustomerAppData(customer IsCustomer, appdata *Appdata) (*UpdateCustomerAppDataReply, error) {
+	command := &hera.UpdateCustomerAppDataCommand{}
+	if secondaryID, ok := customer.(*SecondaryID); ok {
+		command.Customer = &hera.UpdateCustomerAppDataCommand_SecondaryId{
+			SecondaryId: &hera.IndexMapping{Value: wrapperspb.String(secondaryID.Value), Key: secondaryID.Key},
 		}
 	}
-	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		command.UpdateCustomerAppData.Customer = &hera.UpdateCustomerAppDataCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer.CustomerNumber),
+	if customerNumber, ok := customer.(*CustomerNumber); ok {
+		command.Customer = &hera.UpdateCustomerAppDataCommand_CustomerNumber{
+			CustomerNumber: s.heraCustomerNumber(customerNumber),
 		}
 	}
-	if customer.ID != "" {
-		command.UpdateCustomerAppData.Customer = &hera.UpdateCustomerAppDataCommand_CustomerId{
-			CustomerId: customer.ID,
+	if id, ok := customer.(CustomerID); ok {
+		command.Customer = &hera.UpdateCustomerAppDataCommand_CustomerId{
+			CustomerId: string(id),
 		}
 	}
 
-	command.UpdateCustomerAppData.Update = &hera.DataMapValue{}
-
+	command.Update = &hera.DataMapValue{}
 	if stringValue, ok := appdata.Value.(StringDataValue); ok {
-		command.UpdateCustomerAppData.Update.Value = &hera.DataMapValue_StringVal{
+		command.Update.Value = &hera.DataMapValue_StringVal{
 			StringVal: string(stringValue),
 		}
 	}
 	if binaryValue, ok := appdata.Value.(BinaryDataValue); ok {
-		command.UpdateCustomerAppData.Update.Value = &hera.DataMapValue_BytesVal{
+		command.Update.Value = &hera.DataMapValue_BytesVal{
 			BytesVal: binaryValue,
 		}
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_UpdateCustomerAppData{UpdateCustomerAppData: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
-
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -867,35 +878,32 @@ func (s *service) UpdateCustomerAppData(customer *Customer, appdata *Appdata) (*
 	}, nil
 }
 
-func (s *service) DeleteCustomerAppData(customer *Customer) (*UpdateCustomerAppDataReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_DeleteCustomerAppData)
-	command.DeleteCustomerAppData = new(hera.DeleteCustomerAppDataCommand)
-	req.Entry = command
-
-	if !reflect.ValueOf(customer.SecondaryID).IsZero() {
-		command.DeleteCustomerAppData.Customer = &hera.DeleteCustomerAppDataCommand_SecondaryId{
-			SecondaryId: s.secondaryID(customer),
+func (s *elarian) DeleteCustomerAppData(customer IsCustomer) (*UpdateCustomerAppDataReply, error) {
+	command := &hera.DeleteCustomerAppDataCommand{}
+	if secondaryID, ok := customer.(*SecondaryID); ok {
+		command.Customer = &hera.DeleteCustomerAppDataCommand_SecondaryId{
+			SecondaryId: &hera.IndexMapping{Value: wrapperspb.String(secondaryID.Value), Key: secondaryID.Key},
 		}
 	}
-	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		command.DeleteCustomerAppData.Customer = &hera.DeleteCustomerAppDataCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer.CustomerNumber),
+	if customerNumber, ok := customer.(*CustomerNumber); ok {
+		command.Customer = &hera.DeleteCustomerAppDataCommand_CustomerNumber{
+			CustomerNumber: s.heraCustomerNumber(customerNumber),
 		}
 	}
-	if customer.ID != "" {
-		command.DeleteCustomerAppData.Customer = &hera.DeleteCustomerAppDataCommand_CustomerId{
-			CustomerId: customer.ID,
+	if id, ok := customer.(CustomerID); ok {
+		command.Customer = &hera.DeleteCustomerAppDataCommand_CustomerId{
+			CustomerId: string(id),
 		}
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_DeleteCustomerAppData{DeleteCustomerAppData: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -912,29 +920,25 @@ func (s *service) DeleteCustomerAppData(customer *Customer) (*UpdateCustomerAppD
 	}, nil
 }
 
-func (s *service) UpdateCustomerMetaData(customer *Customer, metadata ...*Metadata) (*UpdateCustomerStateReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_UpdateCustomerMetadata)
-	command.UpdateCustomerMetadata = &hera.UpdateCustomerMetadataCommand{}
-	req.Entry = command
+func (s *elarian) UpdateCustomerMetaData(customer IsCustomer, metadata ...*Metadata) (*UpdateCustomerStateReply, error) {
+	command := &hera.UpdateCustomerMetadataCommand{}
 
-	if !reflect.ValueOf(customer.SecondaryID).IsZero() {
-		command.UpdateCustomerMetadata.Customer = &hera.UpdateCustomerMetadataCommand_SecondaryId{
-			SecondaryId: s.secondaryID(customer),
+	if secondaryID, ok := customer.(*SecondaryID); ok {
+		command.Customer = &hera.UpdateCustomerMetadataCommand_SecondaryId{
+			SecondaryId: &hera.IndexMapping{Value: wrapperspb.String(secondaryID.Value), Key: secondaryID.Key},
 		}
 	}
-	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		command.UpdateCustomerMetadata.Customer = &hera.UpdateCustomerMetadataCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer.CustomerNumber),
+	if customerNumber, ok := customer.(*CustomerNumber); ok {
+		command.Customer = &hera.UpdateCustomerMetadataCommand_CustomerNumber{
+			CustomerNumber: s.heraCustomerNumber(customerNumber),
 		}
 	}
-	if customer.ID != "" {
-		command.UpdateCustomerMetadata.Customer = &hera.UpdateCustomerMetadataCommand_CustomerId{
-			CustomerId: customer.ID,
+	if id, ok := customer.(CustomerID); ok {
+		command.Customer = &hera.UpdateCustomerMetadataCommand_CustomerId{
+			CustomerId: string(id),
 		}
 	}
 	meta := map[string]*hera.DataMapValue{}
-
 	for _, val := range metadata {
 		mapValue := new(hera.DataMapValue)
 		if binaryValue, ok := val.Value.(BinaryDataValue); ok {
@@ -949,61 +953,19 @@ func (s *service) UpdateCustomerMetaData(customer *Customer, metadata ...*Metada
 		}
 		meta[val.Key] = mapValue
 	}
-	command.UpdateCustomerMetadata.Updates = meta
+	command.Updates = meta
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_UpdateCustomerMetadata{UpdateCustomerMetadata: command},
+	}
 
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
-	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
-	if err != nil {
-		return nil, err
-	}
-	reply := &hera.AppToServerCommandReply{}
-	if err = proto.Unmarshal(res.Data(), reply); err != nil {
-		return nil, err
-	}
-
-	return &UpdateCustomerStateReply{
-		Status:      reply.GetUpdateCustomerState().Status,
-		Description: reply.GetUpdateCustomerState().Description,
-		CustomerID:  reply.GetUpdateCustomerState().CustomerId.Value,
-	}, nil
-}
-
-func (s *service) DeleteCustomerMetaData(customer *Customer, keys ...string) (*UpdateCustomerStateReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_DeleteCustomerMetadata)
-	command.DeleteCustomerMetadata = &hera.DeleteCustomerMetadataCommand{}
-	req.Entry = command
-
-	if !reflect.ValueOf(customer.SecondaryID).IsZero() {
-		command.DeleteCustomerMetadata.Customer = &hera.DeleteCustomerMetadataCommand_SecondaryId{
-			SecondaryId: s.secondaryID(customer),
-		}
-	}
-	if !reflect.ValueOf(customer.CustomerNumber).IsZero() {
-		command.DeleteCustomerMetadata.Customer = &hera.DeleteCustomerMetadataCommand_CustomerNumber{
-			CustomerNumber: s.customerNumber(customer.CustomerNumber),
-		}
-	}
-	if customer.ID != "" {
-		command.DeleteCustomerMetadata.Customer = &hera.DeleteCustomerMetadataCommand_CustomerId{
-			CustomerId: customer.ID,
-		}
-	}
-	command.DeleteCustomerMetadata.Deletions = keys
-
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	data, err := proto.Marshal(req)
-	if err != nil {
-		return nil, err
-	}
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -1019,35 +981,77 @@ func (s *service) DeleteCustomerMetaData(customer *Customer, keys ...string) (*U
 	}, nil
 }
 
-func (s *service) UpdateMessagingConsent(customerNumber *CustomerNumber, channelNumber *MessagingChannelNumber, update MessagingConsentUpdate) (*UpdateMessagingConsentReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_UpdateMessagingConsent)
-	command.UpdateMessagingConsent = &hera.UpdateMessagingConsentCommand{}
-	req.Entry = command
+func (s *elarian) DeleteCustomerMetaData(customer IsCustomer, keys ...string) (*UpdateCustomerStateReply, error) {
+	command := &hera.DeleteCustomerMetadataCommand{
+		Deletions: keys,
+	}
+	if secondaryID, ok := customer.(*SecondaryID); ok {
+		command.Customer = &hera.DeleteCustomerMetadataCommand_SecondaryId{
+			SecondaryId: &hera.IndexMapping{Value: wrapperspb.String(secondaryID.Value), Key: secondaryID.Key},
+		}
+	}
+	if customerNumber, ok := customer.(*CustomerNumber); ok {
+		command.Customer = &hera.DeleteCustomerMetadataCommand_CustomerNumber{
+			CustomerNumber: s.heraCustomerNumber(customerNumber),
+		}
+	}
+	if id, ok := customer.(CustomerID); ok {
+		command.Customer = &hera.DeleteCustomerMetadataCommand_CustomerId{
+			CustomerId: string(id),
+		}
+	}
 
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_DeleteCustomerMetadata{DeleteCustomerMetadata: command},
+	}
+
+	data, err := proto.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
+	if err != nil {
+		return nil, err
+	}
+	reply := &hera.AppToServerCommandReply{}
+	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
+	return &UpdateCustomerStateReply{
+		Status:      reply.GetUpdateCustomerState().Status,
+		Description: reply.GetUpdateCustomerState().Description,
+		CustomerID:  reply.GetUpdateCustomerState().CustomerId.Value,
+	}, nil
+}
+
+func (s *elarian) UpdateMessagingConsent(customerNumber *CustomerNumber, channelNumber *MessagingChannelNumber, update MessagingConsentUpdate) (*UpdateMessagingConsentReply, error) {
+	command := &hera.UpdateMessagingConsentCommand{}
 	if !reflect.ValueOf(customerNumber).IsZero() {
-		command.UpdateMessagingConsent.CustomerNumber = &hera.CustomerNumber{
+		command.CustomerNumber = &hera.CustomerNumber{
 			Provider:  hera.CustomerNumberProvider(customerNumber.Provider),
 			Number:    customerNumber.Number,
 			Partition: wrapperspb.String(customerNumber.Partition),
 		}
 	}
 	if !reflect.ValueOf(channelNumber).IsZero() {
-		command.UpdateMessagingConsent.ChannelNumber = &hera.MessagingChannelNumber{
+		command.ChannelNumber = &hera.MessagingChannelNumber{
 			Channel: hera.MessagingChannel(channelNumber.Channel),
 			Number:  channelNumber.Number,
 		}
 	}
+	command.Update = hera.MessagingConsentUpdate(update)
 
-	command.UpdateMessagingConsent.Update = hera.MessagingConsentUpdate(update)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_UpdateMessagingConsent{UpdateMessagingConsent: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -1060,5 +1064,5 @@ func (s *service) UpdateMessagingConsent(customerNumber *CustomerNumber, channel
 		Status:      MessagingConsentUpdateStatus(reply.GetUpdateMessagingConsent().Status),
 		Description: reply.GetUpdateMessagingConsent().Description,
 		CustomerID:  reply.GetUpdateMessagingConsent().CustomerId.Value,
-	}, err
+	}, nil
 }

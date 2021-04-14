@@ -17,26 +17,26 @@ type (
 	}
 )
 
-func (s *service) GenerateAuthToken() (*GenerateAuthTokenReply, error) {
-	req := new(hera.AppToServerCommand)
-	req.Entry = new(hera.AppToServerCommand_GenerateAuthToken)
-	reply := new(hera.AppToServerCommandReply)
-
+func (s *elarian) GenerateAuthToken() (*GenerateAuthTokenReply, error) {
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_GenerateAuthToken{},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
 	}
-	err = proto.Unmarshal(res.Data(), reply)
-
+	reply := &hera.AppToServerCommandReply{}
+	if err := proto.Unmarshal(res.Data(), reply); err != nil {
+		return nil, err
+	}
 	return &GenerateAuthTokenReply{
 		LifeTime: reply.GetGenerateAuthToken().Lifetime.AsDuration(),
 		Token:    reply.GetGenerateAuthToken().Token,
-	}, err
+	}, nil
 }

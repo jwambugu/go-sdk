@@ -3,6 +3,7 @@ package elarian
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"log"
 	"reflect"
 	"time"
@@ -16,13 +17,13 @@ import (
 )
 
 type (
-	rSocketService struct {
+	service struct {
 		host                         string
 		port                         int
-		errorChannel                 chan error
-		replyChannel                 chan *hera.ServerToAppNotificationReply
-		notificationChannel          chan *hera.ServerToAppNotification
-		simulatorNotificationChannel chan *hera.ServerToSimulatorNotification
+		errorChannel                 chan<- error
+		replyChannel                 <-chan *hera.ServerToAppNotificationReply
+		notificationChannel          chan<- *hera.ServerToAppNotification
+		simulatorNotificationChannel chan<- *hera.ServerToSimulatorNotification
 	}
 
 	// Options Elarain initialization options
@@ -45,29 +46,25 @@ type (
 	}
 )
 
-func (s *rSocketService) connect(options *Options, connectionOptions *ConnectionOptions) (rsocket.Client, error) {
-	metadata := new(hera.AppConnectionMetadata)
-	metadata.OrgId = options.OrgID
-	metadata.AppId = options.AppID
-	metadata.SimplexMode = !options.IsSimulator
-	metadata.SimulatorMode = options.IsSimulator
-	metadata.SimplexMode = !options.AllowNotifications
-
-	if options.APIKey != "" {
-		metadata.ApiKey = &wrapperspb.StringValue{Value: options.APIKey}
-	}
-	if options.AuthToken != "" {
-		metadata.AuthToken = &wrapperspb.StringValue{Value: options.AuthToken}
+func (s *service) connect(options *Options, connectionOptions *ConnectionOptions) (rsocket.Client, error) {
+	metadata := &hera.AppConnectionMetadata{
+		OrgId:         options.OrgID,
+		AppId:         options.AppID,
+		SimulatorMode: options.IsSimulator,
+		SimplexMode:   !options.AllowNotifications,
+		ApiKey:        wrapperspb.String(options.APIKey),
+		AuthToken:     wrapperspb.String(options.AuthToken),
 	}
 
-	d, err := proto.Marshal(metadata)
+	data, err := proto.Marshal(metadata)
 	if err != nil {
-		log.Fatalln("Error marshaling metadata", err)
+		log.Println("Error marshaling metadata", err)
 	}
 
 	onConnect := func(c rsocket.Client, err error) {
 		if err != nil {
 			log.Fatalf("Error on connection: %v \n", err)
+			return
 		}
 		if options.Log {
 			log.Println("Connected to elarian successfully")
@@ -76,7 +73,8 @@ func (s *rSocketService) connect(options *Options, connectionOptions *Connection
 
 	onClose := func(err error) {
 		if err != nil {
-			log.Fatalf("Error closing connection: %v \n", err)
+			log.Printf("Error closing connection: %v \n", err)
+			return
 		}
 		if options.Log {
 			log.Println("Elarian connection closed successfully")
@@ -89,12 +87,12 @@ func (s *rSocketService) connect(options *Options, connectionOptions *Connection
 		case <-time.After(time.Second * 15):
 			reply := new(hera.ServerToAppNotificationReply)
 			data, _ := proto.Marshal(reply)
+			log.Println("WE got here")
 			return mono.Just(payload.New(data, []byte{}))
 		case reply := <-s.replyChannel:
 			data, err := proto.Marshal(reply)
 			if err != nil {
-				log.Fatalf("Marshaling Error: %v \n", err)
-				s.errorChannel <- err
+				s.errorChannel <- fmt.Errorf("Marshling error: %w ", err)
 			}
 			return mono.Just(payload.New(data, []byte{}))
 		}
@@ -129,9 +127,10 @@ func (s *rSocketService) connect(options *Options, connectionOptions *Connection
 		SetTLSConfig(&tls.Config{ServerName: s.host}).
 		Build()
 
-	connectionOpts := new(ConnectionOptions)
-	connectionOpts.MissedAcks = 6
-	connectionOpts.Resumable = true
+	connectionOpts := &ConnectionOptions{
+		MissedAcks: 6,
+		Resumable:  true,
+	}
 
 	if reflect.ValueOf(connectionOptions).IsZero() {
 		connectionOpts.Keepalive = time.Duration(time.Second * 2)
@@ -147,7 +146,7 @@ func (s *rSocketService) connect(options *Options, connectionOptions *Connection
 		DataMimeType("application/octet-stream").
 		OnClose(onClose).
 		OnConnect(onConnect).
-		SetupPayload(payload.New(d, nil)).
+		SetupPayload(payload.New(data, nil)).
 		Acceptor(acceptor).
 		Transport(tp).
 		Start(context.Background())
@@ -159,6 +158,6 @@ func (s *rSocketService) connect(options *Options, connectionOptions *Connection
 }
 
 // Connect establishes a connection to elarian
-func Connect(options *Options, connectionOptions *ConnectionOptions) (Service, error) {
+func Connect(options *Options, connectionOptions *ConnectionOptions) (Elarian, error) {
 	return NewService(options, connectionOptions)
 }

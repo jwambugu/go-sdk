@@ -15,20 +15,20 @@ import (
 )
 
 const (
-	AppID      string = "zordTest"
-	OrgID      string = "og-hv3yFs"
-	customerID string = "el_cst_27f2e69b82a82176133aeea2cec28e9b"
-	APIKey     string = "el_api_key_6b3ff181a2d5cf91f62d2133a67a25b3070d2d7305eba70288417b3ab9ebd145"
+	appID      string = "test_appId"
+	orgID      string = "test_org"
+	customerID string = "test_customernumber"
+	aPIKey     string = "test_apikey"
 )
 
 func main() {
-	opts := new(elarian.Options)
-	opts.APIKey = APIKey
-	opts.OrgID = OrgID
-	opts.AppID = AppID
-	opts.AllowNotifications = true
-	opts.Log = true
-
+	opts := &elarian.Options{
+		APIKey:             aPIKey,
+		OrgID:              orgID,
+		AppID:              appID,
+		AllowNotifications: true,
+		Log:                true,
+	}
 	service, err := elarian.Connect(opts, nil)
 	if err != nil {
 		log.Fatalln(err)
@@ -38,9 +38,21 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigs
-		service.Disconnect()
+		err := service.Disconnect()
+		if err != nil {
+			os.Exit(1)
+		}
 		os.Exit(0)
 	}()
+
+	includes := func(statusArr []elarian.PaymentStatus, status elarian.PaymentStatus) bool {
+		for _, s := range statusArr {
+			if status == s {
+				return true
+			}
+		}
+		return false
+	}
 
 	approveLoan := func(customer *elarian.Customer, balance float64) {
 		log.Printf("Processing loan for %s", customer.CustomerNumber.Number)
@@ -67,7 +79,16 @@ func main() {
 		if err != nil {
 			log.Fatalln("Error Initiating payment: ", err)
 		}
-		log.Println(res.Status)
+		acceptableStatus := []elarian.PaymentStatus{
+			elarian.PaymentStatusQueued,
+			elarian.PaymentStatusPendingConfirmation,
+			elarian.PaymentStatusPendingValidation,
+			elarian.PaymentStatusSuccess,
+		}
+
+		if !includes(acceptableStatus, res.Status) {
+			log.Fatalf("Failed to send Kes %f to %v reason: %s \n", balance, customer.CustomerNumber.Number, res.Description)
+		}
 		customer.UpdateMetaData(name, &elarian.Metadata{Key: "balance", Value: elarian.StringDataValue(strconv.FormatFloat(balance, 'f', 2, 64))})
 		messagingChannel := &elarian.MessagingChannelNumber{Number: "21356", Channel: elarian.MessagingChannelSms}
 		customer.SendMessage(messagingChannel, elarian.TextMessage(fmt.Sprintf("Congratulations %s, Your loan of KES %f has been approved. You are expexted to pay it back by %v", name.Value, balance, repaymentDate)))
@@ -134,7 +155,7 @@ func main() {
 		}
 		balance, ok := metaData["balance"]
 		if !ok {
-			metaData["balance"] = &elarian.Metadata{Key: "balance", Value: elarian.StringDataValue(0)}
+			metaData["balance"] = &elarian.Metadata{Key: "balance", Value: elarian.StringDataValue("0")}
 		}
 
 		strikeValue, err := strconv.Atoi(strike.Value.String())
@@ -292,7 +313,10 @@ func main() {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
-		service.InitializeNotificationStream()
+		err := <-service.InitializeNotificationStream()
+		if err != nil {
+			log.Println("Notification err", err)
+		}
 		wg.Done()
 	}(wg)
 

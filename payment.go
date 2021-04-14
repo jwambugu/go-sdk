@@ -2,6 +2,7 @@ package elarian
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"time"
 
@@ -95,90 +96,63 @@ const (
 	PaymentStatusReversed                 PaymentStatus = 500
 )
 
-// func (s *service) reply() {
-// 	re := &hera.GetCustomerStateReply{}
-// 	re.Description = ""
-// 	re.Status = true
-// 	re.Data = &hera.CustomerStateReplyData{
-// 		CustomerId: "",
-// 		IdentityState: &hera.IdentityState{
-// 			Tags:         []*hera.CustomerIndex{},
-// 			Metadata:     map[string]*hera.DataMapValue{},
-// 			SecondaryIds: []*hera.CustomerIndex{},
-// 		},
-// 		MessagingState: &hera.MessagingState{
-// 			Channels: []*hera.MessagingChannelState{},
-// 		},
-// 		PaymentState: &hera.PaymentState{
-// 			CustomerNumbers:     []*hera.CustomerNumber{},
-// 			ChannelNumbers:      []*hera.PaymentChannelNumber{},
-// 			TransactionLog:      []*hera.PaymentTransaction{},
-// 			PendingTransactions: []*hera.PaymentTransaction{},
-// 			Wallets:             make(map[string]*hera.PaymentBalance),
-// 		},
-// 		ActivityState: &hera.ActivityState{
-// 			Sessions:        []*hera.ActivitySessionState{},
-// 			CustomerNumbers: []*hera.CustomerNumber{},
-// 		},
-// 	}
-// }
-
-func (s *service) InitiatePayment(customer *Customer, params *Paymentrequest) (*InitiatePaymentReply, error) {
-	req := new(hera.AppToServerCommand)
-	command := new(hera.AppToServerCommand_InitiatePayment)
-	command.InitiatePayment = &hera.InitiatePaymentCommand{}
-	req.Entry = command
-
-	command.InitiatePayment.Value = &hera.Cash{
-		Amount:       params.Cash.Amount,
-		CurrencyCode: params.Cash.CurrencyCode,
+func (s *elarian) InitiatePayment(customer *Customer, params *Paymentrequest) (*InitiatePaymentReply, error) {
+	if params == nil || reflect.ValueOf(params).IsZero() {
+		return nil, errors.New("Initiate payment params required")
 	}
 
+	command := &hera.InitiatePaymentCommand{
+		Value: &hera.Cash{
+			Amount:       params.Cash.Amount,
+			CurrencyCode: params.Cash.CurrencyCode,
+		},
+	}
 	if !reflect.ValueOf(params.CreditParty.Customer).IsZero() {
-		command.InitiatePayment.CreditParty = &hera.PaymentCounterParty{
+		command.CreditParty = &hera.PaymentCounterParty{
 			Party: s.paymentCounterPartyAsCustomer(customer, &params.Channel),
 		}
 	}
 	if !reflect.ValueOf(params.CreditParty.Purse).IsZero() {
-		command.InitiatePayment.CreditParty = &hera.PaymentCounterParty{
+		command.CreditParty = &hera.PaymentCounterParty{
 			Party: s.paymentCounterPartyAsPurse(params.CreditParty.Purse),
 		}
 	}
 	if !reflect.ValueOf(params.CreditParty.Wallet).IsZero() {
-		command.InitiatePayment.CreditParty = &hera.PaymentCounterParty{
+		command.CreditParty = &hera.PaymentCounterParty{
 			Party: s.paymentCounterPartyAsWallet(params.CreditParty.Wallet),
 		}
 	}
-
 	if !reflect.ValueOf(params.DebitParty.Customer).IsZero() {
-		command.InitiatePayment.DebitParty = &hera.PaymentCounterParty{
+		command.DebitParty = &hera.PaymentCounterParty{
 			Party: s.paymentCounterPartyAsCustomer(customer, &params.Channel),
 		}
 	}
 	if !reflect.ValueOf(params.DebitParty.Purse).IsZero() {
-		command.InitiatePayment.DebitParty = &hera.PaymentCounterParty{
+		command.DebitParty = &hera.PaymentCounterParty{
 			Party: s.paymentCounterPartyAsPurse(params.DebitParty.Purse),
 		}
 	}
 	if !reflect.ValueOf(params.DebitParty.Wallet).IsZero() {
-		command.InitiatePayment.DebitParty = &hera.PaymentCounterParty{
+		command.DebitParty = &hera.PaymentCounterParty{
 			Party: s.paymentCounterPartyAsWallet(params.DebitParty.Wallet),
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
+	req := &hera.AppToServerCommand{
+		Entry: &hera.AppToServerCommand_InitiatePayment{InitiatePayment: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	reply := new(hera.AppToServerCommandReply)
+	reply := &hera.AppToServerCommandReply{}
 	if err = proto.Unmarshal(res.Data(), reply); err != nil {
 		return nil, err
 	}
@@ -191,27 +165,36 @@ func (s *service) InitiatePayment(customer *Customer, params *Paymentrequest) (*
 	}, nil
 }
 
-func (s *service) ReceivePayment(channel *PaymentChannelNumber, customerNumber, transactionID string) (*SimulatorToServerCommandReply, error) {
-	req := new(hera.SimulatorToServerCommand)
-	command := new(hera.SimulatorToServerCommand_ReceivePayment)
-	req.Entry = command
-	if !reflect.ValueOf(customerNumber).IsZero() {
-		command.ReceivePayment.CustomerNumber = customerNumber
+func (s *elarian) ReceivePayment(customerNumber, transactionID string, channel *PaymentChannelNumber, cash *Cash, paymentStatus PaymentStatus) (*SimulatorToServerCommandReply, error) {
+	if channel == nil || reflect.ValueOf(channel).IsZero() {
+		return nil, errors.New("paymentChannel is required")
 	}
-	if !reflect.ValueOf(channel).IsZero() {
-		command.ReceivePayment.ChannelNumber = &hera.PaymentChannelNumber{
+	if cash == nil || reflect.ValueOf(cash).IsZero() {
+		return nil, errors.New("cash is required")
+	}
+
+	command := &hera.ReceivePaymentSimulatorCommand{
+		TransactionId:  transactionID,
+		CustomerNumber: customerNumber,
+		ChannelNumber: &hera.PaymentChannelNumber{
 			Channel: hera.PaymentChannel(channel.Channel),
 			Number:  channel.Number,
-		}
+		},
+		Value: &hera.Cash{
+			CurrencyCode: cash.CurrencyCode,
+			Amount:       cash.Amount,
+		},
+		Status: hera.PaymentStatus(paymentStatus),
 	}
-	command.ReceivePayment.TransactionId = transactionID
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
+	req := &hera.SimulatorToServerCommand{
+		Entry: &hera.SimulatorToServerCommand_ReceivePayment{ReceivePayment: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -227,20 +210,20 @@ func (s *service) ReceivePayment(channel *PaymentChannelNumber, customerNumber, 
 	}, nil
 }
 
-func (s *service) UpdatePaymentStatus(transactionID string, paymentStatus PaymentStatus) (*SimulatorToServerCommandReply, error) {
-	req := new(hera.SimulatorToServerCommand)
-	command := new(hera.SimulatorToServerCommand_UpdatePaymentStatus)
-	req.Entry = command
-	command.UpdatePaymentStatus = &hera.UpdatePaymentStatusSimulatorCommand{}
-	command.UpdatePaymentStatus.Status = hera.PaymentStatus(paymentStatus)
-	command.UpdatePaymentStatus.TransactionId = transactionID
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
+func (s *elarian) UpdatePaymentStatus(transactionID string, paymentStatus PaymentStatus) (*SimulatorToServerCommandReply, error) {
+	command := &hera.UpdatePaymentStatusSimulatorCommand{
+		TransactionId: transactionID,
+		Status:        hera.PaymentStatus(paymentStatus),
+	}
+	req := &hera.SimulatorToServerCommand{
+		Entry: &hera.SimulatorToServerCommand_UpdatePaymentStatus{UpdatePaymentStatus: command},
+	}
 	data, err := proto.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err

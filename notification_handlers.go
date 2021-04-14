@@ -6,162 +6,169 @@ import (
 	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
 )
 
-func (s *service) reminderNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
-	if reflect.ValueOf(notf).IsZero() {
+func (s *elarian) reminderNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
+	if notf == nil || reflect.ValueOf(notf).IsZero() {
 		return
 	}
 	if entry, ok := notf.Entry.(*hera.ServerToAppCustomerNotification_Reminder); ok {
 		reminder := s.reminderNotification(entry.Reminder)
 		customer := &Customer{ID: notf.CustomerId}
 		appData := &Appdata{}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
-			appData.Value = StringDataValue(val.StringVal)
-		}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
-			arr := make(BinaryDataValue, len(val.BytesVal))
-			for _, byteval := range val.BytesVal {
-				arr = append(arr, byteval)
+		if !reflect.ValueOf(notf.AppData).IsZero() {
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
+				appData.Value = StringDataValue(val.StringVal)
 			}
-			appData.Value = arr
-
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
+				arr := make(BinaryDataValue, len(val.BytesVal))
+				for _, byteval := range val.BytesVal {
+					arr = append(arr, byteval)
+				}
+				appData.Value = arr
+			}
 		}
 		s.bus.Publish(string(ElarianReminderNotification), reminder, appData, customer, s.notificationCallBack)
 	}
 }
 
-func (s *service) messageStatusNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
-	if reflect.ValueOf(notf).IsZero() {
+func (s *elarian) messageStatusNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
+	if notf == nil || reflect.ValueOf(notf).IsZero() {
 		return
 	}
 	if entry, ok := notf.Entry.(*hera.ServerToAppCustomerNotification_MessageStatus); ok {
 		statusNotification := s.messageStatusNotf(entry.MessageStatus)
 		customer := &Customer{ID: notf.CustomerId}
 		appData := &Appdata{}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
-			appData.Value = StringDataValue(val.StringVal)
-		}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
-			arr := make(BinaryDataValue, len(val.BytesVal))
-			for _, byteval := range val.BytesVal {
-				arr = append(arr, byteval)
+		if !reflect.ValueOf(notf.AppData).IsZero() {
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
+				appData.Value = StringDataValue(val.StringVal)
 			}
-			appData.Value = arr
-
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
+				arr := make(BinaryDataValue, len(val.BytesVal))
+				for _, byteval := range val.BytesVal {
+					arr = append(arr, byteval)
+				}
+				appData.Value = arr
+			}
 		}
 		s.bus.Publish(string(ElarianMessageStatusNotification), statusNotification, appData, customer, s.notificationCallBack)
 	}
 }
 
-func (s *service) messagingSessionStartedNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
-	if reflect.ValueOf(notf).IsZero() {
+func (s *elarian) messagingSessionStartedNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
+	if notf == nil || reflect.ValueOf(notf).IsZero() {
 		return
 	}
 	if entry, ok := notf.Entry.(*hera.ServerToAppCustomerNotification_MessagingSessionStarted); ok {
 		notification := s.messageSessionStartedNotf(entry.MessagingSessionStarted)
 		customer := &Customer{ID: notf.CustomerId, CustomerNumber: notification.CustomerNumber}
 		appData := &Appdata{}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
-			appData.Value = StringDataValue(val.StringVal)
-		}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
-			arr := make(BinaryDataValue, len(val.BytesVal))
-			for _, byteval := range val.BytesVal {
-				arr = append(arr, byteval)
+		if !reflect.ValueOf(notf.AppData).IsZero() {
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
+				appData.Value = StringDataValue(val.StringVal)
 			}
-			appData.Value = arr
-
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
+				arr := make(BinaryDataValue, len(val.BytesVal))
+				for _, byteval := range val.BytesVal {
+					arr = append(arr, byteval)
+				}
+				appData.Value = arr
+			}
 		}
 		s.bus.Publish(string(ElarianMessagingSessionStartedNotification), notification, appData, customer, s.notificationCallBack)
 	}
 }
 
-func (s *service) messagingSessionRenewedNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
-	if reflect.ValueOf(notf).IsZero() {
+func (s *elarian) messagingSessionRenewedNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
+	if notf == nil || reflect.ValueOf(notf).IsZero() {
 		return
 	}
 	if entry, ok := notf.Entry.(*hera.ServerToAppCustomerNotification_MessagingSessionRenewed); ok {
 		notification := s.messageSessionRenewedNotf(entry.MessagingSessionRenewed)
 		customer := &Customer{ID: notf.CustomerId, CustomerNumber: notification.CustomerNumber}
 		appData := &Appdata{}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
-			appData.Value = StringDataValue(val.StringVal)
-		}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
-			arr := make(BinaryDataValue, len(val.BytesVal))
-			for _, byteval := range val.BytesVal {
-				arr = append(arr, byteval)
+		if !reflect.ValueOf(notf.AppData).IsZero() {
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
+				appData.Value = StringDataValue(val.StringVal)
 			}
-			appData.Value = arr
-
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
+				arr := make(BinaryDataValue, len(val.BytesVal))
+				for _, byteval := range val.BytesVal {
+					arr = append(arr, byteval)
+				}
+				appData.Value = arr
+			}
 		}
 		s.bus.Publish(string(ElarianMessagingSessionRenewedNotification), notification, appData, customer, s.notificationCallBack)
 	}
 }
 
-func (s *service) messagingSessionEndedNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
-	if reflect.ValueOf(notf).IsZero() {
+func (s *elarian) messagingSessionEndedNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
+	if notf == nil || reflect.ValueOf(notf).IsZero() {
 		return
 	}
 	if entry, ok := notf.Entry.(*hera.ServerToAppCustomerNotification_MessagingSessionEnded); ok {
 		notification := s.MessageSessionEndedNotf(entry.MessagingSessionEnded)
 		customer := &Customer{ID: notf.CustomerId, CustomerNumber: notification.CustomerNumber}
 		appData := &Appdata{}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
-			appData.Value = StringDataValue(val.StringVal)
-		}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
-			arr := make(BinaryDataValue, len(val.BytesVal))
-			for _, byteval := range val.BytesVal {
-				arr = append(arr, byteval)
+		if !reflect.ValueOf(notf.AppData).IsZero() {
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
+				appData.Value = StringDataValue(val.StringVal)
 			}
-			appData.Value = arr
-
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
+				arr := make(BinaryDataValue, len(val.BytesVal))
+				for _, byteval := range val.BytesVal {
+					arr = append(arr, byteval)
+				}
+				appData.Value = arr
+			}
 		}
 		s.bus.Publish(string(ElarianMessagingSessionEndedNotification), notification, appData, customer, s.notificationCallBack)
 	}
 }
 
-func (s *service) messagingConsentUpdateNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
-	if reflect.ValueOf(notf).IsZero() {
+func (s *elarian) messagingConsentUpdateNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
+	if notf == nil || reflect.ValueOf(notf).IsZero() {
 		return
 	}
 	if entry, ok := notf.Entry.(*hera.ServerToAppCustomerNotification_MessagingConsentUpdate); ok {
 		notification := s.messagingConsentUpdateNotf(entry.MessagingConsentUpdate)
 		customer := &Customer{ID: notf.CustomerId, CustomerNumber: notification.CustomerNumber}
 		appData := &Appdata{}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
-			appData.Value = StringDataValue(val.StringVal)
-		}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
-			arr := make(BinaryDataValue, len(val.BytesVal))
-			for _, byteval := range val.BytesVal {
-				arr = append(arr, byteval)
+		if !reflect.ValueOf(notf.AppData).IsZero() {
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
+				appData.Value = StringDataValue(val.StringVal)
 			}
-			appData.Value = arr
-
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
+				arr := make(BinaryDataValue, len(val.BytesVal))
+				for _, byteval := range val.BytesVal {
+					arr = append(arr, byteval)
+				}
+				appData.Value = arr
+			}
 		}
 		s.bus.Publish(string(ElarianMessagingConsentUpdateNotification), notification, appData, customer, s.notificationCallBack)
 	}
 }
 
-func (s *service) recievedMessageNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
-	if reflect.ValueOf(notf).IsZero() {
+func (s *elarian) recievedMessageNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
+	if notf == nil || reflect.ValueOf(notf).IsZero() {
 		return
 	}
 	if entry, ok := notf.Entry.(*hera.ServerToAppCustomerNotification_ReceivedMessage); ok {
 		notification := s.recievedMessageNotification(entry.ReceivedMessage)
 		customer := &Customer{ID: notf.CustomerId, CustomerNumber: notification.CustomerNumber}
 		appData := &Appdata{}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
-			appData.Value = StringDataValue(val.StringVal)
-		}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
-			arr := make(BinaryDataValue, len(val.BytesVal))
-			for _, byteval := range val.BytesVal {
-				arr = append(arr, byteval)
+		if !reflect.ValueOf(notf.AppData).IsZero() {
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
+				appData.Value = StringDataValue(val.StringVal)
 			}
-			appData.Value = arr
-
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
+				arr := make(BinaryDataValue, len(val.BytesVal))
+				for _, byteval := range val.BytesVal {
+					arr = append(arr, byteval)
+				}
+				appData.Value = arr
+			}
 		}
 		for _, part := range notification.Parts {
 			if notification.ChannelNumber.Channel == MessagingChannelUssd {
@@ -189,122 +196,127 @@ func (s *service) recievedMessageNotificationHandler(notf *hera.ServerToAppCusto
 	}
 }
 
-func (s *service) sentMesssageNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
-	if reflect.ValueOf(notf).IsZero() {
+func (s *elarian) sentMesssageNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
+	if notf == nil || reflect.ValueOf(notf).IsZero() {
 		return
 	}
 	if entry, ok := notf.Entry.(*hera.ServerToAppCustomerNotification_SentMessageReaction); ok {
 		notification := s.sentMessageReaction(entry.SentMessageReaction)
 		customer := &Customer{ID: notf.CustomerId, CustomerNumber: notification.CustomerNumber}
 		appData := &Appdata{}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
-			appData.Value = StringDataValue(val.StringVal)
-		}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
-			arr := make(BinaryDataValue, len(val.BytesVal))
-			for _, byteval := range val.BytesVal {
-				arr = append(arr, byteval)
+		if !reflect.ValueOf(notf.AppData).IsZero() {
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
+				appData.Value = StringDataValue(val.StringVal)
 			}
-			appData.Value = arr
-
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
+				arr := make(BinaryDataValue, len(val.BytesVal))
+				for _, byteval := range val.BytesVal {
+					arr = append(arr, byteval)
+				}
+				appData.Value = arr
+			}
 		}
 		s.bus.Publish(string(ElarianSentMessageReactionNotification), notification, appData, customer, s.notificationCallBack)
 	}
 }
 
-func (s *service) receivedPaymentNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
-	if reflect.ValueOf(notf).IsZero() {
+func (s *elarian) receivedPaymentNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
+	if notf == nil || reflect.ValueOf(notf).IsZero() {
 		return
 	}
 	if entry, ok := notf.Entry.(*hera.ServerToAppCustomerNotification_ReceivedPayment); ok {
 		notification := s.recievedPaymentNotf(entry.ReceivedPayment)
 		customer := &Customer{ID: notf.CustomerId, CustomerNumber: notification.CustomerNumber}
 		appData := &Appdata{}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
-			appData.Value = StringDataValue(val.StringVal)
-		}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
-			arr := make(BinaryDataValue, len(val.BytesVal))
-			for _, byteval := range val.BytesVal {
-				arr = append(arr, byteval)
+		if !reflect.ValueOf(notf.AppData).IsZero() {
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
+				appData.Value = StringDataValue(val.StringVal)
 			}
-			appData.Value = arr
-
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
+				arr := make(BinaryDataValue, len(val.BytesVal))
+				for _, byteval := range val.BytesVal {
+					arr = append(arr, byteval)
+				}
+				appData.Value = arr
+			}
 		}
 		s.bus.Publish(string(ElarianReceivedPaymentNotification), notification, appData, customer, s.notificationCallBack)
 	}
 }
 
-func (s *service) paymentStatusNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
-	if reflect.ValueOf(notf).IsZero() {
+func (s *elarian) paymentStatusNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
+	if notf == nil || reflect.ValueOf(notf).IsZero() {
 		return
 	}
 	if entry, ok := notf.Entry.(*hera.ServerToAppCustomerNotification_PaymentStatus); ok {
 		notification := s.paymentStatusNotf(entry.PaymentStatus)
 		customer := &Customer{ID: notf.CustomerId}
 		appData := &Appdata{}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
-			appData.Value = StringDataValue(val.StringVal)
-		}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
-			arr := make(BinaryDataValue, len(val.BytesVal))
-			for _, byteval := range val.BytesVal {
-				arr = append(arr, byteval)
+		if !reflect.ValueOf(notf.AppData).IsZero() {
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
+				appData.Value = StringDataValue(val.StringVal)
 			}
-			appData.Value = arr
-
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
+				arr := make(BinaryDataValue, len(val.BytesVal))
+				for _, byteval := range val.BytesVal {
+					arr = append(arr, byteval)
+				}
+				appData.Value = arr
+			}
 		}
 		s.bus.Publish(string(ElarianPaymentStatusNotification), notification, appData, customer, s.notificationCallBack)
 	}
 }
 
-func (s *service) walletPaymentStatusNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
-	if reflect.ValueOf(notf).IsZero() {
+func (s *elarian) walletPaymentStatusNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
+	if notf == nil || reflect.ValueOf(notf).IsZero() {
 		return
 	}
 	if entry, ok := notf.Entry.(*hera.ServerToAppCustomerNotification_WalletPaymentStatus); ok {
 		notification := s.walletPaymentStatusNotf(entry.WalletPaymentStatus)
 		customer := &Customer{ID: notf.CustomerId}
 		appData := &Appdata{}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
-			appData.Value = StringDataValue(val.StringVal)
-		}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
-			arr := make(BinaryDataValue, len(val.BytesVal))
-			for _, byteval := range val.BytesVal {
-				arr = append(arr, byteval)
+		if !reflect.ValueOf(notf.AppData).IsZero() {
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
+				appData.Value = StringDataValue(val.StringVal)
 			}
-			appData.Value = arr
-
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
+				arr := make(BinaryDataValue, len(val.BytesVal))
+				for _, byteval := range val.BytesVal {
+					arr = append(arr, byteval)
+				}
+				appData.Value = arr
+			}
 		}
 		s.bus.Publish(string(ElarianWalletPaymentStatusNotification), notification, appData, customer, s.notificationCallBack)
 	}
 }
 
-func (s *service) customerActivityNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
-	if reflect.ValueOf(notf).IsZero() {
+func (s *elarian) customerActivityNotificationHandler(notf *hera.ServerToAppCustomerNotification) {
+	if notf == nil || reflect.ValueOf(notf).IsZero() {
 		return
 	}
 	if entry, ok := notf.Entry.(*hera.ServerToAppCustomerNotification_CustomerActivity); ok {
 		notification := s.customerActivity(entry.CustomerActivity)
 		customer := &Customer{ID: notf.CustomerId, CustomerNumber: notification.CustomerNumber}
 		appData := &Appdata{}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
-			appData.Value = StringDataValue(val.StringVal)
-		}
-		if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
-			arr := make(BinaryDataValue, len(val.BytesVal))
-			for _, byteval := range val.BytesVal {
-				arr = append(arr, byteval)
+		if !reflect.ValueOf(notf.AppData).IsZero() {
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_StringVal); ok {
+				appData.Value = StringDataValue(val.StringVal)
 			}
-			appData.Value = arr
-
+			if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
+				arr := make(BinaryDataValue, len(val.BytesVal))
+				for _, byteval := range val.BytesVal {
+					arr = append(arr, byteval)
+				}
+				appData.Value = arr
+			}
 		}
 		s.bus.Publish(string(ElarianCustomerActivityNotification), notification, appData, customer, s.notificationCallBack)
 	}
 }
 
-func (s *service) paymentPurseStatusNotificationHandler(notf *hera.ServerToAppNotification_Purse) {
+func (s *elarian) paymentPurseStatusNotificationHandler(notf *hera.ServerToAppNotification_Purse) {
 	if reflect.ValueOf(notf).IsZero() || reflect.ValueOf(notf.Purse).IsZero() {
 		return
 	}
@@ -323,8 +335,8 @@ func (s *service) paymentPurseStatusNotificationHandler(notf *hera.ServerToAppNo
 	}
 }
 
-func (s *service) SendChannelPaymentSimulatorNotificationHandler(notf *hera.ServerToSimulatorNotification) {
-	if reflect.ValueOf(notf).IsZero() {
+func (s *elarian) SendChannelPaymentSimulatorNotificationHandler(notf *hera.ServerToSimulatorNotification) {
+	if notf == nil || reflect.ValueOf(notf).IsZero() {
 		return
 	}
 	if entry, ok := notf.Entry.(*hera.ServerToSimulatorNotification_SendChannelPayment); ok {
@@ -358,7 +370,7 @@ func (s *service) SendChannelPaymentSimulatorNotificationHandler(notf *hera.Serv
 	}
 }
 
-func (s *service) CheckoutPaymentSimulatorNotificationHandler(notf *hera.ServerToSimulatorNotification) {
+func (s *elarian) CheckoutPaymentSimulatorNotificationHandler(notf *hera.ServerToSimulatorNotification) {
 	if entry, ok := notf.Entry.(*hera.ServerToSimulatorNotification_CheckoutPayment); ok {
 		customer := &Customer{
 			ID: entry.CheckoutPayment.CustomerId,
@@ -396,7 +408,7 @@ func (s *service) CheckoutPaymentSimulatorNotificationHandler(notf *hera.ServerT
 		s.bus.Publish(string(ElarianCheckoutPaymentSimulatorNotification), notification, nil, customer, s.notificationCallBack)
 	}
 }
-func (s *service) SendCustomerPaymentSimulatorNotificationHandler(notf *hera.ServerToSimulatorNotification) {
+func (s *elarian) SendCustomerPaymentSimulatorNotificationHandler(notf *hera.ServerToSimulatorNotification) {
 	if entry, ok := notf.Entry.(*hera.ServerToSimulatorNotification_SendCustomerPayment); ok {
 		customer := &Customer{
 			ID: entry.SendCustomerPayment.CustomerId,
@@ -434,7 +446,7 @@ func (s *service) SendCustomerPaymentSimulatorNotificationHandler(notf *hera.Ser
 		s.bus.Publish(string(ElarianSendCustomerPaymentSimulatorNotification), notification, nil, customer, s.notificationCallBack)
 	}
 }
-func (s *service) MakeVoiceCallSimulatorNotificationHandler(notf *hera.ServerToSimulatorNotification) {
+func (s *elarian) MakeVoiceCallSimulatorNotificationHandler(notf *hera.ServerToSimulatorNotification) {
 	if entry, ok := notf.Entry.(*hera.ServerToSimulatorNotification_MakeVoiceCall); ok {
 		customer := &Customer{
 			ID: entry.MakeVoiceCall.CustomerId,
@@ -456,7 +468,7 @@ func (s *service) MakeVoiceCallSimulatorNotificationHandler(notf *hera.ServerToS
 	}
 }
 
-func (s *service) SendMessageSimulatorNotificationHandler(notf *hera.ServerToSimulatorNotification) {
+func (s *elarian) SendMessageSimulatorNotificationHandler(notf *hera.ServerToSimulatorNotification) {
 	if entry, ok := notf.Entry.(*hera.ServerToSimulatorNotification_SendMessage); ok {
 		customer := &Customer{
 			ID: entry.SendMessage.CustomerId,
