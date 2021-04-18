@@ -90,7 +90,6 @@ func (s *service) connect(options *Options, connectionOptions *ConnectionOptions
 		case <-time.After(time.Second * 15):
 			reply := new(hera.ServerToAppNotificationReply)
 			data, _ := proto.Marshal(reply)
-			log.Println("WE got here")
 			return mono.Just(payload.New(data, []byte{}))
 		case reply := <-s.replyChannel:
 			data, err := proto.Marshal(reply)

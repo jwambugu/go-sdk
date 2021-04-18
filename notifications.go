@@ -241,17 +241,17 @@ func (s *elarian) notificationCallBack(body IsOutBoundMessageBody, appData *Appd
 			Data: &hera.DataMapValue{},
 		}
 
-		if stringVal, ok := appData.Value.(StringDataValue); ok {
+		if appData.Value != "" {
 			reply.DataUpdate.Data = &hera.DataMapValue{
 				Value: &hera.DataMapValue_StringVal{
-					StringVal: string(stringVal),
+					StringVal: appData.Value,
 				},
 			}
 		}
-		if bytesVal, ok := appData.Value.(StringDataValue); ok {
+		if len(appData.BytesValue) > 0 {
 			reply.DataUpdate.Data = &hera.DataMapValue{
 				Value: &hera.DataMapValue_BytesVal{
-					BytesVal: []byte(bytesVal),
+					BytesVal: appData.BytesValue,
 				},
 			}
 		}

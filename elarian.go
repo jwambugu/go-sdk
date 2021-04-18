@@ -21,13 +21,6 @@ type (
 	// ActivityChannel is an enum that defines a type of activity  channel. it could be a web and mobile
 	ActivityChannel int32
 
-	// DataValue interface is implemented by metadata and appdata as with both you can store data as either a string or an array of bytes
-	DataValue interface {
-		isDataValue()
-		String() string
-		Bytes() []byte
-	}
-
 	// IsCustomer interface denotes a customer identifier which can be an id, secondaryID or a customerNumber
 	IsCustomer interface {
 		customer()
@@ -87,13 +80,15 @@ type (
 
 	// Metadata defines a customer's metadata oneOf value of bytes value should be provided
 	Metadata struct {
-		Key   string    `json:"key,omitempty"`
-		Value DataValue `json:"value,omitempty"`
+		Key        string `json:"key,omitempty"`
+		Value      string `json:"value,omitempty"`
+		BytesValue []byte `json:"bytesValue,omitempty"`
 	}
 
 	// Appdata defines a customer's metadata oneOf value of bytes value should be provided
 	Appdata struct {
-		Value DataValue `json:"value,omitempty"`
+		Value      string `json:"value,omitempty"`
+		BytesValue []byte `json:"bytesValue,omitempty"`
 	}
 
 	// ActivityChannelNumber defines an activity channel
@@ -209,6 +204,7 @@ func (CustomerID) customer()      {}
 
 func (s *elarian) GetCustomerState(ctx context.Context, customer IsCustomer) (*hera.GetCustomerStateReply, error) {
 	command := &hera.GetCustomerStateCommand{}
+
 	if secondaryID, ok := customer.(*SecondaryID); ok {
 		command.Customer = &hera.GetCustomerStateCommand_SecondaryId{
 			SecondaryId: &hera.IndexMapping{Value: wrapperspb.String(secondaryID.Value), Key: secondaryID.Key},
@@ -236,7 +232,7 @@ func (s *elarian) GetCustomerState(ctx context.Context, customer IsCustomer) (*h
 	if err != nil {
 		return nil, err
 	}
-	reply := new(hera.AppToServerCommandReply)
+	reply := &hera.AppToServerCommandReply{}
 	if err = proto.Unmarshal(payload.Data(), reply); err != nil {
 		return nil, err
 	}
@@ -788,14 +784,10 @@ func (s *elarian) LeaseCustomerAppData(ctx context.Context, customer IsCustomer)
 		Appdata:     &Appdata{},
 	}
 	if val, ok := commandReply.GetLeaseCustomerAppData().Value.Value.(*hera.DataMapValue_StringVal); ok {
-		reply.Appdata.Value = StringDataValue(val.StringVal)
+		reply.Appdata.Value = val.StringVal
 	}
 	if val, ok := commandReply.GetLeaseCustomerAppData().Value.Value.(*hera.DataMapValue_BytesVal); ok {
-		byteArr := make(BinaryDataValue, len(val.BytesVal))
-		for _, byteVal := range val.BytesVal {
-			byteArr = append(byteArr, byteVal)
-		}
-		reply.Appdata.Value = byteArr
+		reply.Appdata.BytesValue = val.BytesVal
 	}
 	return reply, err
 }
@@ -819,14 +811,15 @@ func (s *elarian) UpdateCustomerAppData(ctx context.Context, customer IsCustomer
 	}
 
 	command.Update = &hera.DataMapValue{}
-	if stringValue, ok := appdata.Value.(StringDataValue); ok {
+
+	if appdata.Value != "" {
 		command.Update.Value = &hera.DataMapValue_StringVal{
-			StringVal: string(stringValue),
+			StringVal: appdata.Value,
 		}
 	}
-	if binaryValue, ok := appdata.Value.(BinaryDataValue); ok {
+	if len(appdata.BytesValue) > 0 {
 		command.Update.Value = &hera.DataMapValue_BytesVal{
-			BytesVal: binaryValue,
+			BytesVal: appdata.BytesValue,
 		}
 	}
 	req := &hera.AppToServerCommand{
@@ -912,14 +905,14 @@ func (s *elarian) UpdateCustomerMetaData(ctx context.Context, customer IsCustome
 	meta := map[string]*hera.DataMapValue{}
 	for _, val := range metadata {
 		mapValue := new(hera.DataMapValue)
-		if binaryValue, ok := val.Value.(BinaryDataValue); ok {
+		if len(val.BytesValue) > 0 {
 			mapValue.Value = &hera.DataMapValue_BytesVal{
-				BytesVal: binaryValue,
+				BytesVal: val.BytesValue,
 			}
 		}
-		if stringValue, ok := val.Value.(StringDataValue); ok {
+		if val.Value != "" {
 			mapValue.Value = &hera.DataMapValue_StringVal{
-				StringVal: string(stringValue),
+				StringVal: val.Value,
 			}
 		}
 		meta[val.Key] = mapValue

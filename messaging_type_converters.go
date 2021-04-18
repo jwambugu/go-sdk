@@ -270,15 +270,17 @@ func (s *elarian) sentMessageReaction(notf *hera.SentMessageReactionNotification
 }
 
 func (s *elarian) recievedMessageNotification(notf *hera.ReceivedMessageNotification) *RecievedMessageNotification {
-	var notification *RecievedMessageNotification
+	notification := &RecievedMessageNotification{}
 
 	notification.MessageID = notf.MessageId
 
 	if !reflect.ValueOf(notf.CustomerNumber).IsZero() {
 		notification.CustomerNumber = &CustomerNumber{
-			Number:    notf.CustomerNumber.Number,
-			Partition: notf.CustomerNumber.Partition.Value,
-			Provider:  NumberProvider(notf.CustomerNumber.Provider),
+			Number:   notf.CustomerNumber.Number,
+			Provider: NumberProvider(notf.CustomerNumber.Provider),
+		}
+		if !reflect.ValueOf(notf.CustomerNumber.Partition).IsZero() {
+			notification.CustomerNumber.Partition = notf.CustomerNumber.GetPartition().Value
 		}
 	}
 
@@ -288,9 +290,13 @@ func (s *elarian) recievedMessageNotification(notf *hera.ReceivedMessageNotifica
 			Channel: MessagingChannel(notf.ChannelNumber.Channel),
 		}
 	}
-	notification.MessageID = notf.MessageId
-	notification.SessionID = notf.SessionId.Value
-	notification.InReplyTo = notf.InReplyTo.Value
+	if notf.SessionId != nil {
+		notification.SessionID = notf.SessionId.Value
+	}
+	if notf.InReplyTo != nil {
+		notification.InReplyTo = notf.InReplyTo.Value
+	}
+
 	notification.Parts = []*InBoundMessageBody{}
 
 	for _, part := range notf.Parts {
@@ -341,11 +347,11 @@ func (s *elarian) recievedMessageNotification(notf *hera.ReceivedMessageNotifica
 			notification.Parts = append(notification.Parts,
 				&InBoundMessageBody{
 					Ussd: &UssdSessionNotification{
-						SessionID: notf.SessionId.Value,
-						Input:     ussd.Ussd.Value,
+						SessionID: notf.GetSessionId().Value,
+						Input:     ussd.Ussd.GetValue(),
 					},
 				})
-
+			continue
 		}
 		if voice, ok := part.Entry.(*hera.InboundMessageBody_Voice); ok {
 			notification.Parts = append(notification.Parts, &InBoundMessageBody{

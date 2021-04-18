@@ -193,23 +193,18 @@ func (c *Customer) GetMetadata(ctx context.Context) (map[string]*Metadata, error
 	if err != nil {
 		return nil, err
 	}
-
-	if reflect.ValueOf(state.Data.IdentityState).IsZero() {
-		return nil, err
-	}
 	metaMap := make(map[string]*Metadata)
+	if reflect.ValueOf(state).IsZero() || reflect.ValueOf(state.Data).IsZero() || reflect.ValueOf(state.Data.IdentityState).IsZero() || reflect.ValueOf(state.Data.IdentityState.Metadata).IsZero() {
+		return metaMap, nil
+	}
 	metadata := state.Data.IdentityState.Metadata
 	for key, value := range metadata {
 		meta := &Metadata{Key: key}
 		if value, ok := value.Value.(*hera.DataMapValue_StringVal); ok {
-			meta.Value = StringDataValue(value.StringVal)
+			meta.Value = value.StringVal
 		}
 		if value, ok := value.Value.(*hera.DataMapValue_BytesVal); ok {
-			bytesArr := make(BinaryDataValue, len(value.BytesVal))
-			for _, byteval := range value.BytesVal {
-				bytesArr = append(bytesArr, byteval)
-			}
-			meta.Value = bytesArr
+			meta.BytesValue = value.BytesVal
 		}
 		metaMap[key] = meta
 	}

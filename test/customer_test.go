@@ -212,7 +212,7 @@ func Test_Customers(t *testing.T) {
 			ctx,
 			elarian.CustomerID(customerID),
 			&elarian.Appdata{
-				Value: elarian.StringDataValue(`{"sessionId": "fake-session-id", "properties": { "ok": 1, "val": "false" } }`),
+				Value: `{"sessionId": "fake-session-id", "properties": { "ok": 1, "val": "false" } }`,
 			},
 		)
 		if err != nil {
@@ -258,7 +258,7 @@ func Test_Customers(t *testing.T) {
 			elarian.CustomerID(customerID),
 			&elarian.Metadata{
 				Key:   "DOB",
-				Value: elarian.StringDataValue(`{"year": 2020, "day": 13, "month": 10 }`),
+				Value: `{"year": 2020, "day": 13, "month": 10 }`,
 			},
 		)
 		if err != nil {
