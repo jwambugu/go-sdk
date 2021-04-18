@@ -22,7 +22,7 @@ type (
 	NotificationCallBack func(message IsOutBoundMessageBody, appData *Appdata)
 
 	// NotificationHandler func
-	NotificationHandler func(notification IsNotification, appData *Appdata, customer *Customer, cb NotificationCallBack)
+	NotificationHandler func(service Elarian, notification IsNotification, appData *Appdata, customer *Customer, cb NotificationCallBack)
 
 	// NotificationPaymentStatus struct
 	NotificationPaymentStatus struct {
@@ -341,6 +341,7 @@ func (s *elarian) InitializeNotificationStream() <-chan error {
 				s.handleSimulatorNotification(simulatorNotification)
 			case err := <-s.errorChannel:
 				if errors.Is(err, io.EOF) {
+					close(s.replyChannel)
 					return
 				}
 				if err != nil {

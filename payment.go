@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"reflect"
-	"time"
 
 	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
 	"github.com/rsocket/rsocket-go/payload"
@@ -96,7 +95,7 @@ const (
 	PaymentStatusReversed                 PaymentStatus = 500
 )
 
-func (s *elarian) InitiatePayment(customer *Customer, params *Paymentrequest) (*InitiatePaymentReply, error) {
+func (s *elarian) InitiatePayment(ctx context.Context, customer *Customer, params *Paymentrequest) (*InitiatePaymentReply, error) {
 	if params == nil || reflect.ValueOf(params).IsZero() {
 		return nil, errors.New("Initiate payment params required")
 	}
@@ -145,8 +144,6 @@ func (s *elarian) InitiatePayment(customer *Customer, params *Paymentrequest) (*
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -165,7 +162,7 @@ func (s *elarian) InitiatePayment(customer *Customer, params *Paymentrequest) (*
 	}, nil
 }
 
-func (s *elarian) ReceivePayment(customerNumber, transactionID string, channel *PaymentChannelNumber, cash *Cash, paymentStatus PaymentStatus) (*SimulatorToServerCommandReply, error) {
+func (s *elarian) ReceivePayment(ctx context.Context, customerNumber, transactionID string, channel *PaymentChannelNumber, cash *Cash, paymentStatus PaymentStatus) (*SimulatorToServerCommandReply, error) {
 	if channel == nil || reflect.ValueOf(channel).IsZero() {
 		return nil, errors.New("paymentChannel is required")
 	}
@@ -193,8 +190,6 @@ func (s *elarian) ReceivePayment(customerNumber, transactionID string, channel *
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -210,7 +205,7 @@ func (s *elarian) ReceivePayment(customerNumber, transactionID string, channel *
 	}, nil
 }
 
-func (s *elarian) UpdatePaymentStatus(transactionID string, paymentStatus PaymentStatus) (*SimulatorToServerCommandReply, error) {
+func (s *elarian) UpdatePaymentStatus(ctx context.Context, transactionID string, paymentStatus PaymentStatus) (*SimulatorToServerCommandReply, error) {
 	command := &hera.UpdatePaymentStatusSimulatorCommand{
 		TransactionId: transactionID,
 		Status:        hera.PaymentStatus(paymentStatus),
@@ -222,8 +217,6 @@ func (s *elarian) UpdatePaymentStatus(transactionID string, paymentStatus Paymen
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err

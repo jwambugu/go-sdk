@@ -17,7 +17,7 @@ type (
 	}
 )
 
-func (s *elarian) GenerateAuthToken() (*GenerateAuthTokenReply, error) {
+func (s *elarian) GenerateAuthToken(ctx context.Context) (*GenerateAuthTokenReply, error) {
 	req := &hera.AppToServerCommand{
 		Entry: &hera.AppToServerCommand_GenerateAuthToken{},
 	}
@@ -25,8 +25,6 @@ func (s *elarian) GenerateAuthToken() (*GenerateAuthTokenReply, error) {
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err

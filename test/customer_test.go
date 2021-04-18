@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"log"
 	"testing"
 	"time"
@@ -17,7 +18,9 @@ func Test_Customers(t *testing.T) {
 	defer service.Disconnect()
 
 	t.Run("It Should get customer state", func(t *testing.T) {
-		response, err := service.GetCustomerState(elarian.CustomerID(customerID))
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
+		response, err := service.GetCustomerState(ctx, elarian.CustomerID(customerID))
 		if err != nil {
 			t.Fatalf("Error: %v", err)
 		}
@@ -27,7 +30,10 @@ func Test_Customers(t *testing.T) {
 	})
 
 	t.Run("It should update a customer's tags", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
 		response, err := service.UpdateCustomerTag(
+			ctx,
 			elarian.CustomerID(customerID),
 			&elarian.Tag{
 				Key:   "TestTag",
@@ -43,7 +49,10 @@ func Test_Customers(t *testing.T) {
 	})
 
 	t.Run("It should add a customer reminder", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
 		response, err := service.AddCustomerReminder(
+			ctx,
 			elarian.CustomerID(customerID),
 			&elarian.Reminder{
 				Key:      "KEY",
@@ -62,7 +71,10 @@ func Test_Customers(t *testing.T) {
 	})
 
 	t.Run("It should add a customer reminder by tag", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
 		response, err := service.AddCustomerReminderByTag(
+			ctx,
 			&elarian.Tag{Key: "TestTag", Value: "Test Tag value"},
 			&elarian.Reminder{
 				Key:      "REMINDER_KEY",
@@ -79,7 +91,10 @@ func Test_Customers(t *testing.T) {
 
 	t.Run("It should cancel a customer reminder", func(t *testing.T) {
 		key := "REMINDER_KEY"
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
 		response, err := service.AddCustomerReminder(
+			ctx,
 			elarian.CustomerID(customerID),
 			&elarian.Reminder{
 				Key:      key,
@@ -95,6 +110,7 @@ func Test_Customers(t *testing.T) {
 		assert.True(t, response.Status)
 
 		response, err = service.CancelCustomerReminder(
+			ctx,
 			elarian.CustomerID(customerID),
 			key,
 		)
@@ -107,7 +123,10 @@ func Test_Customers(t *testing.T) {
 
 	t.Run("It should cancel a customer reminder by tag", func(t *testing.T) {
 		key := "REMINDER_KEY"
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
 		response, err := service.AddCustomerReminderByTag(
+			ctx,
 			&elarian.Tag{Key: "TestTag", Value: "Test Tag value"},
 			&elarian.Reminder{
 				Key:      key,
@@ -122,6 +141,7 @@ func Test_Customers(t *testing.T) {
 		assert.True(t, response.Status)
 
 		response, err = service.CancelCustomerReminderByTag(
+			ctx,
 			&elarian.Tag{Key: "TestTag", Value: "Test Tag value"},
 			key,
 		)
@@ -133,7 +153,10 @@ func Test_Customers(t *testing.T) {
 	})
 
 	t.Run("It should update a customer's secondary id", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
 		response, err := service.UpdateCustomerSecondaryID(
+			ctx,
 			elarian.CustomerID(customerID),
 			&elarian.SecondaryID{
 				Key:   "email",
@@ -148,7 +171,10 @@ func Test_Customers(t *testing.T) {
 	})
 
 	t.Run("It should delete a customer's Tag", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
 		response, err := service.DeleteCustomerTag(
+			ctx,
 			elarian.CustomerID(customerID),
 			"TestTag",
 		)
@@ -160,7 +186,10 @@ func Test_Customers(t *testing.T) {
 	})
 
 	t.Run("It should delete a customer's secondary id", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
 		response, err := service.DeleteCustomerSecondaryID(
+			ctx,
 			elarian.CustomerID(customerID),
 			&elarian.SecondaryID{
 				Key:   "email",
@@ -177,7 +206,10 @@ func Test_Customers(t *testing.T) {
 
 	// update customer appData
 	t.Run("It should update a customer's app data", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
 		response, err := service.UpdateCustomerAppData(
+			ctx,
 			elarian.CustomerID(customerID),
 			&elarian.Appdata{
 				Value: elarian.StringDataValue(`{"sessionId": "fake-session-id", "properties": { "ok": 1, "val": "false" } }`),
@@ -193,7 +225,9 @@ func Test_Customers(t *testing.T) {
 
 	// lease customer appData
 	t.Run("It should lease a customer's app data", func(t *testing.T) {
-		response, err := service.LeaseCustomerAppData(elarian.CustomerID(customerID))
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
+		response, err := service.LeaseCustomerAppData(ctx, elarian.CustomerID(customerID))
 		if err != nil {
 			t.Errorf("Error: %v \n", err)
 		}
@@ -205,7 +239,9 @@ func Test_Customers(t *testing.T) {
 
 	// delete customer appData
 	t.Run("It should delete a customer's app data", func(t *testing.T) {
-		response, err := service.DeleteCustomerAppData(elarian.CustomerID(customerID))
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
+		response, err := service.DeleteCustomerAppData(ctx, elarian.CustomerID(customerID))
 		if err != nil {
 			t.Errorf("Error: %v \n", err)
 		}
@@ -215,7 +251,10 @@ func Test_Customers(t *testing.T) {
 	})
 
 	t.Run("It should update a customer's metadata", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
 		response, err := service.UpdateCustomerMetaData(
+			ctx,
 			elarian.CustomerID(customerID),
 			&elarian.Metadata{
 				Key:   "DOB",
@@ -231,7 +270,10 @@ func Test_Customers(t *testing.T) {
 	})
 
 	t.Run("It should delete a customer's metadata", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
 		response, err := service.DeleteCustomerMetaData(
+			ctx,
 			elarian.CustomerID(customerID),
 			"DOB",
 		)
@@ -244,7 +286,10 @@ func Test_Customers(t *testing.T) {
 	})
 
 	t.Run("It should update message consent", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
 		response, err := service.UpdateMessagingConsent(
+			ctx,
 			&elarian.CustomerNumber{
 				Number:   "+254712876967",
 				Provider: elarian.CustomerNumberProviderCellular,

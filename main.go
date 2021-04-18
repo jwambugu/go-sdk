@@ -76,6 +76,9 @@ func (s *service) connect(options *Options, connectionOptions *ConnectionOptions
 			log.Printf("Error closing connection: %v \n", err)
 			return
 		}
+		close(s.errorChannel)
+		close(s.notificationChannel)
+		close(s.simulatorNotificationChannel)
 		if options.Log {
 			log.Println("Elarian connection closed successfully")
 		}

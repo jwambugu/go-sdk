@@ -38,13 +38,12 @@ func main() {
  )
 
  opts = &elarian.Options{
-  APIKey:             APIKey,
-  OrgID:              OrgID,
-  AppID:              AppID,
+  APIKey:             aPIKey,
+  OrgID:              orgID,
+  AppID:              appID,
   AllowNotifications: true,
   Log:                true,
  }
-
  service, err := elarian.Connect(opts, nil)
  if err != nil {
   log.Fatalf("Error Initializing Elarian: %v \n", err)
@@ -63,13 +62,14 @@ func main() {
  custNumber = &elarian.CustomerNumber{Number: "+254708752502", Provider: elarian.CustomerNumberProviderCellular}
  channel = &elarian.MessagingChannelNumber{Number: "21356", Channel: elarian.MessagingChannelSms}
 
- response, err := service.SendMessage(custNumber, channel, elarian.TextMessage("Hello world from the go sdk"))
+ ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+ defer cancel()
+ response, err := service.SendMessage(ctx, custNumber, channel, elarian.TextMessage("Hello world from the go sdk"))
  if err != nil {
   log.Fatalf("Message not send %v \n", err.Error())
  }
  log.Printf("Status %d Description %s \n customerID %s \n", response.Status, response.Description, response.CustomerID)
 }
-
 
 ```
 

@@ -245,7 +245,7 @@ func (*Email) isOutBoundMessageBody()           {}
 func (URLMessage) isOutBoundMessageBody()       {}
 func (VoiceCallActions) isOutBoundMessageBody() {}
 
-func (s *elarian) SendMessage(number *CustomerNumber, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*SendMessageReply, error) {
+func (s *elarian) SendMessage(ctx context.Context, number *CustomerNumber, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*SendMessageReply, error) {
 	if number == nil || reflect.ValueOf(number).IsZero() {
 		return nil, errors.New("customerNumber required")
 	}
@@ -311,7 +311,7 @@ func (s *elarian) SendMessage(number *CustomerNumber, channelNumber *MessagingCh
 	}, nil
 }
 
-func (s *elarian) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*TagCommandReply, error) {
+func (s *elarian) SendMessageByTag(ctx context.Context, tag *Tag, channelNumber *MessagingChannelNumber, body IsOutBoundMessageBody) (*TagCommandReply, error) {
 	if tag == nil || reflect.ValueOf(tag).IsZero() {
 		return nil, errors.New("tag is required")
 	}
@@ -378,7 +378,7 @@ func (s *elarian) SendMessageByTag(tag *Tag, channelNumber *MessagingChannelNumb
 	}, err
 }
 
-func (s *elarian) ReplyToMessage(customerID, messageID string, body IsOutBoundMessageBody) (*SendMessageReply, error) {
+func (s *elarian) ReplyToMessage(ctx context.Context, customerID, messageID string, body IsOutBoundMessageBody) (*SendMessageReply, error) {
 	var message = &hera.OutboundMessage{}
 	if entry, ok := body.(TextMessage); ok {
 		message.Body = s.heraOutBoundTextMessage(string(entry))
@@ -432,7 +432,7 @@ func (s *elarian) ReplyToMessage(customerID, messageID string, body IsOutBoundMe
 	}, err
 }
 
-func (s *elarian) ReceiveMessage(customerNumber string, channel *MessagingChannelNumber, sessionID string, parts []*InBoundMessageBody) (*SimulatorToServerCommandReply, error) {
+func (s *elarian) ReceiveMessage(ctx context.Context, customerNumber string, channel *MessagingChannelNumber, sessionID string, parts []*InBoundMessageBody) (*SimulatorToServerCommandReply, error) {
 	messageparts := []*hera.InboundMessageBody{}
 	for _, part := range parts {
 		if !reflect.ValueOf(part.Text).IsZero() {

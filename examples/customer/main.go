@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
@@ -54,7 +55,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	service.On(elarian.ElarianReminderNotification, func(notf elarian.IsNotification, appData *elarian.Appdata, customer *elarian.Customer, cb elarian.NotificationCallBack) {
+	service.On(elarian.ElarianReminderNotification, func(service elarian.Elarian, notf elarian.IsNotification, appData *elarian.Appdata, customer *elarian.Customer, cb elarian.NotificationCallBack) {
 		if notification, ok := notf.(*elarian.ReminderNotification); ok {
 			log.Println("NOTIFICATION_KEY", notification.Reminder.Key)
 			cb(nil, nil)
@@ -62,7 +63,9 @@ func main() {
 	})
 
 	cust := service.NewCustomer(&elarian.CreateCustomer{ID: customerID})
-	response, err := cust.AddReminder(&elarian.Reminder{
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+	defer cancel()
+	response, err := cust.AddReminder(ctx, &elarian.Reminder{
 		Key:      "reminderKey",
 		Payload:  "i am a reminder",
 		RemindAt: time.Now().Add(time.Second * 5),
