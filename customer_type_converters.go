@@ -28,23 +28,24 @@ func (s *elarian) heraCustomerNumbers(customerNumbers []*CustomerNumber) []*hera
 }
 
 func (s *elarian) customerActivity(activity *hera.CustomerActivityNotification) *CustomerActivityNotification {
-	return &CustomerActivityNotification{
-		SessionID: activity.SessionId,
-		Activity: &CustomerActivity{
+	activityNotification := &CustomerActivityNotification{SessionID: activity.SessionId}
+	if activity.ChannelNumber != nil {
+		activityNotification.Activity = &CustomerActivity{
 			Key:        activity.Activity.Key,
 			Properties: activity.Activity.Properties,
 			CreatedAt:  activity.Activity.CreatedAt.AsTime(),
-		},
-		CustomerNumber: &CustomerNumber{
-			Number:    activity.CustomerNumber.Number,
-			Provider:  NumberProvider(activity.CustomerNumber.Provider),
-			Partition: activity.CustomerNumber.Partition.Value,
-		},
-		ActivityChannel: &ActivityChannelNumber{
+		}
+	}
+	if activity.ChannelNumber != nil {
+		activityNotification.ActivityChannel = &ActivityChannelNumber{
 			Number:  activity.ChannelNumber.Number,
 			Channel: ActivityChannel(activity.ChannelNumber.Channel),
-		},
+		}
 	}
+	if activity.CustomerNumber != nil {
+		activityNotification.CustomerNumber = s.customerNumber(activity.CustomerNumber)
+	}
+	return activityNotification
 }
 
 func (s *elarian) heraSecondaryID(secondaryID *SecondaryID) *hera.IndexMapping {
@@ -79,4 +80,15 @@ func (s *elarian) reminderNotification(notf *hera.ReminderNotification) *Reminde
 		reminderNotf.WorkID = notf.WorkId.Value
 	}
 	return reminderNotf
+}
+
+func (s *elarian) customerNumber(heraCustomerNumber *hera.CustomerNumber) *CustomerNumber {
+	custNumber := &CustomerNumber{
+		Number:   heraCustomerNumber.Number,
+		Provider: NumberProvider(heraCustomerNumber.Provider),
+	}
+	if heraCustomerNumber.Partition != nil {
+		custNumber.Partition = heraCustomerNumber.Partition.Value
+	}
+	return custNumber
 }

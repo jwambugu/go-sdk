@@ -21,13 +21,6 @@ type (
 	// ActivityChannel is an enum that defines a type of activity  channel. it could be a web and mobile
 	ActivityChannel int32
 
-	// DataValue interface is implemented by metadata and appdata as with both you can store data as either a string or an array of bytes
-	DataValue interface {
-		isDataValue()
-		String() string
-		Bytes() []byte
-	}
-
 	// IsCustomer interface denotes a customer identifier which can be an id, secondaryID or a customerNumber
 	IsCustomer interface {
 		customer()
@@ -87,13 +80,15 @@ type (
 
 	// Metadata defines a customer's metadata oneOf value of bytes value should be provided
 	Metadata struct {
-		Key   string    `json:"key,omitempty"`
-		Value DataValue `json:"value,omitempty"`
+		Key        string `json:"key,omitempty"`
+		Value      string `json:"value,omitempty"`
+		BytesValue []byte `json:"bytesValue,omitempty"`
 	}
 
 	// Appdata defines a customer's metadata oneOf value of bytes value should be provided
 	Appdata struct {
-		Value DataValue `json:"value,omitempty"`
+		Value      string `json:"value,omitempty"`
+		BytesValue []byte `json:"bytesValue,omitempty"`
 	}
 
 	// ActivityChannelNumber defines an activity channel
@@ -207,8 +202,9 @@ func (*SecondaryID) customer()    {}
 func (*CustomerNumber) customer() {}
 func (CustomerID) customer()      {}
 
-func (s *elarian) GetCustomerState(customer IsCustomer) (*hera.GetCustomerStateReply, error) {
+func (s *elarian) GetCustomerState(ctx context.Context, customer IsCustomer) (*hera.GetCustomerStateReply, error) {
 	command := &hera.GetCustomerStateCommand{}
+
 	if secondaryID, ok := customer.(*SecondaryID); ok {
 		command.Customer = &hera.GetCustomerStateCommand_SecondaryId{
 			SecondaryId: &hera.IndexMapping{Value: wrapperspb.String(secondaryID.Value), Key: secondaryID.Key},
@@ -232,20 +228,18 @@ func (s *elarian) GetCustomerState(customer IsCustomer) (*hera.GetCustomerStateR
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
 	}
-	reply := new(hera.AppToServerCommandReply)
+	reply := &hera.AppToServerCommandReply{}
 	if err = proto.Unmarshal(payload.Data(), reply); err != nil {
 		return nil, err
 	}
 	return reply.GetGetCustomerState(), err
 }
 
-func (s *elarian) GetCustomerActivity(customerNumber *CustomerNumber, channelNumber *ActivityChannelNumber, sessionID string) (*CustomerActivityReply, error) {
+func (s *elarian) GetCustomerActivity(ctx context.Context, customerNumber *CustomerNumber, channelNumber *ActivityChannelNumber, sessionID string) (*CustomerActivityReply, error) {
 	if customerNumber == nil || reflect.ValueOf(customerNumber).IsZero() {
 		return nil, errors.New("customerNumber required")
 	}
@@ -273,8 +267,6 @@ func (s *elarian) GetCustomerActivity(customerNumber *CustomerNumber, channelNum
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -290,7 +282,7 @@ func (s *elarian) GetCustomerActivity(customerNumber *CustomerNumber, channelNum
 	}, nil
 }
 
-func (s *elarian) UpdateCustomerActivity(customerNumber *CustomerNumber, channel *ActivityChannelNumber, sessionID, key string, properties map[string]string) (*CustomerActivityReply, error) {
+func (s *elarian) UpdateCustomerActivity(ctx context.Context, customerNumber *CustomerNumber, channel *ActivityChannelNumber, sessionID, key string, properties map[string]string) (*CustomerActivityReply, error) {
 	if customerNumber == nil || reflect.ValueOf(customerNumber).IsZero() {
 		return nil, errors.New("CustomerNumber required")
 	}
@@ -321,8 +313,6 @@ func (s *elarian) UpdateCustomerActivity(customerNumber *CustomerNumber, channel
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -338,7 +328,7 @@ func (s *elarian) UpdateCustomerActivity(customerNumber *CustomerNumber, channel
 	}, nil
 }
 
-func (s *elarian) AdoptCustomerState(customerID string, otherCustomer IsCustomer) (*UpdateCustomerStateReply, error) {
+func (s *elarian) AdoptCustomerState(ctx context.Context, customerID string, otherCustomer IsCustomer) (*UpdateCustomerStateReply, error) {
 	command := &hera.AdoptCustomerStateCommand{
 		CustomerId: customerID,
 	}
@@ -370,8 +360,6 @@ func (s *elarian) AdoptCustomerState(customerID string, otherCustomer IsCustomer
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -387,7 +375,7 @@ func (s *elarian) AdoptCustomerState(customerID string, otherCustomer IsCustomer
 	}, nil
 }
 
-func (s *elarian) AddCustomerReminder(customer IsCustomer, reminder *Reminder) (*UpdateCustomerAppDataReply, error) {
+func (s *elarian) AddCustomerReminder(ctx context.Context, customer IsCustomer, reminder *Reminder) (*UpdateCustomerAppDataReply, error) {
 	if reminder == nil || reflect.ValueOf(reminder).IsZero() {
 		return nil, errors.New("Reminder Required")
 	}
@@ -424,8 +412,7 @@ func (s *elarian) AddCustomerReminder(customer IsCustomer, reminder *Reminder) (
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
+
 	res, err := s.client.RequestResponse(payload.New(d, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -441,7 +428,7 @@ func (s *elarian) AddCustomerReminder(customer IsCustomer, reminder *Reminder) (
 	}, nil
 }
 
-func (s *elarian) AddCustomerReminderByTag(tag *Tag, reminder *Reminder) (*TagCommandReply, error) {
+func (s *elarian) AddCustomerReminderByTag(ctx context.Context, tag *Tag, reminder *Reminder) (*TagCommandReply, error) {
 	if tag == nil || reflect.ValueOf(tag).IsZero() {
 		return nil, errors.New("Tag is required")
 	}
@@ -469,8 +456,6 @@ func (s *elarian) AddCustomerReminderByTag(tag *Tag, reminder *Reminder) (*TagCo
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
@@ -487,7 +472,7 @@ func (s *elarian) AddCustomerReminderByTag(tag *Tag, reminder *Reminder) (*TagCo
 	}, nil
 }
 
-func (s *elarian) CancelCustomerReminder(customer IsCustomer, key string) (*UpdateCustomerAppDataReply, error) {
+func (s *elarian) CancelCustomerReminder(ctx context.Context, customer IsCustomer, key string) (*UpdateCustomerAppDataReply, error) {
 	command := &hera.CancelCustomerReminderCommand{
 		Key: key,
 	}
@@ -514,8 +499,6 @@ func (s *elarian) CancelCustomerReminder(customer IsCustomer, key string) (*Upda
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -531,7 +514,7 @@ func (s *elarian) CancelCustomerReminder(customer IsCustomer, key string) (*Upda
 	}, nil
 }
 
-func (s *elarian) CancelCustomerReminderByTag(tag *Tag, key string) (*TagCommandReply, error) {
+func (s *elarian) CancelCustomerReminderByTag(ctx context.Context, tag *Tag, key string) (*TagCommandReply, error) {
 	if tag == nil || reflect.ValueOf(tag).IsZero() {
 		return nil, errors.New("Tag is required")
 	}
@@ -549,8 +532,6 @@ func (s *elarian) CancelCustomerReminderByTag(tag *Tag, key string) (*TagCommand
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -565,7 +546,7 @@ func (s *elarian) CancelCustomerReminderByTag(tag *Tag, key string) (*TagCommand
 	}, nil
 }
 
-func (s *elarian) UpdateCustomerTag(customer IsCustomer, tags ...*Tag) (*UpdateCustomerStateReply, error) {
+func (s *elarian) UpdateCustomerTag(ctx context.Context, customer IsCustomer, tags ...*Tag) (*UpdateCustomerStateReply, error) {
 	command := &hera.UpdateCustomerTagCommand{}
 	if secondaryID, ok := customer.(*SecondaryID); ok {
 		command.Customer = &hera.UpdateCustomerTagCommand_SecondaryId{
@@ -604,8 +585,6 @@ func (s *elarian) UpdateCustomerTag(customer IsCustomer, tags ...*Tag) (*UpdateC
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -622,7 +601,7 @@ func (s *elarian) UpdateCustomerTag(customer IsCustomer, tags ...*Tag) (*UpdateC
 	}, nil
 }
 
-func (s *elarian) DeleteCustomerTag(customer IsCustomer, keys ...string) (*UpdateCustomerStateReply, error) {
+func (s *elarian) DeleteCustomerTag(ctx context.Context, customer IsCustomer, keys ...string) (*UpdateCustomerStateReply, error) {
 	command := &hera.DeleteCustomerTagCommand{
 		Deletions: keys,
 	}
@@ -648,8 +627,6 @@ func (s *elarian) DeleteCustomerTag(customer IsCustomer, keys ...string) (*Updat
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -665,7 +642,7 @@ func (s *elarian) DeleteCustomerTag(customer IsCustomer, keys ...string) (*Updat
 	}, err
 }
 
-func (s *elarian) UpdateCustomerSecondaryID(customer IsCustomer, secondaryIDs ...*SecondaryID) (*UpdateCustomerStateReply, error) {
+func (s *elarian) UpdateCustomerSecondaryID(ctx context.Context, customer IsCustomer, secondaryIDs ...*SecondaryID) (*UpdateCustomerStateReply, error) {
 	command := &hera.UpdateCustomerSecondaryIdCommand{}
 	if secondaryID, ok := customer.(*SecondaryID); ok {
 		command.Customer = &hera.UpdateCustomerSecondaryIdCommand_SecondaryId{
@@ -704,8 +681,6 @@ func (s *elarian) UpdateCustomerSecondaryID(customer IsCustomer, secondaryIDs ..
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -721,7 +696,7 @@ func (s *elarian) UpdateCustomerSecondaryID(customer IsCustomer, secondaryIDs ..
 	}, nil
 }
 
-func (s *elarian) DeleteCustomerSecondaryID(customer IsCustomer, secondaryIDs ...*SecondaryID) (*UpdateCustomerStateReply, error) {
+func (s *elarian) DeleteCustomerSecondaryID(ctx context.Context, customer IsCustomer, secondaryIDs ...*SecondaryID) (*UpdateCustomerStateReply, error) {
 	command := &hera.DeleteCustomerSecondaryIdCommand{}
 	if secondaryID, ok := customer.(*SecondaryID); ok {
 		command.Customer = &hera.DeleteCustomerSecondaryIdCommand_SecondaryId{
@@ -755,8 +730,6 @@ func (s *elarian) DeleteCustomerSecondaryID(customer IsCustomer, secondaryIDs ..
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -772,7 +745,7 @@ func (s *elarian) DeleteCustomerSecondaryID(customer IsCustomer, secondaryIDs ..
 	}, nil
 }
 
-func (s *elarian) LeaseCustomerAppData(customer IsCustomer) (*LeaseCustomerAppDataReply, error) {
+func (s *elarian) LeaseCustomerAppData(ctx context.Context, customer IsCustomer) (*LeaseCustomerAppDataReply, error) {
 	command := &hera.LeaseCustomerAppDataCommand{}
 	if secondaryID, ok := customer.(*SecondaryID); ok {
 		command.Customer = &hera.LeaseCustomerAppDataCommand_SecondaryId{
@@ -796,8 +769,6 @@ func (s *elarian) LeaseCustomerAppData(customer IsCustomer) (*LeaseCustomerAppDa
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte(""))).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -813,19 +784,15 @@ func (s *elarian) LeaseCustomerAppData(customer IsCustomer) (*LeaseCustomerAppDa
 		Appdata:     &Appdata{},
 	}
 	if val, ok := commandReply.GetLeaseCustomerAppData().Value.Value.(*hera.DataMapValue_StringVal); ok {
-		reply.Appdata.Value = StringDataValue(val.StringVal)
+		reply.Appdata.Value = val.StringVal
 	}
 	if val, ok := commandReply.GetLeaseCustomerAppData().Value.Value.(*hera.DataMapValue_BytesVal); ok {
-		byteArr := make(BinaryDataValue, len(val.BytesVal))
-		for _, byteVal := range val.BytesVal {
-			byteArr = append(byteArr, byteVal)
-		}
-		reply.Appdata.Value = byteArr
+		reply.Appdata.BytesValue = val.BytesVal
 	}
 	return reply, err
 }
 
-func (s *elarian) UpdateCustomerAppData(customer IsCustomer, appdata *Appdata) (*UpdateCustomerAppDataReply, error) {
+func (s *elarian) UpdateCustomerAppData(ctx context.Context, customer IsCustomer, appdata *Appdata) (*UpdateCustomerAppDataReply, error) {
 	command := &hera.UpdateCustomerAppDataCommand{}
 	if secondaryID, ok := customer.(*SecondaryID); ok {
 		command.Customer = &hera.UpdateCustomerAppDataCommand_SecondaryId{
@@ -844,14 +811,15 @@ func (s *elarian) UpdateCustomerAppData(customer IsCustomer, appdata *Appdata) (
 	}
 
 	command.Update = &hera.DataMapValue{}
-	if stringValue, ok := appdata.Value.(StringDataValue); ok {
+
+	if appdata.Value != "" {
 		command.Update.Value = &hera.DataMapValue_StringVal{
-			StringVal: string(stringValue),
+			StringVal: appdata.Value,
 		}
 	}
-	if binaryValue, ok := appdata.Value.(BinaryDataValue); ok {
+	if len(appdata.BytesValue) > 0 {
 		command.Update.Value = &hera.DataMapValue_BytesVal{
-			BytesVal: binaryValue,
+			BytesVal: appdata.BytesValue,
 		}
 	}
 	req := &hera.AppToServerCommand{
@@ -861,8 +829,6 @@ func (s *elarian) UpdateCustomerAppData(customer IsCustomer, appdata *Appdata) (
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -878,7 +844,7 @@ func (s *elarian) UpdateCustomerAppData(customer IsCustomer, appdata *Appdata) (
 	}, nil
 }
 
-func (s *elarian) DeleteCustomerAppData(customer IsCustomer) (*UpdateCustomerAppDataReply, error) {
+func (s *elarian) DeleteCustomerAppData(ctx context.Context, customer IsCustomer) (*UpdateCustomerAppDataReply, error) {
 	command := &hera.DeleteCustomerAppDataCommand{}
 	if secondaryID, ok := customer.(*SecondaryID); ok {
 		command.Customer = &hera.DeleteCustomerAppDataCommand_SecondaryId{
@@ -902,8 +868,6 @@ func (s *elarian) DeleteCustomerAppData(customer IsCustomer) (*UpdateCustomerApp
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -920,7 +884,7 @@ func (s *elarian) DeleteCustomerAppData(customer IsCustomer) (*UpdateCustomerApp
 	}, nil
 }
 
-func (s *elarian) UpdateCustomerMetaData(customer IsCustomer, metadata ...*Metadata) (*UpdateCustomerStateReply, error) {
+func (s *elarian) UpdateCustomerMetaData(ctx context.Context, customer IsCustomer, metadata ...*Metadata) (*UpdateCustomerStateReply, error) {
 	command := &hera.UpdateCustomerMetadataCommand{}
 
 	if secondaryID, ok := customer.(*SecondaryID); ok {
@@ -941,14 +905,14 @@ func (s *elarian) UpdateCustomerMetaData(customer IsCustomer, metadata ...*Metad
 	meta := map[string]*hera.DataMapValue{}
 	for _, val := range metadata {
 		mapValue := new(hera.DataMapValue)
-		if binaryValue, ok := val.Value.(BinaryDataValue); ok {
+		if len(val.BytesValue) > 0 {
 			mapValue.Value = &hera.DataMapValue_BytesVal{
-				BytesVal: binaryValue,
+				BytesVal: val.BytesValue,
 			}
 		}
-		if stringValue, ok := val.Value.(StringDataValue); ok {
+		if val.Value != "" {
 			mapValue.Value = &hera.DataMapValue_StringVal{
-				StringVal: string(stringValue),
+				StringVal: val.Value,
 			}
 		}
 		meta[val.Key] = mapValue
@@ -963,9 +927,6 @@ func (s *elarian) UpdateCustomerMetaData(customer IsCustomer, metadata ...*Metad
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -981,7 +942,7 @@ func (s *elarian) UpdateCustomerMetaData(customer IsCustomer, metadata ...*Metad
 	}, nil
 }
 
-func (s *elarian) DeleteCustomerMetaData(customer IsCustomer, keys ...string) (*UpdateCustomerStateReply, error) {
+func (s *elarian) DeleteCustomerMetaData(ctx context.Context, customer IsCustomer, keys ...string) (*UpdateCustomerStateReply, error) {
 	command := &hera.DeleteCustomerMetadataCommand{
 		Deletions: keys,
 	}
@@ -1009,8 +970,6 @@ func (s *elarian) DeleteCustomerMetaData(customer IsCustomer, keys ...string) (*
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -1026,7 +985,7 @@ func (s *elarian) DeleteCustomerMetaData(customer IsCustomer, keys ...string) (*
 	}, nil
 }
 
-func (s *elarian) UpdateMessagingConsent(customerNumber *CustomerNumber, channelNumber *MessagingChannelNumber, update MessagingConsentUpdate) (*UpdateMessagingConsentReply, error) {
+func (s *elarian) UpdateMessagingConsent(ctx context.Context, customerNumber *CustomerNumber, channelNumber *MessagingChannelNumber, update MessagingConsentUpdate) (*UpdateMessagingConsentReply, error) {
 	command := &hera.UpdateMessagingConsentCommand{}
 	if !reflect.ValueOf(customerNumber).IsZero() {
 		command.CustomerNumber = &hera.CustomerNumber{
@@ -1050,8 +1009,6 @@ func (s *elarian) UpdateMessagingConsent(customerNumber *CustomerNumber, channel
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err

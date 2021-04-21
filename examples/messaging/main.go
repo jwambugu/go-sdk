@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	elarian "github.com/elarianltd/go-sdk"
 )
@@ -47,7 +49,9 @@ func main() {
 	custNumber = &elarian.CustomerNumber{Number: "+254708752502", Provider: elarian.CustomerNumberProviderCellular}
 	channel = &elarian.MessagingChannelNumber{Number: "21356", Channel: elarian.MessagingChannelSms}
 
-	response, err := service.SendMessage(custNumber, channel, elarian.TextMessage("Hello world from the go sdk"))
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+	defer cancel()
+	response, err := service.SendMessage(ctx, custNumber, channel, elarian.TextMessage("Hello world from the go sdk"))
 	if err != nil {
 		log.Fatalf("Message not send %v \n", err.Error())
 	}

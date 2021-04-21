@@ -1,4 +1,4 @@
-test:
+run_test:
 	go test -v -race ./...
-lint:
+run_lint:
 	golangci-lint run --disable-all --enable=golint,depguard,gci,gochecknoglobals,errorlint,exportloopref,typecheck,goimports,misspell,govet,ineffassign,gosimple,deadcode,structcheck

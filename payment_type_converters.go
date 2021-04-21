@@ -20,12 +20,7 @@ func (s *elarian) walletPaymentStatusNotf(notf *hera.WalletPaymentStatusNotifica
 }
 
 func (s *elarian) recievedPaymentNotf(notf *hera.ReceivedPaymentNotification) *ReceivedPaymentNotification {
-	return &ReceivedPaymentNotification{
-		CustomerNumber: &CustomerNumber{
-			Number:    notf.CustomerNumber.Number,
-			Provider:  NumberProvider(notf.CustomerNumber.Provider),
-			Partition: notf.CustomerNumber.Partition.Value,
-		},
+	notification := &ReceivedPaymentNotification{
 		ChannelNumber: &PaymentChannelNumber{
 			Number:  notf.ChannelNumber.Number,
 			Channel: PaymentChannel(notf.ChannelNumber.Channel),
@@ -38,6 +33,14 @@ func (s *elarian) recievedPaymentNotf(notf *hera.ReceivedPaymentNotification) *R
 			Amount:       notf.Value.Amount,
 		},
 	}
+	if notf.CustomerNumber != nil {
+		customerNumber := s.customerNumber(notf.CustomerNumber)
+		if notf.CustomerNumber.Partition != nil {
+			customerNumber.Partition = notf.CustomerNumber.Partition.Value
+		}
+		notification.CustomerNumber = customerNumber
+	}
+	return notification
 }
 
 func (s *elarian) paymentCounterPartyAsPurse(purse *Purse) *hera.PaymentCounterParty_Purse {

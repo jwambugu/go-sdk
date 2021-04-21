@@ -1,8 +1,10 @@
 package test
 
 import (
+	"context"
 	"log"
 	"testing"
+	"time"
 
 	elarian "github.com/elarianltd/go-sdk"
 	"github.com/stretchr/testify/assert"
@@ -15,7 +17,9 @@ func Test_GenerateAuthToken(t *testing.T) {
 	}
 	defer service.Disconnect()
 	t.Run("Should Generate an Auth Token", func(t *testing.T) {
-		response, err := service.GenerateAuthToken()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
+		response, err := service.GenerateAuthToken(ctx)
 		if err != nil {
 			t.Fatalf("Error %v", err)
 		}

@@ -1,8 +1,10 @@
 package test
 
 import (
+	"context"
 	"log"
 	"testing"
+	"time"
 
 	elarian "github.com/elarianltd/go-sdk"
 	"github.com/stretchr/testify/assert"
@@ -15,6 +17,7 @@ func Test_Messaging(t *testing.T) {
 		log.Fatal(err)
 	}
 	defer service.Disconnect()
+
 	customer := &elarian.Customer{
 		CustomerNumber: &elarian.CustomerNumber{
 			Number:   "+254712876967",
@@ -23,11 +26,14 @@ func Test_Messaging(t *testing.T) {
 	}
 
 	t.Run("It should send a text message", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*30))
+		defer cancel()
 		channelNumber := &elarian.MessagingChannelNumber{
 			Number:  "21356",
 			Channel: elarian.MessagingChannelSms,
 		}
 		response, err := service.SendMessage(
+			ctx,
 			customer.CustomerNumber,
 			channelNumber,
 			elarian.TextMessage("Hello World"),

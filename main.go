@@ -76,6 +76,9 @@ func (s *service) connect(options *Options, connectionOptions *ConnectionOptions
 			log.Printf("Error closing connection: %v \n", err)
 			return
 		}
+		close(s.errorChannel)
+		close(s.notificationChannel)
+		close(s.simulatorNotificationChannel)
 		if options.Log {
 			log.Println("Elarian connection closed successfully")
 		}
@@ -87,7 +90,6 @@ func (s *service) connect(options *Options, connectionOptions *ConnectionOptions
 		case <-time.After(time.Second * 15):
 			reply := new(hera.ServerToAppNotificationReply)
 			data, _ := proto.Marshal(reply)
-			log.Println("WE got here")
 			return mono.Just(payload.New(data, []byte{}))
 		case reply := <-s.replyChannel:
 			data, err := proto.Marshal(reply)

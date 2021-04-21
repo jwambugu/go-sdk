@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"reflect"
-	"time"
 
 	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
 	"github.com/rsocket/rsocket-go/payload"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type (
@@ -17,6 +17,11 @@ type (
 
 	// PaymentStatus type
 	PaymentStatus int32
+
+	// IsPaymentParty is an interface implemented by a CustomerPaymentParty, WalletCounterParty, PurseCounterParty, ChannelCounterParty
+	IsPaymentParty interface {
+		paymentParty()
+	}
 
 	// Cash defines a cash object
 	Cash struct {
@@ -41,20 +46,33 @@ type (
 		PurseID string `json:"purseId,omitempty"`
 	}
 
-	// PaymentParty struct
-	PaymentParty struct {
-		Customer *Customer `json:"customer,omitempty"`
-		Wallet   *Wallet   `json:"wallet,omitempty"`
-		Purse    *Purse    `json:"purse,omitempty"`
+	// CustomerPaymentParty struct
+	CustomerPaymentParty struct {
+		CustomerNumber *CustomerNumber
+		ChannelNumber  *PaymentChannelNumber
 	}
 
-	// Paymentrequest defines arguments required to make a payment request
-	Paymentrequest struct {
-		Cash        Cash                 `json:"cash"`
-		Channel     PaymentChannelNumber `json:"channel"`
-		CreditParty PaymentParty         `json:"creditparty,omitempty"`
-		DebitParty  PaymentParty         `json:"debitparty,omitempty"`
+	// ChannelCounterParty struct
+	ChannelCounterParty struct {
+		ChannelNumber *PaymentChannelNumber
+		Account       string
+		ChannelCode   int32
 	}
+
+	// PaymentParty struct
+	PaymentParty struct {
+		CustomerCounterParty *CustomerPaymentParty `json:"CustomerCounterParty,omitempty"`
+		WalletCounterParty   *Wallet               `json:"walletCounterParty,omitempty"`
+		PurseCounterParty    *Purse                `json:"purseCounterParty,omitempty"`
+		ChannelCounterParty  *ChannelCounterParty  `json:"channelCounterParty,omitempty"`
+	}
+
+	// PaymentCounterParty defines arguments required to make a payment request
+	PaymentCounterParty struct {
+		CreditParty IsPaymentParty `json:"creditparty,omitempty"`
+		DebitParty  IsPaymentParty `json:"debitparty,omitempty"`
+	}
+
 	// InitiatePaymentReply struct
 	InitiatePaymentReply struct {
 		CreditCustomerID string        `json:"creditCustomerID,omitempty"`
@@ -96,45 +114,113 @@ const (
 	PaymentStatusReversed                 PaymentStatus = 500
 )
 
-func (s *elarian) InitiatePayment(customer *Customer, params *Paymentrequest) (*InitiatePaymentReply, error) {
-	if params == nil || reflect.ValueOf(params).IsZero() {
-		return nil, errors.New("Initiate payment params required")
+func (*CustomerPaymentParty) paymentParty() {}
+func (*Wallet) paymentParty()               {}
+func (*Purse) paymentParty()                {}
+func (*ChannelCounterParty) paymentParty()  {}
+
+func (s *elarian) InitiatePayment(ctx context.Context, party *PaymentCounterParty, cash *Cash) (*InitiatePaymentReply, error) {
+	if party == nil || reflect.ValueOf(party).IsZero() {
+		return nil, errors.New("Payment Party required")
 	}
 
 	command := &hera.InitiatePaymentCommand{
 		Value: &hera.Cash{
-			Amount:       params.Cash.Amount,
-			CurrencyCode: params.Cash.CurrencyCode,
+			Amount:       cash.Amount,
+			CurrencyCode: cash.CurrencyCode,
 		},
 	}
-	if !reflect.ValueOf(params.CreditParty.Customer).IsZero() {
-		command.CreditParty = &hera.PaymentCounterParty{
-			Party: s.paymentCounterPartyAsCustomer(customer, &params.Channel),
+
+	if party.CreditParty != nil {
+		counterParty := &hera.PaymentCounterParty{}
+		if customerCounterParty, ok := party.CreditParty.(*CustomerPaymentParty); ok {
+			counterParty.Party = &hera.PaymentCounterParty_Customer{
+				Customer: &hera.PaymentCustomerCounterParty{
+					CustomerNumber: s.heraCustomerNumber(customerCounterParty.CustomerNumber),
+					ChannelNumber: &hera.PaymentChannelNumber{
+						Channel: hera.PaymentChannel(customerCounterParty.ChannelNumber.Channel),
+						Number:  customerCounterParty.ChannelNumber.Number,
+					},
+				},
+			}
+			command.CreditParty = counterParty
+		}
+
+		if purseCounterParty, ok := party.CreditParty.(*Purse); ok {
+			counterParty.Party = &hera.PaymentCounterParty_Purse{
+				Purse: &hera.PaymentPurseCounterParty{
+					PurseId: purseCounterParty.PurseID,
+				},
+			}
+			command.CreditParty = counterParty
+		}
+		if walletCounterParty, ok := party.CreditParty.(*Wallet); ok {
+			counterParty.Party = &hera.PaymentCounterParty_Wallet{
+				Wallet: &hera.PaymentWalletCounterParty{
+					CustomerId: walletCounterParty.CustomerID,
+					WalletId:   walletCounterParty.WalletID,
+				},
+			}
+			command.CreditParty = counterParty
+		}
+		if channelCounterParty, ok := party.CreditParty.(*ChannelCounterParty); ok {
+			counterParty.Party = &hera.PaymentCounterParty_Channel{
+				Channel: &hera.PaymentChannelCounterParty{
+					ChannelNumber: &hera.PaymentChannelNumber{
+						Channel: hera.PaymentChannel(channelCounterParty.ChannelNumber.Channel),
+						Number:  channelCounterParty.ChannelNumber.Number,
+					},
+					ChannelCode: channelCounterParty.ChannelCode,
+					Account:     wrapperspb.String(channelCounterParty.Account),
+				},
+			}
+			command.CreditParty = counterParty
 		}
 	}
-	if !reflect.ValueOf(params.CreditParty.Purse).IsZero() {
-		command.CreditParty = &hera.PaymentCounterParty{
-			Party: s.paymentCounterPartyAsPurse(params.CreditParty.Purse),
+
+	if party.DebitParty != nil {
+		counterParty := &hera.PaymentCounterParty{}
+		if customerCounterParty, ok := party.DebitParty.(*CustomerPaymentParty); ok {
+			counterParty.Party = &hera.PaymentCounterParty_Customer{
+				Customer: &hera.PaymentCustomerCounterParty{
+					CustomerNumber: s.heraCustomerNumber(customerCounterParty.CustomerNumber),
+					ChannelNumber: &hera.PaymentChannelNumber{
+						Channel: hera.PaymentChannel(customerCounterParty.ChannelNumber.Channel),
+						Number:  customerCounterParty.ChannelNumber.Number,
+					},
+				},
+			}
+			command.DebitParty = counterParty
 		}
-	}
-	if !reflect.ValueOf(params.CreditParty.Wallet).IsZero() {
-		command.CreditParty = &hera.PaymentCounterParty{
-			Party: s.paymentCounterPartyAsWallet(params.CreditParty.Wallet),
+		if purseCounterParty, ok := party.DebitParty.(*Purse); ok {
+			counterParty.Party = &hera.PaymentCounterParty_Purse{
+				Purse: &hera.PaymentPurseCounterParty{
+					PurseId: purseCounterParty.PurseID,
+				},
+			}
+			command.DebitParty = counterParty
 		}
-	}
-	if !reflect.ValueOf(params.DebitParty.Customer).IsZero() {
-		command.DebitParty = &hera.PaymentCounterParty{
-			Party: s.paymentCounterPartyAsCustomer(customer, &params.Channel),
+		if walletCounterParty, ok := party.DebitParty.(*Wallet); ok {
+			counterParty.Party = &hera.PaymentCounterParty_Wallet{
+				Wallet: &hera.PaymentWalletCounterParty{
+					CustomerId: walletCounterParty.CustomerID,
+					WalletId:   walletCounterParty.WalletID,
+				},
+			}
+			command.DebitParty = counterParty
 		}
-	}
-	if !reflect.ValueOf(params.DebitParty.Purse).IsZero() {
-		command.DebitParty = &hera.PaymentCounterParty{
-			Party: s.paymentCounterPartyAsPurse(params.DebitParty.Purse),
-		}
-	}
-	if !reflect.ValueOf(params.DebitParty.Wallet).IsZero() {
-		command.DebitParty = &hera.PaymentCounterParty{
-			Party: s.paymentCounterPartyAsWallet(params.DebitParty.Wallet),
+		if channelCounterParty, ok := party.DebitParty.(*ChannelCounterParty); ok {
+			counterParty.Party = &hera.PaymentCounterParty_Channel{
+				Channel: &hera.PaymentChannelCounterParty{
+					ChannelNumber: &hera.PaymentChannelNumber{
+						Channel: hera.PaymentChannel(channelCounterParty.ChannelNumber.Channel),
+						Number:  channelCounterParty.ChannelNumber.Number,
+					},
+					ChannelCode: 12,
+					Account:     wrapperspb.String(""),
+				},
+			}
+			command.DebitParty = counterParty
 		}
 	}
 
@@ -145,27 +231,31 @@ func (s *elarian) InitiatePayment(customer *Customer, params *Paymentrequest) (*
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	res, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	reply := &hera.AppToServerCommandReply{}
-	if err = proto.Unmarshal(res.Data(), reply); err != nil {
+	commandReply := &hera.AppToServerCommandReply{}
+	if err = proto.Unmarshal(res.Data(), commandReply); err != nil {
 		return nil, err
 	}
-	return &InitiatePaymentReply{
-		CreditCustomerID: reply.GetInitiatePayment().CreditCustomerId.Value,
-		DebitCustomerID:  reply.GetInitiatePayment().DebitCustomerId.Value,
-		Description:      reply.GetInitiatePayment().Description,
-		Status:           PaymentStatus(reply.GetInitiatePayment().Status),
-		TransactionID:    reply.GetInitiatePayment().TransactionId.Value,
-	}, nil
+	paymentReply := commandReply.GetInitiatePayment()
+	reply := &InitiatePaymentReply{
+		Status:        PaymentStatus(paymentReply.Status),
+		Description:   paymentReply.Description,
+		TransactionID: paymentReply.TransactionId.Value,
+	}
+	if paymentReply.CreditCustomerId != nil {
+		reply.CreditCustomerID = paymentReply.CreditCustomerId.Value
+	}
+	if paymentReply.DebitCustomerId != nil {
+		reply.DebitCustomerID = paymentReply.DebitCustomerId.Value
+	}
+	return reply, nil
 }
 
-func (s *elarian) ReceivePayment(customerNumber, transactionID string, channel *PaymentChannelNumber, cash *Cash, paymentStatus PaymentStatus) (*SimulatorToServerCommandReply, error) {
+func (s *elarian) ReceivePayment(ctx context.Context, customerNumber, transactionID string, channel *PaymentChannelNumber, cash *Cash, paymentStatus PaymentStatus) (*SimulatorToServerCommandReply, error) {
 	if channel == nil || reflect.ValueOf(channel).IsZero() {
 		return nil, errors.New("paymentChannel is required")
 	}
@@ -193,8 +283,6 @@ func (s *elarian) ReceivePayment(customerNumber, transactionID string, channel *
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err
@@ -210,7 +298,7 @@ func (s *elarian) ReceivePayment(customerNumber, transactionID string, channel *
 	}, nil
 }
 
-func (s *elarian) UpdatePaymentStatus(transactionID string, paymentStatus PaymentStatus) (*SimulatorToServerCommandReply, error) {
+func (s *elarian) UpdatePaymentStatus(ctx context.Context, transactionID string, paymentStatus PaymentStatus) (*SimulatorToServerCommandReply, error) {
 	command := &hera.UpdatePaymentStatusSimulatorCommand{
 		TransactionId: transactionID,
 		Status:        hera.PaymentStatus(paymentStatus),
@@ -222,8 +310,6 @@ func (s *elarian) UpdatePaymentStatus(transactionID string, paymentStatus Paymen
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
 	payload, err := s.client.RequestResponse(payload.New(data, []byte{})).Block(ctx)
 	if err != nil {
 		return nil, err

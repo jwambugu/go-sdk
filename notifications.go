@@ -22,7 +22,7 @@ type (
 	NotificationCallBack func(message IsOutBoundMessageBody, appData *Appdata)
 
 	// NotificationHandler func
-	NotificationHandler func(notification IsNotification, appData *Appdata, customer *Customer, cb NotificationCallBack)
+	NotificationHandler func(service Elarian, notification IsNotification, appData *Appdata, customer *Customer, cb NotificationCallBack)
 
 	// NotificationPaymentStatus struct
 	NotificationPaymentStatus struct {
@@ -241,17 +241,17 @@ func (s *elarian) notificationCallBack(body IsOutBoundMessageBody, appData *Appd
 			Data: &hera.DataMapValue{},
 		}
 
-		if stringVal, ok := appData.Value.(StringDataValue); ok {
+		if appData.Value != "" {
 			reply.DataUpdate.Data = &hera.DataMapValue{
 				Value: &hera.DataMapValue_StringVal{
-					StringVal: string(stringVal),
+					StringVal: appData.Value,
 				},
 			}
 		}
-		if bytesVal, ok := appData.Value.(StringDataValue); ok {
+		if len(appData.BytesValue) > 0 {
 			reply.DataUpdate.Data = &hera.DataMapValue{
 				Value: &hera.DataMapValue_BytesVal{
-					BytesVal: []byte(bytesVal),
+					BytesVal: appData.BytesValue,
 				},
 			}
 		}
@@ -341,6 +341,7 @@ func (s *elarian) InitializeNotificationStream() <-chan error {
 				s.handleSimulatorNotification(simulatorNotification)
 			case err := <-s.errorChannel:
 				if errors.Is(err, io.EOF) {
+					close(s.replyChannel)
 					return
 				}
 				if err != nil {
