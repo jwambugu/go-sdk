@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"reflect"
 	"strconv"
 	"sync"
 	"syscall"
@@ -23,7 +22,6 @@ const (
 )
 
 func main() {
-
 	includes := func(statusArr []elarian.PaymentStatus, status elarian.PaymentStatus) bool {
 		for _, s := range statusArr {
 			if status == s {
@@ -35,31 +33,34 @@ func main() {
 
 	approveLoan := func(service elarian.Elarian, customer *elarian.Customer, balance float64) {
 		log.Printf("Processing loan for %s", customer.CustomerNumber.Number)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*120))
-		defer cancel()
-		metaData, err := customer.GetMetadata(ctx)
+		metaData, err := customer.GetMetadata(context.Background())
 		if err != nil {
 			log.Fatalln("Error Fetching Metadata", err)
 		}
 		name, ok := metaData["name"]
 		if !ok {
-			metaData["name"] = &elarian.Metadata{Key: "balance", Value: ""}
+			name = &elarian.Metadata{Key: "balance", Value: ""}
+			metaData["name"] = name
 		}
 		repaymentDate := time.Now().Add(time.Second * 6)
 
-		res, err := service.InitiatePayment(ctx, customer, &elarian.Paymentrequest{
-			Channel: elarian.PaymentChannelNumber{},
-			Cash: elarian.Cash{
-				Amount:       balance,
+		res, err := service.InitiatePayment(
+			context.Background(),
+			&elarian.PaymentCounterParty{
+				DebitParty: &elarian.Purse{PurseID: "prs-PZSvFO"},
+				CreditParty: &elarian.CustomerPaymentParty{
+					CustomerNumber: customer.CustomerNumber,
+					ChannelNumber: &elarian.PaymentChannelNumber{
+						Channel: elarian.PaymentChannelCellular,
+						Number:  "525900",
+					},
+				},
+			},
+			&elarian.Cash{
 				CurrencyCode: "KES",
+				Amount:       balance,
 			},
-			DebitParty: elarian.PaymentParty{
-				Purse: &elarian.Purse{PurseID: "prs-PZSvFO"},
-			},
-			CreditParty: elarian.PaymentParty{
-				Customer: customer,
-			},
-		})
+		)
 		if err != nil {
 			log.Fatalln("Error Initiating payment: ", err)
 		}
@@ -70,14 +71,17 @@ func main() {
 			elarian.PaymentStatusSuccess,
 		}
 
-		if !includes(acceptableStatus, res.Status) {
-			log.Fatalf("Failed to send Kes %f to %v reason: %s \n", balance, customer.CustomerNumber.Number, res.Description)
-		}
-		customer.UpdateMetaData(ctx, name, &elarian.Metadata{Key: "balance", Value: strconv.FormatFloat(balance, 'f', 2, 64)})
 		messagingChannel := &elarian.MessagingChannelNumber{Number: "21356", Channel: elarian.MessagingChannelSms}
-		customer.SendMessage(ctx, messagingChannel, elarian.TextMessage(fmt.Sprintf("Congratulations %s, Your loan of KES %f has been approved. You are expexted to pay it back by %v", name.Value, balance, repaymentDate)))
+		if !includes(acceptableStatus, res.Status) {
+			customer.SendMessage(context.Background(), messagingChannel, elarian.TextMessage("Processing your loan failed please try again"))
+			log.Printf("Failed to send Kes %f to %v reason: %s \n", balance, customer.CustomerNumber.Number, res.Description)
+			return
+		}
+
+		customer.UpdateMetaData(context.Background(), name, &elarian.Metadata{Key: "balance", Value: strconv.FormatFloat(balance, 'f', 2, 64)})
+		customer.SendMessage(context.Background(), messagingChannel, elarian.TextMessage(fmt.Sprintf("Congratulations %s, Your loan of KES %f has been approved. You are expexted to pay it back by %v", name.Value, balance, repaymentDate)))
 		customer.AddReminder(
-			ctx,
+			context.Background(),
 			&elarian.Reminder{
 				Key:      "moni",
 				RemindAt: time.Now().Add(time.Second * 2),
@@ -87,20 +91,19 @@ func main() {
 	}
 
 	processPayment := func(customer *elarian.Customer, notification *elarian.ReceivedPaymentNotification) {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*120))
-		defer cancel()
-
-		metaData, err := customer.GetMetadata(ctx)
+		metaData, err := customer.GetMetadata(context.Background())
 		if err != nil {
 			log.Fatalln("Error Fetching Metadata", err)
 		}
 		name, ok := metaData["name"]
 		if !ok {
-			metaData["name"] = &elarian.Metadata{Key: "balance", Value: ""}
+			name = &elarian.Metadata{Key: "balance", Value: ""}
+			metaData["name"] = name
 		}
 		balanceMeta, ok := metaData["balance"]
 		if !ok {
-			metaData["balance"] = &elarian.Metadata{Key: "balance", Value: "0"}
+			balanceMeta = &elarian.Metadata{Key: "balance", Value: "0"}
+			metaData["balance"] = balanceMeta
 		}
 		balance, err := strconv.ParseFloat(string(balanceMeta.Value), 64)
 		if err != nil {
@@ -108,48 +111,49 @@ func main() {
 		}
 		newBalance := balance - notification.Value.Amount
 		customer.UpdateMetaData(
-			ctx,
+			context.Background(),
 			name,
 			&elarian.Metadata{Key: "balance", Value: strconv.FormatFloat(newBalance, 'f', 2, 64)},
 		)
 
 		messagingChannel := &elarian.MessagingChannelNumber{Number: "21356", Channel: elarian.MessagingChannelSms}
 		if newBalance <= 0 {
-			customer.CancelReminder(ctx, "moni")
+			customer.CancelReminder(context.Background(), "moni")
 			customer.SendMessage(
-				ctx,
+				context.Background(),
 				messagingChannel,
-				elarian.TextMessage(fmt.Sprintf("Thank you for your payment %s, your loan has been fully repaid!!", name)),
+				elarian.TextMessage(fmt.Sprintf("Thank you for your payment %s, your loan has been fully repaid!!", name.Value)),
 			)
-			customer.DeleteMetaData(ctx, "name", "strike", "balance", "screen")
+			customer.DeleteMetaData(context.Background(), "name", "strike", "balance", "screen")
 			return
 		}
 		customer.SendMessage(
-			ctx,
+			context.Background(),
 			messagingChannel,
 			elarian.TextMessage(fmt.Sprintf("Hey %s! \n Thank you for your payment, but you still owe me KES ${newBalance}", name)),
 		)
 	}
 
 	processReminder := func(customer *elarian.Customer, notification *elarian.ReminderNotification) {
-
 		metaData, err := customer.GetMetadata(context.Background())
 		if err != nil {
 			log.Fatalln("Error Fetching Metadata", err)
 		}
 		strike, ok := metaData["strike"]
 		if !ok {
-			metaData["strike"] = &elarian.Metadata{Key: "strike", Value: "1"}
+			strike = &elarian.Metadata{Key: "strike", Value: "1"}
+			metaData["strike"] = strike
 		}
 		name, ok := metaData["name"]
 		if !ok {
-			metaData["name"] = &elarian.Metadata{Key: "balance", Value: ""}
+			name = &elarian.Metadata{Key: "balance", Value: ""}
+			metaData["name"] = name
 		}
 		balance, ok := metaData["balance"]
 		if !ok {
-			metaData["balance"] = &elarian.Metadata{Key: "balance", Value: "0"}
+			balance = &elarian.Metadata{Key: "balance", Value: "0"}
+			metaData["balance"] = balance
 		}
-
 		strikeValue, err := strconv.Atoi(strike.Value)
 		if err != nil {
 			log.Fatalln("Error parsing strike value")
@@ -176,29 +180,30 @@ func main() {
 				elarian.TextMessage(fmt.Sprintf("Yo %s, !!! you need to pay back my KES %s", name, balance)),
 			)
 		}
-
 		strikeValue++
 		customer.UpdateMetaData(context.Background(), balance, name, &elarian.Metadata{Key: "strike", Value: strconv.Itoa(strikeValue)})
 		customer.AddReminder(context.Background(), &elarian.Reminder{Key: "moni", RemindAt: time.Now().Add(time.Minute * 1), Payload: ""})
 	}
 
 	processUssd := func(service elarian.Elarian, customer *elarian.Customer, notification *elarian.UssdSessionNotification, appdata *elarian.Appdata, cb elarian.NotificationCallBack) {
-		fmt.Printf("Processing USSD from %v \n", customer.CustomerNumber.Number)
+		fmt.Printf("Processing USSD from %v %s \n", customer.CustomerNumber.Number, notification.SessionID)
 
 		// Create an abitrary  struct to hold our appdata
 		appData := struct {
-			Screen string `json:"screen,omitempty"`
+			State     string `json:"state"`
+			SessionID string `json:"sessionId"`
 		}{}
 
-		if appdata.Value == "" {
-			appData.Screen = "home"
-		}
-
-		if appdata.Value != "" && !reflect.ValueOf(appdata.Value).IsZero() {
+		if appdata.Value != "" {
 			err := json.Unmarshal([]byte(appdata.Value), &appData)
 			if err != nil {
 				log.Fatalln("Error unmarshalling app data", err)
 			}
+		}
+
+		if notification.SessionID != appData.SessionID {
+			appData.State = "initial"
+			appData.SessionID = notification.SessionID
 		}
 
 		// get a customer's metadata
@@ -209,7 +214,7 @@ func main() {
 
 		nameVal, ok := customerData["name"]
 		if !ok {
-			nameVal = &elarian.Metadata{Key: "balance", Value: ""}
+			nameVal = &elarian.Metadata{Key: "name", Value: ""}
 			customerData["name"] = nameVal
 		}
 		balanceVal, ok := customerData["balance"]
@@ -223,82 +228,83 @@ func main() {
 		if err != nil {
 			log.Fatalln("Error converting balance", err)
 		}
+
 		menu := &elarian.UssdMenu{Text: "", IsTerminal: false}
-		nextScreen := appData.Screen
-		if appData.Screen == "home" && notification.Input != "" {
+		state := appData.State
+		switch state {
+		case "initial":
+			appData.State = "home"
+			menu.Text = "Welcome to MoniMoni!\n1. Apply for loan\n2. Quit"
+			val, _ := json.Marshal(&appData)
+			cb(menu, &elarian.Appdata{Value: string(val)})
+			return
+		case "home":
 			if notification.Input == "1" {
-				nextScreen = "request-name"
+				if name == "" {
+					appData.State = "request-name"
+					menu.Text = "Alright, what is your name?"
+					val, _ := json.Marshal(&appData)
+					cb(menu, &elarian.Appdata{Value: string(val)})
+					return
+				}
+				if balance > 0 {
+					appData.State = "request-amount"
+					menu.Text += fmt.Sprintf("Hey %s, you still owe KES %f !", name, balance)
+					val, _ := json.Marshal(&appData)
+					cb(menu, &elarian.Appdata{Value: string(val)})
+					return
+				}
+				menu.Text = fmt.Sprintf("Okay %s, how much do you need?", name)
+				appData.State = "request-amount"
+				val, _ := json.Marshal(&appData)
+				cb(menu, &elarian.Appdata{Value: string(val)})
+				return
 			}
 			if notification.Input == "2" {
-				nextScreen = "quit"
+				menu.Text = "Have a great day"
+				menu.IsTerminal = true
+				cb(menu, nil)
+				return
 			}
-			if name != "" {
-				nextScreen = "info"
-			}
-		}
-
-		switch nextScreen {
-		case "quit":
-			menu.Text = "Happy Coding"
-			menu.IsTerminal = true
-			nextScreen = "home"
-			appData.Screen = nextScreen
-			val, _ := json.Marshal(&appData)
-			cb(menu, &elarian.Appdata{Value: string(val)})
-
-		case "info":
-			menu.Text = fmt.Sprintf("Hey %s, ", name)
-			if balance > 0 {
-				menu.Text += fmt.Sprintf("you still owe me KES %f !", balance)
-			} else {
-				menu.Text += "you have repaid your loan, good for you !"
-			}
-			menu.IsTerminal = false
-			nextScreen = "home"
-			appData.Screen = nextScreen
-			val, _ := json.Marshal(&appData)
-			cb(menu, &elarian.Appdata{Value: string(val)})
-
 		case "request-name":
-			menu.Text = "Alright, what is your name?"
-			nextScreen = "request-amount"
-			appData.Screen = nextScreen
-			val, _ := json.Marshal(&appData)
-			cb(menu, &elarian.Appdata{Value: string(val)})
-		case "request-amount":
 			name = notification.Input
 			menu.Text = fmt.Sprintf("Okay %s, how much do you need?", name)
-			nextScreen = "approve-amount"
-			appData.Screen = nextScreen
+			appData.State = "request-amount"
 			val, _ := json.Marshal(&appData)
 			cb(menu, &elarian.Appdata{Value: string(val)})
-		case "approve-amount":
+			customer.UpdateMetaData(context.Background(), &elarian.Metadata{Key: "name", Value: name})
+			return
+		case "request-amount":
+			appData.State = "approve-amount"
 			balance, err := strconv.ParseFloat(notification.Input, 64)
 			if err != nil {
-				log.Fatalln("Error converting balance", err)
+				menu.Text = "Incorrect amount, please try again"
+				menu.IsTerminal = true
+				val, _ := json.Marshal(&appData)
+				cb(menu, &elarian.Appdata{Value: string(val)})
+				log.Println("Error converting balance", err)
+				return
 			}
 			menu.Text = fmt.Sprintf("Awesome! %s we are reviewing your application and will be in touch shortly \n Have a lovely day!", name)
 			menu.IsTerminal = true
-			nextScreen = "home"
-			appData.Screen = nextScreen
 			val, _ := json.Marshal(&appData)
 			cb(menu, &elarian.Appdata{Value: string(val)})
 			approveLoan(service, customer, balance)
-		case "home":
-			menu.Text = "Welcome to MoniMoni!\n1. Apply for loan\n2. Quit"
-			menu.IsTerminal = false
-			appData.Screen = nextScreen
+			return
+		case "approve-amount":
+			appData.State = "approve-amount"
+			menu.Text = fmt.Sprintf("Hi! %s your loan was approved. \n Please contact our support team for further inquiries!", name)
+			menu.IsTerminal = true
 			val, _ := json.Marshal(&appData)
 			cb(menu, &elarian.Appdata{Value: string(val)})
+			return
 		default:
+			appData.State = "home"
 			menu.Text = "Welcome to MoniMoni!\n1. Apply for loan\n2. Quit"
-			menu.IsTerminal = false
-			appData.Screen = nextScreen
 			val, _ := json.Marshal(&appData)
 			cb(menu, &elarian.Appdata{Value: string(val)})
+			return
 		}
-		customer.UpdateMetaData(context.Background(), &elarian.Metadata{Key: "name", Value: name},
-			&elarian.Metadata{Key: "balance", Value: strconv.FormatFloat(balance, 'f', 2, 64)})
 	}
 
 	opts := &elarian.Options{
@@ -331,10 +337,11 @@ func main() {
 	})
 
 	service.On(elarian.ElarianReceivedUssdSessionNotification, func(service elarian.Elarian, notf elarian.IsNotification, appData *elarian.Appdata, customer *elarian.Customer, cb elarian.NotificationCallBack) {
-		if messageNotification, ok := notf.(*elarian.UssdSessionNotification); ok {
-			processUssd(service, customer, messageNotification, appData, cb)
+		if ussdNotification, ok := notf.(*elarian.UssdSessionNotification); ok {
+			processUssd(service, customer, ussdNotification, appData, cb)
 		}
 	})
+
 	service.On(elarian.ElarianReceivedPaymentNotification, func(service elarian.Elarian, notf elarian.IsNotification, appData *elarian.Appdata, customer *elarian.Customer, cb elarian.NotificationCallBack) {
 		if paymentNotification, ok := notf.(*elarian.ReceivedPaymentNotification); ok {
 			processPayment(customer, paymentNotification)
@@ -350,6 +357,5 @@ func main() {
 		}
 		wg.Done()
 	}(wg)
-
 	wg.Wait()
 }

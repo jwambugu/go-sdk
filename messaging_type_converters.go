@@ -195,13 +195,9 @@ func (s *elarian) messageSessionStartedNotf(notf *hera.MessagingSessionStartedNo
 			Number:  notf.ChannelNumber.Number,
 			Channel: MessagingChannel(notf.ChannelNumber.Channel),
 		},
-		CustomerNumber: &CustomerNumber{
-			Number:    notf.CustomerNumber.Number,
-			Partition: notf.CustomerNumber.Partition.Value,
-			Provider:  NumberProvider(notf.CustomerNumber.Provider),
-		},
-		Expiration: notf.ExpiresAt.Seconds,
-		SessionID:  notf.SessionId,
+		CustomerNumber: s.customerNumber(notf.CustomerNumber),
+		Expiration:     notf.ExpiresAt.Seconds,
+		SessionID:      notf.SessionId,
 	}
 }
 
@@ -211,13 +207,9 @@ func (s *elarian) messageSessionRenewedNotf(notf *hera.MessagingSessionRenewedNo
 			Number:  notf.ChannelNumber.Number,
 			Channel: MessagingChannel(notf.ChannelNumber.Channel),
 		},
-		CustomerNumber: &CustomerNumber{
-			Number:    notf.CustomerNumber.Number,
-			Partition: notf.CustomerNumber.Partition.Value,
-			Provider:  NumberProvider(notf.CustomerNumber.Provider),
-		},
-		Expiration: notf.ExpiresAt.Seconds,
-		SessionID:  notf.SessionId,
+		CustomerNumber: s.customerNumber(notf.CustomerNumber),
+		Expiration:     notf.ExpiresAt.Seconds,
+		SessionID:      notf.SessionId,
 	}
 }
 
@@ -227,24 +219,16 @@ func (s *elarian) MessageSessionEndedNotf(notf *hera.MessagingSessionEndedNotifi
 			Number:  notf.ChannelNumber.Number,
 			Channel: MessagingChannel(notf.ChannelNumber.Channel),
 		},
-		CustomerNumber: &CustomerNumber{
-			Number:    notf.CustomerNumber.Number,
-			Partition: notf.CustomerNumber.Partition.Value,
-			Provider:  NumberProvider(notf.CustomerNumber.Provider),
-		},
-		Duration:  notf.Duration.AsDuration(),
-		SessionID: notf.SessionId,
-		Reason:    MessagingSessionEndReason(notf.Reason),
+		CustomerNumber: s.customerNumber(notf.CustomerNumber),
+		Duration:       notf.Duration.AsDuration(),
+		SessionID:      notf.SessionId,
+		Reason:         MessagingSessionEndReason(notf.Reason),
 	}
 }
 
 func (s *elarian) messagingConsentUpdateNotf(notf *hera.MessagingConsentUpdateNotification) *MessagingConsentUpdateNotification {
 	return &MessagingConsentUpdateNotification{
-		CustomerNumber: &CustomerNumber{
-			Number:    notf.CustomerNumber.Number,
-			Partition: notf.CustomerNumber.Partition.Value,
-			Provider:  NumberProvider(notf.CustomerNumber.Provider),
-		},
+		CustomerNumber: s.customerNumber(notf.CustomerNumber),
 		ChannelNumber: &MessagingChannelNumber{
 			Number:  notf.ChannelNumber.Number,
 			Channel: MessagingChannel(notf.ChannelNumber.Channel),
@@ -255,11 +239,7 @@ func (s *elarian) messagingConsentUpdateNotf(notf *hera.MessagingConsentUpdateNo
 
 func (s *elarian) sentMessageReaction(notf *hera.SentMessageReactionNotification) *SentMessageReaction {
 	return &SentMessageReaction{
-		CustomerNumber: &CustomerNumber{
-			Number:    notf.CustomerNumber.Number,
-			Partition: notf.CustomerNumber.Partition.Value,
-			Provider:  NumberProvider(notf.CustomerNumber.Provider),
-		},
+		CustomerNumber: s.customerNumber(notf.CustomerNumber),
 		ChannelNumber: &MessagingChannelNumber{
 			Number:  notf.ChannelNumber.Number,
 			Channel: MessagingChannel(notf.ChannelNumber.Channel),
@@ -275,13 +255,7 @@ func (s *elarian) recievedMessageNotification(notf *hera.ReceivedMessageNotifica
 	notification.MessageID = notf.MessageId
 
 	if !reflect.ValueOf(notf.CustomerNumber).IsZero() {
-		notification.CustomerNumber = &CustomerNumber{
-			Number:   notf.CustomerNumber.Number,
-			Provider: NumberProvider(notf.CustomerNumber.Provider),
-		}
-		if !reflect.ValueOf(notf.CustomerNumber.Partition).IsZero() {
-			notification.CustomerNumber.Partition = notf.CustomerNumber.GetPartition().Value
-		}
+		notification.CustomerNumber = s.customerNumber(notf.CustomerNumber)
 	}
 
 	if !reflect.ValueOf(notf.ChannelNumber).IsZero() {

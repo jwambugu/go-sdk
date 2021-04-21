@@ -309,12 +309,12 @@ func (s *elarian) SendChannelPaymentSimulatorNotificationHandler(notf *hera.Serv
 		}
 		notification.DebitParty = &PaymentParty{}
 		if purse, ok := entry.SendChannelPayment.DebitParty.(*hera.SendChannelPaymentSimulatorNotification_Purse); ok {
-			notification.DebitParty.Purse = &Purse{
+			notification.DebitParty.PurseCounterParty = &Purse{
 				PurseID: purse.Purse.PurseId,
 			}
 		}
 		if wallet, ok := entry.SendChannelPayment.DebitParty.(*hera.SendChannelPaymentSimulatorNotification_Wallet); ok {
-			notification.DebitParty.Wallet = &Wallet{
+			notification.DebitParty.WalletCounterParty = &Wallet{
 				WalletID:   wallet.Wallet.WalletId,
 				CustomerID: wallet.Wallet.CustomerId,
 			}
@@ -349,12 +349,12 @@ func (s *elarian) CheckoutPaymentSimulatorNotificationHandler(notf *hera.ServerT
 		}
 		notification.CreditParty = &PaymentParty{}
 		if purse, ok := entry.CheckoutPayment.CreditParty.(*hera.CheckoutPaymentSimulatorNotification_Purse); ok {
-			notification.CreditParty.Purse = &Purse{
+			notification.CreditParty.PurseCounterParty = &Purse{
 				PurseID: purse.Purse.PurseId,
 			}
 		}
 		if wallet, ok := entry.CheckoutPayment.CreditParty.(*hera.CheckoutPaymentSimulatorNotification_Wallet); ok {
-			notification.CreditParty.Wallet = &Wallet{
+			notification.CreditParty.WalletCounterParty = &Wallet{
 				CustomerID: wallet.Wallet.CustomerId,
 				WalletID:   wallet.Wallet.WalletId,
 			}
@@ -388,12 +388,12 @@ func (s *elarian) SendCustomerPaymentSimulatorNotificationHandler(notf *hera.Ser
 		}
 		notification.DebitParty = &PaymentParty{}
 		if purse, ok := entry.SendCustomerPayment.DebitParty.(*hera.SendCustomerPaymentSimulatorNotification_Purse); ok {
-			notification.DebitParty.Purse = &Purse{
+			notification.DebitParty.PurseCounterParty = &Purse{
 				PurseID: purse.Purse.PurseId,
 			}
 		}
 		if wallet, ok := entry.SendCustomerPayment.DebitParty.(*hera.SendCustomerPaymentSimulatorNotification_Wallet); ok {
-			notification.DebitParty.Wallet = &Wallet{
+			notification.DebitParty.WalletCounterParty = &Wallet{
 				CustomerID: wallet.Wallet.CustomerId,
 				WalletID:   wallet.Wallet.WalletId,
 			}

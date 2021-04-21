@@ -77,7 +77,7 @@ type (
 		UpdateMessagingConsent(ctx context.Context, customer *CustomerNumber, channelNumber *MessagingChannelNumber, action MessagingConsentUpdate) (*UpdateMessagingConsentReply, error)
 
 		// InitiatePayment requires a wallet setup and involves the transfer of funds to a customer
-		InitiatePayment(ctx context.Context, customer *Customer, params *Paymentrequest) (*InitiatePaymentReply, error)
+		InitiatePayment(ctx context.Context, party *PaymentCounterParty, cash *Cash) (*InitiatePaymentReply, error)
 
 		// NewCustomer func creates and Returns a customer instance for functionality consumable from a customer's perspective
 		NewCustomer(params *CreateCustomer) *Customer

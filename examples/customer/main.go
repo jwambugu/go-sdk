@@ -34,6 +34,21 @@ func main() {
 	}
 	defer service.Disconnect()
 
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		_, err := service.CancelCustomerReminder(context.Background(), elarian.CustomerID(customerID), "reminderKey")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		err = service.Disconnect()
+		if err != nil {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}()
+
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
@@ -43,17 +58,6 @@ func main() {
 		}
 		wg.Done()
 	}(wg)
-
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigs
-		err := service.Disconnect()
-		if err != nil {
-			os.Exit(1)
-		}
-		os.Exit(0)
-	}()
 
 	service.On(elarian.ElarianReminderNotification, func(service elarian.Elarian, notf elarian.IsNotification, appData *elarian.Appdata, customer *elarian.Customer, cb elarian.NotificationCallBack) {
 		if notification, ok := notf.(*elarian.ReminderNotification); ok {
@@ -69,6 +73,7 @@ func main() {
 		Key:      "reminderKey",
 		Payload:  "i am a reminder",
 		RemindAt: time.Now().Add(time.Second * 5),
+		Interval: time.Second * 60,
 	})
 	if err != nil {
 		log.Fatalln("Error: err", err)
