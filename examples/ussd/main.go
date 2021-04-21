@@ -15,13 +15,23 @@ import (
 	elarian "github.com/elarianltd/go-sdk"
 )
 
+// These are test values and cannot be used in any production environments
 const (
-	appID  string = "zordTest"
-	orgID  string = "og-hv3yFs"
-	aPIKey string = "el_api_key_6b3ff181a2d5cf91f62d2133a67a25b3070d2d7305eba70288417b3ab9ebd145"
+	appID         string = "zordTest"
+	orgID         string = "og-hv3yFs"
+	aPIKey        string = "el_api_key_6b3ff181a2d5cf91f62d2133a67a25b3070d2d7305eba70288417b3ab9ebd145"
+	purseID       string = "prs-PZSvFO"
+	payBillNumber string = "525900"
+	smsShortCode  string = "21356"
 )
 
 func main() {
+	// These are test values and cannot be used in any production environments
+	var (
+		messagingChannel = &elarian.MessagingChannelNumber{Number: smsShortCode, Channel: elarian.MessagingChannelSms}
+		paymentChannel   = &elarian.PaymentChannelNumber{Number: payBillNumber, Channel: elarian.PaymentChannelCellular}
+	)
+
 	includes := func(statusArr []elarian.PaymentStatus, status elarian.PaymentStatus) bool {
 		for _, s := range statusArr {
 			if status == s {
@@ -47,13 +57,10 @@ func main() {
 		res, err := service.InitiatePayment(
 			context.Background(),
 			&elarian.PaymentCounterParty{
-				DebitParty: &elarian.Purse{PurseID: "prs-PZSvFO"},
+				DebitParty: &elarian.Purse{PurseID: purseID},
 				CreditParty: &elarian.CustomerPaymentParty{
 					CustomerNumber: customer.CustomerNumber,
-					ChannelNumber: &elarian.PaymentChannelNumber{
-						Channel: elarian.PaymentChannelCellular,
-						Number:  "525900",
-					},
+					ChannelNumber:  paymentChannel,
 				},
 			},
 			&elarian.Cash{
@@ -71,15 +78,17 @@ func main() {
 			elarian.PaymentStatusSuccess,
 		}
 
-		messagingChannel := &elarian.MessagingChannelNumber{Number: "21356", Channel: elarian.MessagingChannelSms}
 		if !includes(acceptableStatus, res.Status) {
 			customer.SendMessage(context.Background(), messagingChannel, elarian.TextMessage("Processing your loan failed please try again"))
 			log.Printf("Failed to send Kes %f to %v reason: %s \n", balance, customer.CustomerNumber.Number, res.Description)
 			return
 		}
-
 		customer.UpdateMetaData(context.Background(), name, &elarian.Metadata{Key: "balance", Value: strconv.FormatFloat(balance, 'f', 2, 64)})
-		customer.SendMessage(context.Background(), messagingChannel, elarian.TextMessage(fmt.Sprintf("Congratulations %s, Your loan of KES %f has been approved. You are expexted to pay it back by %v", name.Value, balance, repaymentDate)))
+		customer.SendMessage(
+			context.Background(),
+			messagingChannel,
+			elarian.TextMessage(fmt.Sprintf("Congratulations %s, Your loan of KES %f has been approved. You are expexted to pay it back by %v", name.Value, balance, repaymentDate)),
+		)
 		customer.AddReminder(
 			context.Background(),
 			&elarian.Reminder{
@@ -115,8 +124,6 @@ func main() {
 			name,
 			&elarian.Metadata{Key: "balance", Value: strconv.FormatFloat(newBalance, 'f', 2, 64)},
 		)
-
-		messagingChannel := &elarian.MessagingChannelNumber{Number: "21356", Channel: elarian.MessagingChannelSms}
 		if newBalance <= 0 {
 			customer.CancelReminder(context.Background(), "moni")
 			customer.SendMessage(
@@ -158,8 +165,6 @@ func main() {
 		if err != nil {
 			log.Fatalln("Error parsing strike value")
 		}
-
-		messagingChannel := &elarian.MessagingChannelNumber{Number: "21356", Channel: elarian.MessagingChannelSms}
 		if strikeValue == 1 {
 			customer.SendMessage(
 				context.Background(),

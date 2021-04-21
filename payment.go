@@ -46,7 +46,7 @@ type (
 		PurseID string `json:"purseId,omitempty"`
 	}
 
-	// CustomerCounterParty struct
+	// CustomerPaymentParty struct
 	CustomerPaymentParty struct {
 		CustomerNumber *CustomerNumber
 		ChannelNumber  *PaymentChannelNumber
