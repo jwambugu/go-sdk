@@ -17,11 +17,11 @@ import (
 
 // These are test values and cannot be used in any production environments
 const (
-	appID         string = "zordTest"
+	appID         string = "test"
 	orgID         string = "og-hv3yFs"
 	aPIKey        string = "el_api_key_6b3ff181a2d5cf91f62d2133a67a25b3070d2d7305eba70288417b3ab9ebd145"
-	purseID       string = "prs-PZSvFO"
-	payBillNumber string = "525900"
+	purseID       string = "prs-V86dj7"
+	payBillNumber string = "98500"
 	smsShortCode  string = "21356"
 )
 
@@ -83,23 +83,25 @@ func main() {
 			log.Printf("Failed to send Kes %f to %v reason: %s \n", balance, customer.CustomerNumber.Number, res.Description)
 			return
 		}
-		customer.UpdateMetaData(context.Background(), name, &elarian.Metadata{Key: "balance", Value: strconv.FormatFloat(balance, 'f', 2, 64)})
+		customer.UpdateMetaData(context.Background(), name, &elarian.Metadata{Key: "balance", Value: strconv.FormatFloat(balance, 'f', -1, 64)})
 		customer.SendMessage(
 			context.Background(),
 			messagingChannel,
-			elarian.TextMessage(fmt.Sprintf("Congratulations %s, Your loan of KES %f has been approved. You are expexted to pay it back by %v", name.Value, balance, repaymentDate)),
+			elarian.TextMessage(fmt.Sprintf("Congratulations %s, Your loan of KES %f has been approved. You are expected to pay it back by %v", name.Value, balance, repaymentDate)),
 		)
 		customer.AddReminder(
 			context.Background(),
 			&elarian.Reminder{
 				Key:      "moni",
-				RemindAt: time.Now().Add(time.Second * 2),
+				RemindAt: time.Now().Add(time.Second * 30),
 				Payload:  "",
 			},
 		)
 	}
 
 	processPayment := func(customer *elarian.Customer, notification *elarian.ReceivedPaymentNotification) {
+		fmt.Println("Processing payment", notification.TransactionID)
+
 		metaData, err := customer.GetMetadata(context.Background())
 		if err != nil {
 			log.Fatalln("Error Fetching Metadata", err)
@@ -131,17 +133,19 @@ func main() {
 				messagingChannel,
 				elarian.TextMessage(fmt.Sprintf("Thank you for your payment %s, your loan has been fully repaid!!", name.Value)),
 			)
-			customer.DeleteMetaData(context.Background(), "name", "strike", "balance", "screen")
+			customer.DeleteMetaData(context.Background(), "strike", "balance", "screen")
 			return
 		}
 		customer.SendMessage(
 			context.Background(),
 			messagingChannel,
-			elarian.TextMessage(fmt.Sprintf("Hey %s! \n Thank you for your payment, but you still owe me KES ${newBalance}", name)),
+			elarian.TextMessage(fmt.Sprintf("Hey %s! \n Thank you for your payment, but you still owe me KES ${newBalance}", name.Value)),
 		)
 	}
 
 	processReminder := func(customer *elarian.Customer, notification *elarian.ReminderNotification) {
+		fmt.Println("Processing reminder: ", notification)
+
 		metaData, err := customer.GetMetadata(context.Background())
 		if err != nil {
 			log.Fatalln("Error Fetching Metadata", err)
@@ -163,31 +167,41 @@ func main() {
 		}
 		strikeValue, err := strconv.Atoi(strike.Value)
 		if err != nil {
-			log.Fatalln("Error parsing strike value")
+			log.Println("Error parsing strike value")
 		}
+		fmt.Println("Strike value", strikeValue)
 		if strikeValue == 1 {
-			customer.SendMessage(
+			_, err := customer.SendMessage(
 				context.Background(),
 				messagingChannel,
-				elarian.TextMessage(fmt.Sprintf("Hey %s, this is a friendly reminder to pay back my KES %s", name, balance)),
+				elarian.TextMessage(fmt.Sprintf("Hey %s, this is a friendly reminder to pay back my KES %s", name.Value, balance.Value)),
 			)
+			if err != nil {
+				fmt.Println("ERROR SENDING SMS", err)
+			}
 		}
 		if strikeValue == 2 {
-			customer.SendMessage(
+			_, err := customer.SendMessage(
 				context.Background(),
 				messagingChannel,
-				elarian.TextMessage(fmt.Sprintf("Hey %s,you still need to pay back my KES %s", name, balance)))
+				elarian.TextMessage(fmt.Sprintf("Hey %s,you still need to pay back my KES %s", name.Value, balance.Value)))
+			if err != nil {
+				fmt.Println("ERROR SENDING SMS", err)
+			}
 		}
 		if strikeValue > 2 {
-			customer.SendMessage(
+			_, err := customer.SendMessage(
 				context.Background(),
 				messagingChannel,
-				elarian.TextMessage(fmt.Sprintf("Yo %s, !!! you need to pay back my KES %s", name, balance)),
+				elarian.TextMessage(fmt.Sprintf("Yo %s, !!! you need to pay back my KES %s", name.Value, balance.Value)),
 			)
+			if err != nil {
+				fmt.Println("ERROR SENDING SMS", err)
+			}
 		}
 		strikeValue++
 		customer.UpdateMetaData(context.Background(), balance, name, &elarian.Metadata{Key: "strike", Value: strconv.Itoa(strikeValue)})
-		customer.AddReminder(context.Background(), &elarian.Reminder{Key: "moni", RemindAt: time.Now().Add(time.Minute * 1), Payload: ""})
+		customer.AddReminder(context.Background(), &elarian.Reminder{Key: "moni", RemindAt: time.Now().Add(time.Second * 30), Payload: ""})
 	}
 
 	processUssd := func(service elarian.Elarian, customer *elarian.Customer, notification *elarian.UssdSessionNotification, appdata *elarian.Appdata, cb elarian.NotificationCallBack) {
@@ -255,6 +269,7 @@ func main() {
 				if balance > 0 {
 					appData.State = "request-amount"
 					menu.Text += fmt.Sprintf("Hey %s, you still owe KES %f !", name, balance)
+					menu.IsTerminal = true
 					val, _ := json.Marshal(&appData)
 					cb(menu, &elarian.Appdata{Value: string(val)})
 					return
