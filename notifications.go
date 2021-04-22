@@ -10,27 +10,33 @@ import (
 )
 
 type (
-	// Notification enum
+	// Notification is a constant that encapsulates all kinds of notifications you can listen for.
+	// Its the first argument in the On method defined by the service.
 	Notification int32
 
-	// IsNotification interface every notification should implement this interface
+	// IsNotification defines one method notification() that all notifications implement.
+	// There are 18 types of notifications relating to messaging, payments and simulator.
+	// They are all declared below.
 	IsNotification interface {
 		notification()
 	}
 
-	// NotificationCallBack func
+	// NotificationCallBack is part of the notification handler and should be called after a notification has been handled.
+	// It takes in a message or appData and both can be nil.
+	// These are sent back to elarian. if you the callback is not called in 15 seconds an empty reply is sent back to elarian.
 	NotificationCallBack func(message IsOutBoundMessageBody, appData *Appdata)
 
-	// NotificationHandler func
+	// NotificationHandler type is a handler function for all notifications. it provides the service, the notification, appdata, customer and the callback handler defined above.
 	NotificationHandler func(service Elarian, notification IsNotification, appData *Appdata, customer *Customer, cb NotificationCallBack)
 
-	// NotificationPaymentStatus struct
+	// NotificationPaymentStatus defines a structure for a payment status it has a transaction id and a status which is of type payment status
 	NotificationPaymentStatus struct {
 		TransactionID string        `json:"transactionId,omitempty"`
 		Status        PaymentStatus `json:"status,omitempty"`
 	}
 
-	// PurseNotification struct
+	// PurseNotification defines a structure for a purse notification.
+	// A purse notification is generated in context of a purse and has a purse ID and a paymentStatus. other fields include an OrgID, AppID and a CreatedAt
 	PurseNotification struct {
 		OrgID         string                     `json:"orgId,omitempty"`
 		AppID         string                     `json:"appId,omitempty"`
@@ -39,7 +45,8 @@ type (
 		PaymentStatus *NotificationPaymentStatus `json:"paymentStatus,omitempty"`
 	}
 
-	// MessageStatusNotification struct
+	// MessageStatusNotification defines a structure for a message status.
+	// When a message is sent a message delivery status event is emitted. This is send to the SDK as a notification.
 	MessageStatusNotification struct {
 		CustomerID string                `json:"customerId,omitempty"`
 		Status     MessageDeliveryStatus `json:"status,omitempty"`
@@ -287,7 +294,7 @@ func (s *elarian) notificationCallBack(body IsOutBoundMessageBody, appData *Appd
 }
 
 func (s *elarian) On(notification Notification, handler NotificationHandler) {
-	s.bus.SubscribeAsync(string(notification), handler, false)
+	s.bus.Subscribe(string(notification), handler)
 }
 
 func (s *elarian) handleSimulatorNotification(notf *hera.ServerToSimulatorNotification) {
