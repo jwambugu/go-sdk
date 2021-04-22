@@ -1,6 +1,7 @@
 package elarian
 
 import (
+	"context"
 	"reflect"
 
 	hera "github.com/elarianltd/go-sdk/com_elarian_hera_proto"
@@ -20,6 +21,32 @@ func (s *elarian) reminderNotificationHandler(notf *hera.ServerToAppCustomerNoti
 			}
 			if val, ok := notf.AppData.Value.(*hera.DataMapValue_BytesVal); ok {
 				appData.BytesValue = val.BytesVal
+			}
+		}
+		// Reminder Notifications do not come with a customer Number so we fetch a customer's state and add the customer number through that
+		state, err := customer.GetState(context.Background())
+		if err != nil {
+			// if we encounter an error fetch state at this point. we publish the reminder notification as is
+			s.bus.Publish(string(ElarianReminderNotification), s, reminder, appData, customer, s.notificationCallBack)
+			return
+		}
+
+		if state.Data != nil && state.Data.ActivityState != nil {
+			customerNumbers := state.Data.ActivityState.CustomerNumbers
+			if len(customerNumbers) > 0 {
+				customer.CustomerNumber = s.customerNumber(customerNumbers[0])
+				s.bus.Publish(string(ElarianReminderNotification), s, reminder, appData, customer, s.notificationCallBack)
+				return
+			}
+		}
+		if state.Data != nil && state.Data.MessagingState != nil {
+			channels := state.Data.MessagingState.Channels
+			if len(channels) > 0 {
+				channel := channels[0]
+				heraCustomerNumber := channel.GetActive().CustomerNumber
+				customer.CustomerNumber = s.customerNumber(heraCustomerNumber)
+				s.bus.Publish(string(ElarianReminderNotification), s, reminder, appData, customer, s.notificationCallBack)
+				return
 			}
 		}
 		s.bus.Publish(string(ElarianReminderNotification), s, reminder, appData, customer, s.notificationCallBack)

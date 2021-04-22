@@ -11,7 +11,6 @@ import (
 )
 
 func Test_Messaging(t *testing.T) {
-
 	service, err := elarian.Connect(GetOpts())
 	if err != nil {
 		log.Fatal(err)
@@ -38,7 +37,6 @@ func Test_Messaging(t *testing.T) {
 			channelNumber,
 			elarian.TextMessage("Hello World"),
 		)
-
 		if err != nil {
 			t.Fatalf("Error %v", err)
 		}
