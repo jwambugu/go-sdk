@@ -1,6 +1,7 @@
 # Elarian
 
-A convenient way to interact with the Elarian APIs.
+> A convenient way to interact with the Elarian APIs.
+> ***Project Status: Still under ACTIVE DEVELOPMENT, APIs are unstable and may change at any time until release of v1.0.0.***
 
 ## Install
 
