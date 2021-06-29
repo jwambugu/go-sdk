@@ -25,6 +25,12 @@ type (
 	// UssdSessionNotification struct
 	UssdSessionNotification struct {
 		SessionID string `json:"sessionId,omitempty"`
-		Input     string `json:"input,omitempty"`
+		Input     *UssdInput `json:"input,omitempty"`
+	}
+
+	// UssdInput struct
+	UssdInput struct {
+		Text string `json:"text"`
+		Status int32 `json:"status"`
 	}
 )
