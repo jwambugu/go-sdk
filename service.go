@@ -124,7 +124,7 @@ func NewService(options *Options, connectionOptions *ConnectionOptions) (Elarian
 
 	srvc := &service{
 		host:                         "tcp.elarian.dev",
-		port:                         8082,
+		port:                         443,
 		errorChannel:                 errorChan,
 		replyChannel:                 replyChan,
 		notificationChannel:          notificationChannel,
